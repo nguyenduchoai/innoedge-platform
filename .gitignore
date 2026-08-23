@@ -8,3 +8,6 @@ dependencies.lock
 
 # macOS
 .DS_Store
+
+# mock-cloud binary
+tools/mock-cloud/mock-cloud

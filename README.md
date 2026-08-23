@@ -48,20 +48,37 @@ và kết nối lại khi rớt mạng.
 
 ## Bắt đầu trong 10 phút
 
-**Cần:** ESP-IDF ≥ 5.1, một bo ESP32-S3 bất kỳ, một tài khoản InnoEdge Cloud.
-Example 01–05 và 07 không cần phần cứng gì thêm.
+**Cần:** ESP-IDF ≥ 5.1 và một bo ESP32-S3 bất kỳ. **Không cần đăng ký tài
+khoản** — repo có sẵn một cloud giả để bạn chạy thử ngay. Example 01–05 và 07
+không cần phần cứng gì thêm.
+
+**1. Chạy cloud giả** (cần Go; cửa sổ terminal riêng):
 
 ```bash
 git clone https://github.com/nguyenduchoai/innoedge-platform.git
-cd innoedge-platform/examples/01-hello-device
+cd innoedge-platform
+go run ./tools/mock-cloud
+```
+```
+InnoEdge mock-cloud — ĐỒ THỬ, đừng dùng cho production
+  đặt cloud base URL của thiết bị = http://192.168.1.42:8080
+```
 
+**2. Nạp firmware:**
+
+```bash
+cd examples/01-hello-device
 idf.py set-target esp32s3
-idf.py menuconfig        # InnoEdge SDK → "cloud base URL" → địa chỉ cloud của bạn
+idf.py menuconfig        # InnoEdge SDK → cloud base URL → http://192.168.1.42:8080
 idf.py flash monitor
 ```
 
-> **Bắt buộc đổi cloud URL.** Mặc định là `https://cloud.example.com` —
-> placeholder. SDK sẽ dừng với thông báo rõ ràng nếu bạn quên đổi.
+> Dùng **IP LAN** mock in ra, không phải `127.0.0.1` — thiết bị nối từ WiFi.
+> Mặc định `https://cloud.example.com` là placeholder; SDK dừng với thông báo
+> rõ ràng nếu bạn quên đổi.
+
+Xong bước này là chạy được cả 8 example. Khi nào cần cloud thật thì đổi lại
+đúng một dòng cấu hình đó. Chi tiết: [`tools/mock-cloud`](tools/mock-cloud).
 
 Lần đầu, máy chưa có WiFi:
 ```
@@ -78,6 +95,12 @@ I (9110) hello: Máy đã được gán cho đối tác — sẵn sàng phục v
 ```
 
 Xong. Máy đã online, gửi heartbeat, và sẵn sàng nhận OTA.
+
+Gõ vào cửa sổ mock để điều khiển máy:
+```
+> dispense 20000     # nhả tiền
+> dup                # gửi lại CÙNG commandId → máy phải trả "duplicate"
+```
 
 Kẹt ở bước nào? Mỗi example có bảng **Troubleshooting** riêng ở cuối README.
 
@@ -226,6 +249,7 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   ├── example.cmake        # đường dẫn component — một chỗ duy nhất
 │   ├── sdkconfig.defaults   # cấu hình chung mọi example
 │   └── NN-*/                # mỗi example: CMakeLists + main/ + README
+├── tools/mock-cloud/        # cloud giả — chạy example không cần tài khoản
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo
 └── docs/PROTOCOL-v1.md      # đặc tả giao thức thiết bị ↔ cloud
 ```
@@ -264,6 +288,10 @@ kiểm tra, gồm cả ca trùng-qua-reboot.
 Test dùng stub tối thiểu trong `tests/stubs/`, và stub log vẫn để compiler kiểm
 tra format string — bắt được lỗi kiểu `%d` cho `int64_t` (in sai số tiền).
 
+Bộ thứ hai kiểm tra `tools/mock-cloud` trả đúng từng khung tin trong spec:
+handshake, kích hoạt, ack tiền đúng đơn giá, QR + webhook, combo, OTA. Bỏ qua
+tự động nếu máy chưa cài Go.
+
 ---
 
 ## Giao thức mở
@@ -272,8 +300,11 @@ tra format string — bắt được lỗi kiểu `%d` cho `int64_t` (in sai s�
 cloud: handshake, heartbeat, khung tiền, cảnh báo, lệnh động, QR, cấu hình, OTA.
 
 **Mở công khai có chủ đích.** Bạn không bị khoá vào một nhà cung cấp — có spec
-là tự viết được server thay thế. Nhưng đừng tự dựng lại client: SDK đã xử lý
-retry, dedupe, hàng đợi, rollback — đúng những chỗ tự làm là mất tiền.
+là tự viết được server thay thế. [`tools/mock-cloud`](tools/mock-cloud) là bằng
+chứng: ~450 dòng Go cài đặt lại đủ giao thức để chạy cả 8 example.
+
+Nhưng đừng tự dựng lại *client*: SDK đã xử lý retry, dedupe, hàng đợi bền,
+rollback — đúng những chỗ tự làm là mất tiền.
 
 ---
 
@@ -303,7 +334,8 @@ Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
 
 | Việc | Trạng thái |
 |---|---|
-| 8 example chưa được `idf.py build` xác nhận | Đã verify: test host PASS, Kconfig parse OK, cmake path resolve OK, `-fsyntax-only` sạch trên toàn bộ file C. Nhưng build đầy đủ thì chưa. Gặp lỗi build → mở issue, sẽ sửa ngay. |
+| 8 example chưa được `idf.py build` xác nhận | Đã verify: test host PASS (cả C lẫn Go), Kconfig parse OK, cmake path resolve OK, `-fsyntax-only` sạch trên toàn bộ file C. Nhưng build đầy đủ thì chưa. Gặp lỗi build → mở issue, sẽ sửa ngay. |
+| mock-cloud chưa chạy đối đầu với thiết bị thật | Đã test bằng thiết bị giả nối vào (`go test`), đúng từng khung tin. Chưa có bo thật cắm vào. |
 | Tiền tố nội bộ còn là `gtek_*` / `CONFIG_GTEK_*` | Di sản từ hệ chạy trước. API công khai (`innoedge_*`) đã đúng tên và sẽ không đổi. Tiền tố nội bộ sẽ đổi ở một bản major. |
 | Chỉ có transport WebSocket | Là thứ đang chạy thật. MQTT sẽ thêm khi có nhu cầu thật, không thêm cho đủ bộ. |
 | `gtek_config_lookup_combo()` (logic rửa xe) nằm nhầm trong `net/` | Thuộc về `components-hw/wash_control/`. Sẽ dời, không ảnh hưởng API công khai. |
