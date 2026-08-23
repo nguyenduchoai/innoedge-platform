@@ -16,7 +16,10 @@ config GTEK_FW_VERSION
 
 config GTEK_SERVER_BASE_URL
     string "InnoEdge cloud base URL"
-    default "https://g-tek.com.vn"
+    default "https://cloud.example.com"
+    help
+      ĐỔI GIÁ TRỊ NÀY. Mặc định là placeholder — SDK sẽ báo lỗi rõ ràng lúc
+      khởi động nếu bạn quên đổi.
 
 config GTEK_FACTORY_TOKEN
     string "Factory bootstrap token"

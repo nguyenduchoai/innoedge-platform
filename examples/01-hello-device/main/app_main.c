@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 01 — Hello Device: đưa một ESP32 lên InnoEdge Cloud.
 //
 // Đây là toàn bộ những gì cần để máy ONLINE. Không MQTT topic, không JSON,

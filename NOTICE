@@ -1,0 +1,20 @@
+InnoEdge SDK for ESP32
+Copyright 2026 InnoEdge
+
+This product includes software developed at InnoEdge.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+Third-party components (NOT included in this repository; fetched at build time)
+--------------------------------------------------------------------------------
+
+ESP-IDF                             Apache-2.0   Espressif Systems
+espressif/esp_websocket_client      Apache-2.0   Espressif Systems
+cJSON                               MIT          Dave Gamble and cJSON contributors
+
+Each retains its own license. See the respective upstream projects for terms.

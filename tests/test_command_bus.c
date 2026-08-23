@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // Test host cho command bus — phần rủi ro nhất của SDK: registry runtime +
 // chống trùng lệnh. Chống trùng hỏng = máy NHẢ TIỀN HAI LẦN.
 //

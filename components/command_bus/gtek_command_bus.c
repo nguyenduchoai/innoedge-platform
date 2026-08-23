@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #include "gtek_command_bus.h"
 
 #include "gtek_config_store.h"

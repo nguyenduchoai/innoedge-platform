@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 07 — QR Payment: khách quét QR trả tiền, máy biết ngay khi tiền về.
 //
 // Nhấn BOOT = khách chọn gói 20.000đ → xin QR → chờ báo đã trả.

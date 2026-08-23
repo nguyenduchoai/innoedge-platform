@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 04 — Device Config: máy chạy đúng cấu hình chủ máy đặt trên app, KỂ CẢ OFFLINE.
 //
 // Cloud giữ cấu hình vận hành (combo, giá, tham số). SDK tải về, cache vào NVS.

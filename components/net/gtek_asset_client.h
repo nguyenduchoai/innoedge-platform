@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 // Tải asset thương hiệu (logo G-TEK + logo đối tác) từ server dạng bitmap
 // RGB565+alpha đã scale sẵn — endpoint GET /device-assets/header, format GLG1.

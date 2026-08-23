@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // Client HTTP mã giảm giá (voucher) — device-auth như config_client.
 // 3 lệnh: verify (xem trước, KHÔNG đốt lượt) · tạo intent kèm mã · hủy intent cũ.
 #pragma once

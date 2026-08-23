@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 #include <stdio.h>
 // Log im lặng khi chạy test, nhưng compiler VẪN kiểm tra format string —

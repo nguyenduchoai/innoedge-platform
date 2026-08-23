@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 03 — Remote Command: cloud gửi lệnh xuống, máy làm và trả kết quả.
 //
 // Thêm một nghiệp vụ = viết 1 hàm + 1 dòng đăng ký. SDK lo phần khó:

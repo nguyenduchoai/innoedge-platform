@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 02 — Telemetry: gửi tiền + cảnh báo lên cloud, KHÔNG mất dữ liệu khi rớt mạng.
 //
 // Nhấn nút BOOT (GPIO0) = giả lập khách bỏ 1 xu.

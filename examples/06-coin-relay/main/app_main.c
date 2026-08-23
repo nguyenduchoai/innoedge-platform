@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 06 — Coin & Relay: máy coin-op thật.
 //
 // Đầu vào : đầu đọc xu/bill nhả xung → đếm → báo tiền lên cloud.

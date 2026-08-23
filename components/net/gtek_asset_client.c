@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #include "gtek_asset_client.h"
 
 #include "esp_crt_bundle.h"

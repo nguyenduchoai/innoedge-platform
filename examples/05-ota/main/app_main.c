@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 05 — OTA: cập nhật firmware từ xa, an toàn.
 //
 // Bạn không phải viết gì cho OTA. SDK tự: kiểm tra bản mới lúc boot → tải HTTPS

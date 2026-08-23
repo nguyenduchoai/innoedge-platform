@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // InnoEdge SDK — hiện thực API công khai (xem include/innoedge.h).
 //
 // File này là lớp mỏng gói các component hạ tầng đã chạy thật trên fleet
@@ -307,6 +309,15 @@ esp_err_t innoedge_init(const innoedge_config_t *cfg)
     ESP_RETURN_ON_ERROR(gtek_command_bus_init(), TAG, "command bus");
     if (s_ev.on_provisioning) {
         gtek_provisioning_set_ui_notify(s_ev.on_provisioning);
+    }
+
+    // Quên đổi cloud URL là lỗi first-run phổ biến nhất. Nói thẳng thay vì để
+    // dev ngồi đoán tại sao WebSocket không bao giờ kết nối.
+    if (strstr(s_dev.server_base_url, "example.com") != NULL) {
+        ESP_LOGE(TAG, "CONFIG_GTEK_SERVER_BASE_URL vẫn là placeholder (%s).",
+                 s_dev.server_base_url);
+        ESP_LOGE(TAG, "Sửa: idf.py menuconfig → InnoEdge SDK → cloud base URL");
+        return ESP_ERR_INVALID_STATE;
     }
 
     s_inited = true;

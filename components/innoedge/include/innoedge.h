@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 //
 // InnoEdge SDK cho ESP32 — API công khai v1.

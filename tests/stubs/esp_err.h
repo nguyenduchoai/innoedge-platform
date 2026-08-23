@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 typedef int esp_err_t;
 #define ESP_OK 0

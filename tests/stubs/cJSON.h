@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 // Stub tối thiểu: test registry/dedupe không cần parser thật.
 typedef struct cJSON cJSON;

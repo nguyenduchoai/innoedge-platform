@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 
 // Bộ phát cảnh báo lỗi tập trung cho firmware G-TEK. Mục tiêu: máy KHÔNG chạy âm

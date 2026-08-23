@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #include "gtek_provisioning.h"
 
 #include "cJSON.h"

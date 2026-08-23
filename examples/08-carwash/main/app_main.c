@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 // 08 — Car Wash: một phiên nhiều thiết bị, chạy bằng NGÂN SÁCH THỜI GIAN.
 //
 // Combo = ngân sách giây cho từng thiết bị (nước / bọt / khí / hút bụi).

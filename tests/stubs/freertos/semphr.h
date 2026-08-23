@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 InnoEdge
 #pragma once
 #include "FreeRTOS.h"
 typedef void *SemaphoreHandle_t;
