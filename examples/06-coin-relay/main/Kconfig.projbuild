@@ -1,0 +1,72 @@
+menu "Board — coin-op"
+
+# Tham số PHẦN CỨNG thuộc lớp board/application, KHÔNG thuộc SDK.
+# Bo khác = sửa file này, không đụng SDK.
+
+config GTEK_COIN_PULSE_GPIO
+    int "Coin acceptor pulse GPIO (-1 = tat)"
+    default 4
+
+config GTEK_BILL_PULSE_GPIO
+    int "Bill acceptor pulse GPIO (-1 = tat)"
+    default -1
+
+config GTEK_COIN_PULSE_PCA9554_P0
+    bool "Doc xung xu qua IO-expander PCA9554 P0 thay vi GPIO"
+    default n
+
+config GTEK_COIN_VND_PER_PULSE
+    int "VND moi xung xu (0 = gui SO XU, cloud tu quy doi)"
+    default 0
+
+config GTEK_BILL_VND_PER_PULSE
+    int "VND moi xung bill"
+    default 10000
+
+config GTEK_PULSE_MIN_MS
+    int "Chong doi: do rong xung toi thieu (ms)"
+    default 35
+
+config GTEK_PULSE_GAP_MS
+    int "Khoang lang ket thuc mot chuoi xung (ms)"
+    default 300
+
+config GTEK_RELAY_GPIO
+    int "Relay nha tien/credit GPIO (-1 = tat)"
+    default 42
+
+config GTEK_RELAY_PULSE_MS
+    int "Do rong xung relay (ms)"
+    default 80
+
+config GTEK_RELAY_PULSE_GAP_MS
+    int "Khoang cach giua hai xung relay (ms)"
+    default 120
+
+config GTEK_DISPENSE_VND_PER_PULSE
+    int "VND moi xung khi nha tien (0 = dung bill rate)"
+    default 0
+
+config GTEK_DISPENSE_MAX_PULSES
+    int "Tran an toan: so xung toi da moi lenh dispense"
+    default 200
+
+comment "Kenh relay rua xe — example 08 dung, o day de -1"
+
+config GTEK_WASH_GPIO_WATER
+    int "WATER relay GPIO"
+    default -1
+
+config GTEK_WASH_GPIO_FOAM
+    int "FOAM relay GPIO"
+    default -1
+
+config GTEK_WASH_GPIO_AIR
+    int "AIR relay GPIO"
+    default -1
+
+config GTEK_WASH_GPIO_VACUUM
+    int "VACUUM relay GPIO"
+    default -1
+
+endmenu

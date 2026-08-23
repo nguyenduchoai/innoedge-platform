@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(IE_EXTRA_COMPONENTS pulse_input relay_control)
+include(${CMAKE_CURRENT_LIST_DIR}/../example.cmake)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(ie-coin-relay)

@@ -1,0 +1,30 @@
+# Cấu hình chung cho mọi example InnoEdge. Example nào cần khác thì đặt file
+# sdkconfig.defaults riêng trong thư mục của nó (ghi đè các dòng dưới đây).
+
+# 2 slot app: OTA cần chỗ ghi bản mới, rollback cần giữ bản cũ.
+CONFIG_PARTITION_TABLE_TWO_OTA=y
+# Bản mới treo/crash trước khi vào được cloud → bootloader tự quay bản cũ.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# TLS: OTA + WebSocket + REST đều chạy HTTPS.
+CONFIG_ESP_HTTP_CLIENT_ENABLE_HTTPS=y
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=n
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+
+# BLE provisioning dùng NimBLE (nhẹ RAM hơn Bluedroid).
+CONFIG_BT_ENABLED=y
+CONFIG_BT_BLUEDROID_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=256
+
+# ── ĐỔI 2 DÒNG NÀY CHO HỆ CỦA BẠN ───────────────────────────────────────────
+CONFIG_GTEK_SERVER_BASE_URL="https://g-tek.com.vn"
+CONFIG_GTEK_FW_VERSION="0.1.0"
