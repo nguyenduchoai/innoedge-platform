@@ -5,7 +5,6 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%E2%89%A55.1-red.svg)](https://docs.espressif.com/projects/esp-idf/)
 [![Protocol](https://img.shields.io/badge/protocol-v1%20open-green.svg)](docs/PROTOCOL-v1.md)
-[![CI](https://github.com/nguyenduchoai/innoedge-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/nguyenduchoai/innoedge-platform/actions/workflows/ci.yml)
 
 InnoEdge SDK lo phần hạ tầng IoT mà ai làm thiết bị cũng phải viết lại từ đầu:
 cài WiFi, giữ kết nối, không mất giao dịch khi rớt mạng, nhận lệnh từ xa mà
@@ -360,7 +359,8 @@ Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
 
 | Việc | Trạng thái |
 |---|---|
-| 8 example chưa được `idf.py build` xác nhận trên máy dev | CI đã build cả 8 example bằng ESP-IDF 5.4 (và example 01 trên 5.1 để chốt bản sàn) — xem badge ở đầu README. Trên máy tác giả thì chưa chạy được vì thiếu toolchain. |
+| **8 example chưa từng được `idf.py build`** | Chưa một lần nào — máy tác giả thiếu toolchain ESP-IDF, và CI (`.github/workflows/ci.yml`) đã viết nhưng bị chặn ở mức billing của GitHub Actions nên chưa chạy. Đã verify được: test host PASS (C + Go), Kconfig parse OK, cmake path resolve OK, `-fsyntax-only` sạch. **Coi như chưa build được cho tới khi có một lần CI xanh.** Gặp lỗi build → mở issue, sẽ sửa ngay. |
+| Bản thân file CI cũng chưa chạy lần nào | Cùng lý do billing ở trên. Actions miễn phí không giới hạn cho repo CÔNG KHAI — bật public là nó chạy. |
 | mock-cloud chưa chạy đối đầu với thiết bị thật | Đã test bằng thiết bị giả nối vào (`go test`), đúng từng khung tin. Chưa có bo thật cắm vào. |
 | Tiền tố nội bộ còn là `gtek_*` / `CONFIG_GTEK_*` | Di sản từ hệ chạy trước. API công khai (`innoedge_*`) đã đúng tên và sẽ không đổi. Tiền tố nội bộ sẽ đổi ở một bản major. |
 | Chỉ có transport WebSocket | Là thứ đang chạy thật. MQTT sẽ thêm khi có nhu cầu thật, không thêm cho đủ bộ. |
