@@ -232,15 +232,12 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 
 ```
 .
-├── components/              # SDK — HẠ TẦNG (đây là thứ được hỗ trợ)
-│   ├── innoedge/            #   API công khai: include/innoedge.h
-│   │   └── Kconfig          #   tham số hạ tầng — không có GPIO nào
-│   ├── wifi_manager/        #   kết nối WiFi + retry
-│   ├── provisioning/        #   BLE/SoftAP cài WiFi
-│   ├── net/                 #   WebSocket, OTA, config, asset client
-│   ├── config_store/        #   NVS: định danh, token, seq, cache cấu hình
-│   ├── payment_queue/       #   hàng đợi giao dịch bền qua mất điện
-│   └── command_bus/         #   dispatch + chống trùng lệnh
+├── components/innoedge/     # SDK — MỘT component, publish lên registry
+│   ├── include/innoedge.h   #   hợp đồng công khai duy nhất
+│   ├── idf_component.yml    #   manifest cho ESP Component Registry
+│   ├── Kconfig              #   tham số hạ tầng — không có GPIO nào
+│   └── src/                 #   wifi, provisioning, websocket, OTA, hàng đợi,
+│                            #   command bus, config store (nội bộ)
 ├── components-hw/           # driver phần cứng mẫu — KHÔNG thuộc SDK
 │   ├── pulse_input/         #   đếm xung đầu đọc xu/bill (có chống dội)
 │   ├── relay_control/       #   relay đa kênh + xung nhả tiền
@@ -249,7 +246,9 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   ├── example.cmake        # đường dẫn component — một chỗ duy nhất
 │   ├── sdkconfig.defaults   # cấu hình chung mọi example
 │   └── NN-*/                # mỗi example: CMakeLists + main/ + README
-├── tools/mock-cloud/        # cloud giả — chạy example không cần tài khoản
+├── tools/
+│   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
+│   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo
 └── docs/PROTOCOL-v1.md      # đặc tả giao thức thiết bị ↔ cloud
 ```
@@ -260,18 +259,42 @@ mẫu để example chạy trên phần cứng thật — dùng thoải mái, nh
 
 ### Dùng SDK trong project của bạn
 
-```cmake
-# CMakeLists.txt của project
-list(APPEND EXTRA_COMPONENT_DIRS "path/to/innoedge-platform/components")
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(my-device)
+Cách khuyến nghị — cài từ ESP Component Registry, không cần clone repo:
+
+```bash
+idf.py add-dependency "innoedge/innoedge^0.1.0"
 ```
 ```cmake
 # main/CMakeLists.txt
 idf_component_register(SRCS "app_main.c" REQUIRES innoedge)
 ```
 
+Cần thêm driver phần cứng (đầu đọc xu, relay):
+
+```bash
+idf.py add-dependency "innoedge/innoedge-hw^0.1.0"
+```
+
+Hoặc dùng thẳng từ bản clone:
+
+```cmake
+# CMakeLists.txt của project
+list(APPEND EXTRA_COMPONENT_DIRS "path/to/innoedge-platform/components")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(my-device)
+```
+
 Cách nhanh nhất để bắt đầu là copy thư mục `examples/01-hello-device` rồi sửa.
+
+### Lập trình có AI hỗ trợ
+
+Nối [`tools/mcp`](tools/mcp) vào Claude Code / Cursor / VS Code để AI đọc thẳng
+API, giao thức và bộ luật của SDK — thay vì bịa tên hàm và bịa MQTT topic:
+
+```bash
+cd tools/mcp && go build -o innoedge-mcp .
+claude mcp add innoedge -- $(pwd)/innoedge-mcp -root $(cd ../.. && pwd)
+```
 
 ---
 
@@ -289,8 +312,9 @@ Test dùng stub tối thiểu trong `tests/stubs/`, và stub log vẫn để com
 tra format string — bắt được lỗi kiểu `%d` cho `int64_t` (in sai số tiền).
 
 Bộ thứ hai kiểm tra `tools/mock-cloud` trả đúng từng khung tin trong spec:
-handshake, kích hoạt, ack tiền đúng đơn giá, QR + webhook, combo, OTA. Bỏ qua
-tự động nếu máy chưa cài Go.
+handshake, kích hoạt, ack tiền đúng đơn giá, QR + webhook, combo, OTA. Bộ thứ ba
+chạy `tools/mcp` thật và nói JSON-RPC qua stdio đúng như client MCP sẽ làm. Cả
+hai tự bỏ qua nếu máy chưa cài Go.
 
 ---
 
@@ -340,6 +364,7 @@ Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
 | Chỉ có transport WebSocket | Là thứ đang chạy thật. MQTT sẽ thêm khi có nhu cầu thật, không thêm cho đủ bộ. |
 | `gtek_config_lookup_combo()` (logic rửa xe) nằm nhầm trong `net/` | Thuộc về `components-hw/wash_control/`. Sẽ dời, không ảnh hưởng API công khai. |
 | Mới kiểm chứng trên ESP32-S3 | Các chip ESP32 khác về lý thuyết chạy được. Báo giúp nếu bạn thử. |
+| Chưa lên ESP Component Registry | Manifest đã sẵn sàng (`components/innoedge/idf_component.yml`); còn thiếu bước upload. Tới lúc đó vẫn dùng được bằng `EXTRA_COMPONENT_DIRS`. |
 
 ## Đóng góp
 

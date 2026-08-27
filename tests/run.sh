@@ -6,8 +6,8 @@ C=../components
 
 echo "▸ command bus (registry + chống trùng lệnh)"
 cc -std=c11 -Wall -Wextra -Werror -O1 \
-   -I stubs -I "$C/command_bus" -I "$C/config_store" -I "$C/net" \
-   test_command_bus.c "$C/command_bus/gtek_command_bus.c" \
+   -I stubs -I "$C/innoedge/src" \
+   test_command_bus.c "$C/innoedge/src/gtek_command_bus.c" \
    -o /tmp/ie_test_command_bus
 /tmp/ie_test_command_bus
 
@@ -15,6 +15,8 @@ cc -std=c11 -Wall -Wextra -Werror -O1 \
 if command -v go >/dev/null 2>&1; then
     echo "▸ mock-cloud (khung tin đúng spec giao thức)"
     (cd ../tools/mock-cloud && go test ./...)
+    echo "▸ mcp (JSON-RPC qua stdio)"
+    (cd ../tools/mcp && go test ./...)
 else
     echo "▸ mock-cloud: BỎ QUA (chưa cài Go)"
 fi

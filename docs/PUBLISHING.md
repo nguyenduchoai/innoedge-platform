@@ -1,0 +1,68 @@
+# Phát hành lên ESP Component Registry
+
+Đây là cách dev ESP32 thật sự tìm và cài SDK: `idf.py add-dependency`, không phải
+`git clone`.
+
+## Chuẩn bị một lần
+
+1. Đăng nhập https://components.espressif.com bằng tài khoản GitHub.
+2. Tạo namespace `innoedge` (Settings → Namespaces).
+3. Tạo API token (Settings → Tokens), rồi:
+
+```bash
+export IDF_COMPONENT_API_TOKEN=<token>
+```
+
+4. Cài công cụ:
+
+```bash
+pip install -U idf-component-manager
+```
+
+## Mỗi lần phát hành
+
+```bash
+# 1. Tăng version trong components/innoedge/idf_component.yml
+#    (semver — phá vỡ tương thích thì tăng major)
+
+# 2. Test phải xanh
+./tests/run.sh
+
+# 3. Đóng gói thử, KHÔNG upload — xem đúng những file nào sẽ đi
+compote component pack --name innoedge --project-dir components/innoedge
+
+# 4. Upload
+compote component upload --namespace innoedge --name innoedge \
+    --project-dir components/innoedge
+
+# 5. Driver phần cứng (tuỳ chọn, phát hành riêng)
+compote component upload --namespace innoedge --name innoedge-hw \
+    --project-dir components-hw
+```
+
+## Luật
+
+**Không bao giờ ghi đè một version đã phát hành.** Registry cho phép xoá, nhưng
+project của người khác đã ghim version đó. Sai thì phát hành version vá.
+
+**Version trong manifest là nguồn duy nhất.** Đừng để nó lệch với git tag —
+gắn tag `v<version>` ngay sau khi upload.
+
+**`compote component pack` trước khi upload.** Nó cho thấy đúng danh sách file
+sẽ đi ra ngoài. Đây là chốt chặn cuối trước khi lỡ phát hành thứ không định phát.
+
+## Người dùng cài như thế nào
+
+```bash
+idf.py add-dependency "innoedge/innoedge^0.1.0"
+```
+
+Component manager tự kéo cả `espressif/esp_websocket_client`. Người dùng chỉ cần
+`REQUIRES innoedge` trong `main/CMakeLists.txt`.
+
+## Vì sao chỉ một component
+
+Tên component là **toàn cục** trong một project ESP-IDF. Phát hành ra registry
+công khai một component tên `net` hay `config_store` là đặt mìn xung đột cho mọi
+người dùng. Nên 6 component hạ tầng cũ được gộp thành một `innoedge` duy nhất:
+một tên, một phiên bản, một lệnh cài.

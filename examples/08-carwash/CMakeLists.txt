@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-set(IE_EXTRA_COMPONENTS relay_control wash_control)
+set(IE_WANT_HW ON)
 include(${CMAKE_CURRENT_LIST_DIR}/../example.cmake)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(ie-carwash)

@@ -3,8 +3,6 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         innoedge
-        relay_control
-        wash_control
-        net
+        innoedge_hw
         json
 )

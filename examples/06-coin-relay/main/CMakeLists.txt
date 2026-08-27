@@ -3,7 +3,6 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         innoedge
-        pulse_input
-        relay_control
+        innoedge_hw
         json
 )

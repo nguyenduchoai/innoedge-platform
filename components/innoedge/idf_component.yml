@@ -1,0 +1,36 @@
+version: "0.1.0"
+description: >-
+  InnoEdge SDK — hạ tầng IoT cho thiết bị ESP32 vận hành bằng tiền:
+  provisioning WiFi qua BLE/SoftAP, kết nối cloud có reconnect backoff, hàng đợi
+  giao dịch bền qua mất điện, lệnh từ xa có chống trùng bền qua reboot, cấu hình
+  động chạy được offline, và OTA có xác thực SHA-256 + rollback.
+url: https://github.com/nguyenduchoai/innoedge-platform
+repository: https://github.com/nguyenduchoai/innoedge-platform.git
+documentation: https://github.com/nguyenduchoai/innoedge-platform#readme
+issues: https://github.com/nguyenduchoai/innoedge-platform/issues
+license: "Apache-2.0"
+
+tags:
+  - iot
+  - websocket
+  - ota
+  - provisioning
+  - payment
+  - coin-op
+  - vending
+
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32c3
+
+dependencies:
+  idf:
+    version: ">=5.1"
+  espressif/esp_websocket_client:
+    version: "^1.4.0"
+
+# Không khai "examples:" ở đây: đường dẫn phải nằm TRONG gói component, mà
+# example của SDK nằm ở examples/ ngoài thư mục này. Người dùng xem example trên
+# GitHub (link documentation ở trên).
