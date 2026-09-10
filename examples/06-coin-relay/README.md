@@ -11,7 +11,7 @@ Tiền vào (đầu đọc xu/bill) và tiền ra (relay nhả credit) — hai c
 | GPIO42 | chân IN của module relay | |
 | 12V | nguồn đầu đọc | nguồn riêng, KHÔNG lấy từ 5V của ESP32 |
 
-Đổi chân trong `menuconfig → Board — coin-op`.
+Đổi chân trong `sdkconfig.defaults` của example này (hoặc `menuconfig → InnoEdge HW drivers`, rồi `idf.py fullclean`).
 
 > Đầu đọc xu chạy 12V, ESP32 chạy 3.3V. Nối thẳng chân xung 12V vào GPIO là
 > **cháy chip**. Dùng opto-coupler hoặc module chuyển mức.
@@ -19,7 +19,7 @@ Tiền vào (đầu đọc xu/bill) và tiền ra (relay nhả credit) — hai c
 ## Build
 ```bash
 idf.py set-target esp32s3
-idf.py menuconfig     # Board — coin-op → đặt đúng GPIO
+# sửa sdkconfig.defaults nếu chân khác mặc định
 idf.py flash monitor
 ```
 

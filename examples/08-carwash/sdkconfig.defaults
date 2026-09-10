@@ -1,0 +1,6 @@
+# Chân cắm của example này (ghi đè mặc định -1 trong innoedge_hw/Kconfig).
+# Bo khác = sửa file này. Đổi xong: idf.py fullclean rồi build lại.
+CONFIG_GTEK_WASH_GPIO_WATER=4
+CONFIG_GTEK_WASH_GPIO_FOAM=5
+CONFIG_GTEK_WASH_GPIO_AIR=6
+CONFIG_GTEK_WASH_GPIO_VACUUM=7

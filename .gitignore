@@ -12,3 +12,4 @@ dependencies.lock
 # mock-cloud binary
 tools/mock-cloud/mock-cloud
 tools/mcp/innoedge-mcp
+build.log

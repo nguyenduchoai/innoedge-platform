@@ -3,6 +3,6 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         innoedge
-        esp_driver_gpio
+        driver
         json
 )

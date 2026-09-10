@@ -1,0 +1,4 @@
+# Chân cắm của example này (ghi đè mặc định -1 trong innoedge_hw/Kconfig).
+# Bo khác = sửa file này. Đổi xong: idf.py fullclean rồi build lại.
+CONFIG_GTEK_COIN_PULSE_GPIO=4
+CONFIG_GTEK_RELAY_GPIO=42

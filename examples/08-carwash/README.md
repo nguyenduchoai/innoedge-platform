@@ -34,7 +34,7 @@ và test logic được mà không cần relay thật.
 ## Build
 ```bash
 idf.py set-target esp32s3
-idf.py menuconfig     # Board — car wash → đặt đúng GPIO
+# sửa sdkconfig.defaults nếu chân khác mặc định
 idf.py flash monitor
 ```
 

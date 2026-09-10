@@ -149,8 +149,8 @@ func TestExampleLietKeVaLay(t *testing.T) {
 	if !strings.Contains(one, "app_main.c") || !strings.Contains(one, "innoedge_publish_payment") {
 		t.Error("example phải kèm mã nguồn app_main.c")
 	}
-	if !strings.Contains(one, "Kconfig.projbuild") {
-		t.Error("example dùng phần cứng phải kèm cả Kconfig của board")
+	if !strings.Contains(one, "sdkconfig.defaults") || !strings.Contains(one, "COIN_PULSE_GPIO") {
+		t.Error("example dùng phần cứng phải kèm chân cắm (sdkconfig.defaults)")
 	}
 }
 

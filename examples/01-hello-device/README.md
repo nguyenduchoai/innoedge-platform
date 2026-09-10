@@ -33,7 +33,15 @@ Lần đầu (máy chưa có WiFi):
 ```
 W (2100) hello: CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng GTEK-Setup
 ```
-→ Mở app di động → tìm thiết bị `GTEK-Setup-XXXX` → nhập WiFi → máy tự reboot.
+Ba cách cài WiFi — **không cách nào bắt buộc phải có app**:
+
+| Cách | Làm thế nào | Dùng khi |
+|---|---|---|
+| **Điện thoại, không app** | Vào WiFi, nối mạng `GTEK-Setup-XX:XX` → mở trình duyệt `http://192.168.4.1` → chọn mạng, nhập mật khẩu | Lớp học, demo, lần đầu thử |
+| **Nạp sẵn lúc build** | `menuconfig → InnoEdge SDK → Factory WiFi SSID/password` | Bàn thử nghiệm, CI, nhiều bo cùng một mạng |
+| App di động (BLE) | App tìm `GTEK-Setup-XXXX` qua Bluetooth | Sản phẩm thật, chủ máy tự cài |
+
+Máy mở **cả SoftAP lẫn BLE cùng lúc**, chọn đường nào cũng được. Cài xong máy tự reboot.
 
 Sau khi có WiFi:
 ```
@@ -63,7 +71,8 @@ Máy hiện đã online trên dashboard, gửi heartbeat mỗi 30s, và tự nh�
 ## Troubleshooting
 | Triệu chứng | Nguyên nhân thường gặp |
 |---|---|
-| Không thấy `GTEK-Setup-XXXX` trong app | Chưa bật `CONFIG_BT_NIMBLE_ENABLED`, hoặc máy ĐÃ có WiFi lưu sẵn (xoá bằng `idf.py erase-flash`) |
+| Không thấy mạng `GTEK-Setup-XX:XX` | Máy ĐÃ có WiFi lưu sẵn nên không mở provisioning (xoá bằng `idf.py erase-flash`), hoặc còn đang boot |
+| Vào `192.168.4.1` không lên | Điện thoại tự nhảy về 4G vì mạng này không có internet — tắt dữ liệu di động tạm thời |
 | SDK dừng ngay, báo "vẫn là placeholder" | Chưa đổi `CONFIG_GTEK_SERVER_BASE_URL` — đúng như thiết kế |
 | `online=không` mãi | Sai địa chỉ cloud; dùng mock thì phải là **IP LAN**, không phải `127.0.0.1`, và máy tính phải cùng WiFi với ESP32 |
 | `assigned=chưa` mãi | Cloud thật: chưa thêm máy trên app / sai `device_id`. Mock: tự gán sau 1s, chưa thấy thì kiểm tra WS đã nối chưa |

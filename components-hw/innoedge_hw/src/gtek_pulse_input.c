@@ -10,6 +10,12 @@
 #include "gtek_ws_client.h"
 #include "sdkconfig.h"
 
+// Kconfig bool = n thì CONFIG_* KHÔNG được định nghĩa (không phải 0). File này
+// dùng nó trong biểu thức C, nên chuẩn hoá về 0 để build được khi tắt.
+#ifndef CONFIG_GTEK_COIN_PULSE_PCA9554_P0
+#define CONFIG_GTEK_COIN_PULSE_PCA9554_P0 0
+#endif
+
 static const char *TAG = "gtek.pulse";
 
 typedef struct {

@@ -230,10 +230,10 @@ func example(name string) (string, error) {
 	}
 
 	var b strings.Builder
-	for _, f := range []string{"README.md", "main/app_main.c", "main/CMakeLists.txt", "main/Kconfig.projbuild"} {
+	for _, f := range []string{"README.md", "main/app_main.c", "main/CMakeLists.txt", "sdkconfig.defaults"} {
 		data, err := os.ReadFile(filepath.Join(dir, match, f))
 		if err != nil {
-			continue // Kconfig.projbuild chỉ có ở example dùng phần cứng
+			continue // sdkconfig.defaults chỉ có ở example dùng phần cứng (chân cắm)
 		}
 		fmt.Fprintf(&b, "\n===== %s/%s =====\n%s", match, f, data)
 	}

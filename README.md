@@ -127,7 +127,7 @@ Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, v
 
 ## API công khai
 
-Toàn bộ SDK là **17 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
+Toàn bộ SDK là **14 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
 là đủ — không cần đọc source.
 
 ### Vòng đời
@@ -338,10 +338,10 @@ rollback — đúng những chỗ tự làm là mất tiền.
 | | |
 |---|---|
 | ESP-IDF | ≥ 5.1 |
-| Chip đã chạy thật | ESP32-S3 |
+| Chip đã chạy thật | ESP32-S3 (build 8/8 trên ESP-IDF 5.5.4) |
 | Chip nên chạy được | ESP32, ESP32-S2, ESP32-C3 (chưa kiểm chứng) |
 | Transport | WebSocket over TLS |
-| Flash tối thiểu | 4MB (2 slot OTA) |
+| Flash tối thiểu | 4MB — `examples/partitions.csv`: 2 slot OTA × 1,875 MB, không có factory |
 | Protocol | v1 — ổn định, tương thích ngược |
 
 **Cam kết tương thích:** `innoedge.h` giữ tương thích ngược trong toàn bộ dòng
@@ -359,8 +359,9 @@ Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
 
 | Việc | Trạng thái |
 |---|---|
-| **8 example chưa từng được `idf.py build`** | Chưa một lần nào — máy tác giả thiếu toolchain ESP-IDF, và CI (`.github/workflows/ci.yml`) đã viết nhưng bị chặn ở mức billing của GitHub Actions nên chưa chạy. Đã verify được: test host PASS (C + Go), Kconfig parse OK, cmake path resolve OK, `-fsyntax-only` sạch. **Coi như chưa build được cho tới khi có một lần CI xanh.** Gặp lỗi build → mở issue, sẽ sửa ngay. |
-| Bản thân file CI cũng chưa chạy lần nào | Cùng lý do billing ở trên. Actions miễn phí không giới hạn cho repo CÔNG KHAI — bật public là nó chạy. |
+| 8 example đã `idf.py build` | **8/8 build thành công** trên ESP-IDF **5.5.4**, target esp32s3, mỗi bản ~1,23–1,24 MB (2026-09-10, máy tác giả). Lần build đầu bắt được 4 lỗi mà kiểm tra tĩnh không thấy — đã sửa hết (bảng partition, CMakeLists thiếu, tên component chỉ có từ IDF 5.3, Kconfig bool trong biểu thức C). |
+| Chưa build trên ESP-IDF 5.1 | README tuyên bố ≥ 5.1 nhưng mới build thật trên 5.5.4. CI có job `idf-floor` để chốt, nhưng CI đang bị chặn ở mức billing của GitHub Actions (miễn phí không giới hạn cho repo công khai). Tới lúc đó, coi 5.5 là bản đã kiểm chứng. |
+| Chưa flash lên bo thật trong lần verify này | Hạ tầng bên dưới đã chạy trên fleet thật; phần đóng gói SDK + example thì mới build, chưa chạy trên bo. |
 | mock-cloud chưa chạy đối đầu với thiết bị thật | Đã test bằng thiết bị giả nối vào (`go test`), đúng từng khung tin. Chưa có bo thật cắm vào. |
 | Tiền tố nội bộ còn là `gtek_*` / `CONFIG_GTEK_*` | Di sản từ hệ chạy trước. API công khai (`innoedge_*`) đã đúng tên và sẽ không đổi. Tiền tố nội bộ sẽ đổi ở một bản major. |
 | Chỉ có transport WebSocket | Là thứ đang chạy thật. MQTT sẽ thêm khi có nhu cầu thật, không thêm cho đủ bộ. |
