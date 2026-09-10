@@ -35,6 +35,27 @@ Nó tồn tại vì hai lý do:
 
 **Đừng chạy ở production.** Nó nhận mọi token, tin mọi thiết bị.
 
+## Chế độ AI: `-ai` — LLM cầm lái thay bàn phím
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...      # hoặc: ant auth login
+go run ./tools/mock-cloud -ai
+> bật đèn rồi cho biết nhiệt độ
+```
+
+Claude tự chọn tool → mock biến thành lệnh InnoEdge → chờ ack → trả về cho
+Claude làm tool result → Claude trả lời bằng **kết quả thật từ máy**. Cả vòng
+lặp nằm trong `ai.go`, ~150 dòng, viết tay để đọc được từng bước. Firmware mẫu:
+[`examples/09-ai-agent`](../../examples/09-ai-agent).
+
+| Cờ | Mặc định | |
+|---|---|---|
+| `-model` | `claude-opus-5` | Model Claude |
+| `-effort` | `medium` | `low` nhanh hơn cho demo; `high` khi lệnh nhiều bước |
+| `-ack-wait` | `15s` | Máy không ack trong thời gian này → tool báo lỗi |
+
+Test chế độ AI không cần API key: `go test ./...` giả lập cả LLM lẫn thiết bị.
+
 ## Điều khiển máy: gõ lệnh rồi Enter
 
 ```

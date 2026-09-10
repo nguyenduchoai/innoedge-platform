@@ -32,6 +32,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -139,22 +140,23 @@ func redact(auth string) string {
 
 func handleFrame(d *device, data []byte) {
 	var env struct {
-		Type      string `json:"type"`
-		Seq       *int64 `json:"seq"`
-		Coins     int    `json:"coins"`
-		Tickets   int    `json:"tickets"`
-		Amount    int64  `json:"amount"`
-		Method    string `json:"method"`
-		Code      string `json:"code"`
-		Severity  string `json:"severity"`
-		Message   string `json:"message"`
-		Active    *bool  `json:"active"`
-		CommandID int64  `json:"commandId"`
-		Status    string `json:"status"`
-		IntentID  int64  `json:"intentId"`
-		FWVersion string `json:"fw_version"`
-		RSSI      int    `json:"rssi"`
-		QueueDep  int    `json:"queue_depth"`
+		Type      string          `json:"type"`
+		Seq       *int64          `json:"seq"`
+		Coins     int             `json:"coins"`
+		Tickets   int             `json:"tickets"`
+		Amount    int64           `json:"amount"`
+		Method    string          `json:"method"`
+		Code      string          `json:"code"`
+		Severity  string          `json:"severity"`
+		Message   string          `json:"message"`
+		Active    *bool           `json:"active"`
+		CommandID int64           `json:"commandId"`
+		Status    string          `json:"status"`
+		Result    json.RawMessage `json:"result"`
+		IntentID  int64           `json:"intentId"`
+		FWVersion string          `json:"fw_version"`
+		RSSI      int             `json:"rssi"`
+		QueueDep  int             `json:"queue_depth"`
 	}
 	if err := json.Unmarshal(data, &env); err != nil {
 		log.Printf("  ! JSON hỏng: %v", err)
@@ -226,7 +228,7 @@ func handleFrame(d *device, data []byte) {
 			"amount": env.Amount,
 			// Chuỗi giả rõ ràng — KHÔNG phải VietQR thật, quét cũng không
 			// chuyển được tiền cho ai.
-			"qrPayload": fmt.Sprintf("INNOEDGE-MOCK-QR:%s:%d", ref, env.Amount),
+			"qrPayload":     fmt.Sprintf("INNOEDGE-MOCK-QR:%s:%d", ref, env.Amount),
 			"payloadFormat": "emv", "expiresSec": 300,
 		})
 		if *paidAfter > 0 {
@@ -243,6 +245,7 @@ func handleFrame(d *device, data []byte) {
 
 	case "command_ack":
 		log.Printf("  ✓ lệnh %d → %s (%s)", env.CommandID, env.Status, env.Message)
+		deliverAck(env.CommandID, ackResult{Status: env.Status, Message: env.Message, Result: env.Result})
 
 	case "paid_ack":
 		log.Printf("  ✓ máy đã xử lý payment_paid intent=%d", env.IntentID)
@@ -449,7 +452,11 @@ func main() {
 	}
 	fmt.Printf("  đơn giá: %d đ/xu · webhook giả sau %s\n", *rateVND, *paidAfter)
 
-	go consoleLoop()
+	if *aiMode {
+		go aiLoop(anthropic.NewClient())
+	} else {
+		go consoleLoop()
+	}
 	log.Fatal(http.ListenAndServe(*addr, newMux()))
 }
 

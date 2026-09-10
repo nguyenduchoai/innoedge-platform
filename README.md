@@ -77,7 +77,7 @@ idf.py flash monitor
 > Mặc định `https://cloud.example.com` là placeholder; SDK dừng với thông báo
 > rõ ràng nếu bạn quên đổi.
 
-Xong bước này là chạy được cả 8 example. Khi nào cần cloud thật thì đổi lại
+Xong bước này là chạy được cả 9 example. Khi nào cần cloud thật thì đổi lại
 đúng một dòng cấu hình đó. Chi tiết: [`tools/mock-cloud`](tools/mock-cloud).
 
 Lần đầu, máy chưa có WiFi:
@@ -120,6 +120,7 @@ Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nh
 | 06 | [coin-relay](examples/06-coin-relay) | Đầu đọc xu/bill + relay nhả tiền — máy coin-op đủ hai chiều | đầu đọc xu, relay |
 | 07 | [qr-payment](examples/07-qr-payment) | QR động · webhook xác nhận tiền về | devkit |
 | 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
+| 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
 
 Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
 
@@ -248,6 +249,7 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   └── NN-*/                # mỗi example: CMakeLists + main/ + README
 ├── tools/
 │   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
+│   │   └── ai.go            #   -ai: Claude tool calling → lệnh xuống thiết bị
 │   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
 ├── .github/workflows/ci.yml # CI: test host + build 8 example bằng ESP-IDF thật
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo

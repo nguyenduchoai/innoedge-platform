@@ -33,6 +33,7 @@ jobs:
           - 06-coin-relay
           - 07-qr-payment
           - 08-carwash
+          - 09-ai-agent
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.example }}
