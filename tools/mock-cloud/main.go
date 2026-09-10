@@ -53,6 +53,14 @@ type device struct {
 	mu   sync.Mutex // websocket không cho ghi đồng thời
 }
 
+func (d *device) sendBinary(b []byte) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if err := d.conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
+		log.Printf("  ✗ gửi binary tới %s lỗi: %v", d.id, err)
+	}
+}
+
 func (d *device) send(v any) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -121,9 +129,13 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("✓ %s kết nối (auth=%q)", deviceID, redact(token))
 
 	for {
-		_, data, err := conn.ReadMessage()
+		mt, data, err := conn.ReadMessage()
 		if err != nil {
 			return
+		}
+		if mt == websocket.BinaryMessage {
+			handleBinary(d, data) // PCM — không log từng khung
+			continue
 		}
 		log.Printf("  → %s", data)
 		handleFrame(d, data)
@@ -153,8 +165,9 @@ func handleFrame(d *device, data []byte) {
 		CommandID int64           `json:"commandId"`
 		Status    string          `json:"status"`
 		Result    json.RawMessage `json:"result"`
-		Name      string          `json:"name"` // event
-		Data      json.RawMessage `json:"data"` // event
+		Name      string          `json:"name"`  // event
+		State     string          `json:"state"` // listen
+		Data      json.RawMessage `json:"data"`  // event
 		IntentID  int64           `json:"intentId"`
 		FWVersion string          `json:"fw_version"`
 		RSSI      int             `json:"rssi"`
@@ -214,6 +227,9 @@ func handleFrame(d *device, data []byte) {
 			ack["seq"] = *env.Seq
 		}
 		d.send(ack)
+
+	case "listen":
+		handleListen(d, env.State)
 
 	case "event":
 		// Sự kiện tuỳ ý (v1.1): ack theo seq để gỡ khỏi hàng đợi bền của máy,
@@ -464,6 +480,12 @@ func main() {
 	}
 	fmt.Printf("  đơn giá: %d đ/xu · webhook giả sau %s\n", *rateVND, *paidAfter)
 
+	if *voiceMode && !*aiMode {
+		log.Fatal("-voice cần -ai (ai trả lời câu nói?)")
+	}
+	if *voiceMode && speechAuth() == "" {
+		log.Fatal("-voice cần API key giọng nói: -speech-key hoặc $OPENAI_API_KEY")
+	}
 	if *aiMode {
 		go aiLoop(anthropic.NewClient())
 	} else {

@@ -35,6 +35,7 @@ jobs:
           - 08-carwash
           - 09-ai-agent
           - 10-edu-tutor
+          - 11-voice-assistant
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.example }}

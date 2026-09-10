@@ -148,6 +148,22 @@ static void on_static_qr(const char *payload, const char *ref_code, void *ctx)
     }
 }
 
+static void on_binary(const uint8_t *data, size_t len, void *ctx)
+{
+    (void)ctx;
+    if (s_ev.on_binary) {
+        s_ev.on_binary(data, len);
+    }
+}
+
+static void on_frame(const char *type, const char *raw, void *ctx)
+{
+    (void)ctx;
+    if (s_ev.on_frame) {
+        s_ev.on_frame(type, raw);
+    }
+}
+
 // Lệnh "cứng" của nền tảng (không qua registry): gán máy, reboot, ota, đổi WiFi.
 static void on_command(const char *command, const char *auth_token,
                        const char *raw_json, void *ctx)
@@ -257,6 +273,8 @@ static void start_online_services(void)
         .on_qr_error = on_qr_error,
         .on_payment_paid = on_payment_paid,
         .on_static_qr = on_static_qr,
+        .on_binary = on_binary,
+        .on_frame = on_frame,
     };
     ESP_ERROR_CHECK_WITHOUT_ABORT(gtek_ws_client_start(&s_dev, &handlers));
 
@@ -471,6 +489,11 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
     }
     try_send_queue_head();
     return ESP_OK;
+}
+
+esp_err_t innoedge_send_binary(const uint8_t *data, size_t len)
+{
+    return gtek_ws_client_send_binary(data, len);
 }
 
 esp_err_t innoedge_alert(const char *code, const char *severity,

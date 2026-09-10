@@ -42,6 +42,12 @@ typedef struct {
     void (*on_qr_error)(uint64_t seq, const char *message, void *ctx);
     void (*on_payment_paid)(int64_t intent_id, int64_t amount, void *ctx);
     void (*on_static_qr)(const char *payload, const char *ref_code, void *ctx);
+    // Khung binary (audio PCM, ảnh…). Có thể là một mảnh của frame lớn — với
+    // dữ liệu dòng (PCM) mảnh vẫn là dữ liệu hợp lệ. Chạy trên task WS: ngắn thôi.
+    void (*on_binary)(const uint8_t *data, size_t len, void *ctx);
+    // Khung text có "type" mà SDK không biết (vd "tts","stt") → application.
+    // raw là JSON nguyên văn, sống tới khi callback trả về.
+    void (*on_frame)(const char *type, const char *raw, void *ctx);
     void *ctx;
 } gtek_ws_handlers_t;
 
@@ -50,6 +56,8 @@ esp_err_t gtek_ws_client_start(const gtek_device_config_t *config,
 esp_err_t gtek_ws_client_stop(void);
 bool gtek_ws_client_is_connected(void);
 esp_err_t gtek_ws_client_send_text(const char *text);
+// Gửi một frame binary (opcode 0x02). Thread-safe như send_text.
+esp_err_t gtek_ws_client_send_binary(const uint8_t *data, size_t len);
 esp_err_t gtek_ws_client_send_heartbeat(const char *fw_version, int rssi,
                                         unsigned queue_depth, int reset_reason);
 esp_err_t gtek_ws_client_request_qr(uint64_t seq, int64_t amount);

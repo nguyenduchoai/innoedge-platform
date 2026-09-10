@@ -67,6 +67,12 @@ typedef struct {
     void (*on_config)(int version);
     // Đang chờ cài WiFi (BLE/SoftAP đã mở) → hiện hướng dẫn ghép nối.
     void (*on_provisioning)(void);
+    // Khung binary từ cloud (audio PCM, ảnh…). Có thể tới theo mảnh. Chạy trên
+    // task WS — chỉ đẩy vào buffer/queue, đừng xử lý nặng ở đây.
+    void (*on_binary)(const uint8_t *data, size_t len);
+    // Khung text có "type" SDK không biết → application tự xử lý (vd "tts",
+    // "stt" của innoedge_audio). raw_json sống tới khi callback trả về.
+    void (*on_frame)(const char *type, const char *raw_json);
 } innoedge_events_t;
 
 // ── Cấu hình khởi tạo ───────────────────────────────────────────────────────
@@ -116,6 +122,10 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
 // {"type":"event_ack","seq":N}. Giới hạn cả khung ~190 byte — data dài hơn
 // ~120 byte trả ESP_ERR_INVALID_SIZE.
 esp_err_t innoedge_publish_event(const char *name, const char *data_json);
+
+// Gửi một khung binary lên cloud (audio, ảnh, dump cảm biến). KHÔNG qua hàng
+// đợi bền — mất mạng là mất, đúng cho dữ liệu dòng. Thread-safe.
+esp_err_t innoedge_send_binary(const uint8_t *data, size_t len);
 
 // Số giao dịch còn tồn chưa gửi được lên cloud (0 = đã đồng bộ hết).
 uint32_t innoedge_queue_depth(void);

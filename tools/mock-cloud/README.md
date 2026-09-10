@@ -61,6 +61,29 @@ Sự kiện máy gửi lên (`{"type":"event"}`) được ack theo `seq` và, tr
 
 Test chế độ AI không cần API key: `go test ./...` giả lập cả LLM lẫn thiết bị.
 
+## Chế độ giọng nói: `-ai -voice`
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # Claude
+export OPENAI_API_KEY=sk-...          # Whisper + TTS (hoặc server local dạng OpenAI)
+go run ./tools/mock-cloud -ai -voice
+```
+
+Máy gửi `listen start` + PCM 16 kHz + `listen stop` → mock gom clip → ASR →
+câu nói thành lượt user của Claude → câu trả lời (và tool `say` của persona edu)
+→ TTS → PCM về máy **đúng nhịp 20 ms** kèm `tts start/stop`. Firmware mẫu:
+[`examples/11-voice-assistant`](../../examples/11-voice-assistant).
+
+| Cờ | Mặc định | |
+|---|---|---|
+| `-speech-url` | `https://api.openai.com/v1` | Bất kỳ server dạng OpenAI: faster-whisper-server, openedai-speech, LocalAI |
+| `-speech-key` | `$OPENAI_API_KEY` | |
+| `-asr-model` / `-tts-model` / `-tts-voice` | `whisper-1` / `tts-1` / `nova` | |
+| `-asr-lang` | `vi` | |
+
+Test không cần key: `go test ./...` giả lập ASR/TTS/LLM/thiết bị, kiểm cả vòng
+và kiểm nhịp gửi (bắn cả clip một lúc là tràn đệm máy — test bắt).
+
 ## Điều khiển máy: gõ lệnh rồi Enter
 
 ```

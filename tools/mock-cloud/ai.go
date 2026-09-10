@@ -251,6 +251,12 @@ func runDeviceTool(name, rawInput string) (string, bool) {
 	if err != nil {
 		return err.Error(), true
 	}
+	// Persona edu: "say" là lời nói với bé — có -voice thì phát ra loa thật.
+	if name == "say" {
+		if t, ok := params["text"].(string); ok {
+			speak(d, t)
+		}
+	}
 	out, _ := json.Marshal(ack)
 	return string(out), ack.Status != "ok"
 }
@@ -288,6 +294,7 @@ func runTurn(ctx context.Context, client anthropic.Client, history []anthropic.M
 			switch v := block.AsAny().(type) {
 			case anthropic.TextBlock:
 				fmt.Printf("🤖 %s\n", strings.TrimSpace(v.Text))
+				speak(targetDevice(), v.Text) // -voice: câu trả lời thành tiếng
 			case anthropic.ToolUseBlock:
 				out, isErr := runDeviceTool(v.Name, v.JSON.Input.Raw())
 				results = append(results, anthropic.NewToolResultBlock(block.ID, out, isErr))
@@ -362,7 +369,13 @@ func aiLoop(client anthropic.Client) {
 			setActiveDevice(ev.DeviceID) // tool tiếp theo đi về đúng máy này
 			// Sự kiện máy thành lượt user có đánh dấu nguồn — AI phân biệt được
 			// "bé bấm nút" với "phụ huynh gõ chữ".
-			userText = fmt.Sprintf("[sự kiện từ thiết bị %s] %s %s", ev.DeviceID, ev.Name, ev.Data)
+			if ev.Name == "speech" {
+				var said string
+				_ = json.Unmarshal(ev.Data, &said)
+				userText = said // câu nói qua ASR = lượt user bình thường
+			} else {
+				userText = fmt.Sprintf("[sự kiện từ thiết bị %s] %s %s", ev.DeviceID, ev.Name, ev.Data)
+			}
 			fmt.Printf("⚡ %s\n", userText)
 		}
 		history = append(history, anthropic.NewUserMessage(anthropic.NewTextBlock(userText)))

@@ -196,6 +196,34 @@ sớm.
 Binary đặt tên `gtek-fw-<version>.bin`. Rollout theo % hash MAC; pin per-device
 để rollback từng máy.
 
+## 9. Audio hai chiều — v1.1
+
+Cùng kết nối WebSocket; text frame điều khiển, **binary frame (opcode 0x02)**
+chở PCM. Định dạng khai trong `listen start`; v1.1 chỉ có `pcm16` mono 16 kHz.
+
+```jsonc
+// device → cloud
+{"type":"listen","state":"start","format":"pcm16","rate":16000}
+<binary: PCM16 LE mono, 20 ms = 640 byte mỗi frame> …
+{"type":"listen","state":"stop"}
+
+// cloud → device
+{"type":"stt","text":"bật đèn"}            // cloud nghe được gì (hiện lên màn)
+{"type":"tts","state":"start"}
+<binary: PCM16 LE mono 16 kHz, 640 byte mỗi frame, gửi ĐÚNG NHỊP 20 ms>
+{"type":"tts","state":"stop"}
+```
+
+- **Audio không vào hàng đợi bền.** Mất mạng là mất khung — đúng cho dữ liệu
+  dòng; không ai muốn nghe lại câu nói trễ 30 giây.
+- **Cloud phải gửi TTS đúng nhịp thật.** Đệm phát trên thiết bị nhỏ (~1,5 s);
+  bắn cả clip một lúc là tràn và rơi tiếng.
+- Thiết bị có thể gửi `listen start` khi cloud đang phát → cloud nên dừng TTS
+  (barge-in). Thiết bị tự xả đệm phát khi bắt đầu thu.
+- Trần một lần thu do hai bên tự đặt (thiết bị 15 s, cloud 20 s) — nút kẹt
+  không được thành stream vô tận.
+- Codec nén (Opus) là `format` khác trong tương lai; v1.1 không định nghĩa.
+
 ---
 
 ## Quy tắc thay đổi giao thức

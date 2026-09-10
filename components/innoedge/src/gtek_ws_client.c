@@ -45,6 +45,30 @@ static void build_ws_url(const gtek_device_config_t *config, char *out, size_t o
     snprintf(out, out_len, "%s%s%sws/", scheme, host, slash);
 }
 
+static esp_err_t send_binary_locked(const uint8_t *data, size_t len)
+{
+    if (!s_client || !s_connected || !esp_websocket_client_is_connected(s_client)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_send_lock && xSemaphoreTake(s_send_lock, pdMS_TO_TICKS(100)) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    int sent = esp_websocket_client_send_bin(s_client, (const char *)data, (int)len,
+                                             pdMS_TO_TICKS(1000));
+    if (s_send_lock) {
+        xSemaphoreGive(s_send_lock);
+    }
+    return sent > 0 ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t gtek_ws_client_send_binary(const uint8_t *data, size_t len)
+{
+    if (!data || len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return send_binary_locked(data, len);
+}
+
 static esp_err_t send_locked(const char *text)
 {
     if (!s_client || !s_connected || !esp_websocket_client_is_connected(s_client)) {
@@ -201,6 +225,8 @@ static void handle_text(const char *data, int len)
             s_handlers.on_static_qr(json_string(root, "payload"), json_string(root, "refCode"),
                                     s_handlers.ctx);
         }
+    } else if (strcmp(type, "hello") != 0 && s_handlers.on_frame) {
+        s_handlers.on_frame(type, raw, s_handlers.ctx);
     } else if (strcmp(type, "hello") != 0) {
         ESP_LOGD(TAG, "ignored frame type=%s", type);
     }
@@ -228,6 +254,9 @@ static void on_ws_event(void *handler_args, esp_event_base_t base, int32_t id, v
     case WEBSOCKET_EVENT_DATA:
         if (e->op_code == 0x01) {
             handle_text((const char *)e->data_ptr, e->data_len);
+        } else if (e->op_code == 0x02 && s_handlers.on_binary && e->data_len > 0) {
+            s_handlers.on_binary((const uint8_t *)e->data_ptr, (size_t)e->data_len,
+                                 s_handlers.ctx);
         }
         break;
     case WEBSOCKET_EVENT_ERROR:

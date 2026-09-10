@@ -1,0 +1,39 @@
+menu "InnoEdge audio (I2S mic + speaker)"
+
+# Chân I2S mặc định -1 = kênh tắt: build/boot được khi chưa đấu dây.
+# Bộ tham chiếu: INMP441 (mic) + MAX98357A (amp), hai cổng I2S riêng.
+
+config IE_AUDIO_MIC_BCLK_GPIO
+    int "Mic I2S BCLK (SCK) GPIO (-1 = không có mic)"
+    default -1
+config IE_AUDIO_MIC_WS_GPIO
+    int "Mic I2S WS (LRCLK) GPIO"
+    default -1
+config IE_AUDIO_MIC_DIN_GPIO
+    int "Mic I2S DATA (SD) GPIO"
+    default -1
+
+config IE_AUDIO_SPK_BCLK_GPIO
+    int "Speaker I2S BCLK GPIO (-1 = không có loa)"
+    default -1
+config IE_AUDIO_SPK_WS_GPIO
+    int "Speaker I2S WS (LRCLK) GPIO"
+    default -1
+config IE_AUDIO_SPK_DOUT_GPIO
+    int "Speaker I2S DATA (DIN của amp) GPIO"
+    default -1
+
+config IE_AUDIO_MIC_GAIN_SHIFT
+    int "Khuếch đại mic (dịch bit, 0-8)"
+    default 4
+    help
+      INMP441 xuất 24-bit trong khung 32-bit, biên độ nhỏ. Dịch trái N bit
+      trước khi cắt về 16-bit. 4 là hợp lý cho nói cách mic 30cm; méo thì giảm.
+
+config IE_AUDIO_MAX_LISTEN_SEC
+    int "Trần một lần thu (giây)"
+    default 15
+    help
+      Giữ nút quá lâu (kẹt nút, bé nghịch) không được biến thành stream vô tận.
+
+endmenu

@@ -77,7 +77,7 @@ idf.py flash monitor
 > Mặc định `https://cloud.example.com` là placeholder; SDK dừng với thông báo
 > rõ ràng nếu bạn quên đổi.
 
-Xong bước này là chạy được cả 10 example. Khi nào cần cloud thật thì đổi lại
+Xong bước này là chạy được cả 11 example. Khi nào cần cloud thật thì đổi lại
 đúng một dòng cấu hình đó. Chi tiết: [`tools/mock-cloud`](tools/mock-cloud).
 
 Lần đầu, máy chưa có WiFi:
@@ -122,6 +122,7 @@ Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nh
 | 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
 | 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
 | 10 | [edu-tutor](examples/10-edu-tutor) | **Hai chiều**: AI gia sư ↔ bé trả lời bằng nút — lấy từ sản phẩm VIMATE Edu | devkit + API key |
+| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → ASR → Claude → TTS → loa | mic + amp I2S (~120k), 2 API key |
 
 Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
 
@@ -129,7 +130,7 @@ Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, v
 
 ## API công khai
 
-Toàn bộ SDK là **15 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
+Toàn bộ SDK là **16 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
 là đủ — không cần đọc source.
 
 ### Vòng đời
@@ -145,6 +146,7 @@ const char *innoedge_device_id(void);
 ```c
 esp_err_t innoedge_publish_payment(kind, count, amount_vnd); // vào NVS trước, gửi sau
 esp_err_t innoedge_publish_event(name, data_json);           // sự kiện tuỳ ý, cùng hàng đợi
+esp_err_t innoedge_send_binary(data, len);                   // audio/ảnh — dòng, không hàng đợi
 uint32_t  innoedge_queue_depth(void);
 esp_err_t innoedge_alert(code, severity, message, active);
 ```
@@ -176,6 +178,7 @@ Truyền `innoedge_events_t` vào `innoedge_init()`. Mọi callback đều có t
 | `on_assigned` / `on_unassigned` | máy được gán / bị gỡ khỏi đối tác |
 | `on_config` | cấu hình vận hành đã tải xong |
 | `on_provisioning` | đang chờ cài WiFi (BLE/SoftAP đã mở) |
+| `on_binary` / `on_frame` | khung binary (audio) / frame text SDK không biết — cắm `innoedge_audio` vào đây |
 
 Callback chạy trên task WebSocket — giữ ngắn, việc nặng đẩy sang task riêng.
 
@@ -242,16 +245,16 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   └── src/                 #   wifi, provisioning, websocket, OTA, hàng đợi,
 │                            #   command bus, config store (nội bộ)
 ├── components-hw/           # driver phần cứng mẫu — KHÔNG thuộc SDK
-│   ├── pulse_input/         #   đếm xung đầu đọc xu/bill (có chống dội)
-│   ├── relay_control/       #   relay đa kênh + xung nhả tiền
-│   └── wash_control/        #   phiên rửa xe theo ngân sách thời gian
+│   ├── innoedge_hw/         #   đầu đọc xu, relay, phiên rửa xe
+│   └── innoedge_audio/      #   mic/loa I2S, push-to-talk, kênh audio hai chiều
 ├── examples/
 │   ├── example.cmake        # đường dẫn component — một chỗ duy nhất
 │   ├── sdkconfig.defaults   # cấu hình chung mọi example
 │   └── NN-*/                # mỗi example: CMakeLists + main/ + README
 ├── tools/
 │   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
-│   │   └── ai.go            #   -ai: Claude tool calling; -persona device|edu
+│   │   ├── ai.go            #   -ai: Claude tool calling; -persona device|edu
+│   │   └── voice.go         #   -voice: PCM → ASR → Claude → TTS → PCM
 │   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
 ├── .github/workflows/ci.yml # CI: test host + build 8 example bằng ESP-IDF thật
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo
@@ -344,7 +347,7 @@ rollback — đúng những chỗ tự làm là mất tiền.
 | ESP-IDF | ≥ 5.1 |
 | Chip đã chạy thật | ESP32-S3 (build 8/8 trên ESP-IDF 5.5.4) |
 | Chip nên chạy được | ESP32, ESP32-S2, ESP32-C3 (chưa kiểm chứng) |
-| Transport | WebSocket over TLS |
+| Transport | WebSocket over TLS — text (JSON) + binary (audio) |
 | Flash tối thiểu | 4MB — `examples/partitions.csv`: 2 slot OTA × 1,875 MB, không có factory |
 | Protocol | v1 — ổn định, tương thích ngược |
 

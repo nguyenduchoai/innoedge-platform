@@ -1,0 +1,14 @@
+version: "0.1.0"
+description: >-
+  Driver audio mẫu cho InnoEdge SDK: mic/loa I2S thuần (INMP441 + MAX98357A),
+  PCM16 16 kHz, push-to-talk, kênh audio hai chiều với cloud. Code THAM KHẢO.
+url: https://github.com/nguyenduchoai/innoedge-platform
+repository: https://github.com/nguyenduchoai/innoedge-platform.git
+license: "Apache-2.0"
+tags: [iot, audio, i2s, voice, speech]
+targets: [esp32, esp32s3]
+dependencies:
+  idf:
+    version: ">=5.1"
+  innoedge/innoedge:
+    version: "^0.1.0"
