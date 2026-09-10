@@ -34,6 +34,7 @@ jobs:
           - 07-qr-payment
           - 08-carwash
           - 09-ai-agent
+          - 10-edu-tutor
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.example }}

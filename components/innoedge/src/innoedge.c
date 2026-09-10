@@ -418,6 +418,43 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
     return ESP_OK;
 }
 
+esp_err_t innoedge_publish_event(const char *name, const char *data_json)
+{
+    if (!s_inited) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!name || name[0] == '\0') {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!data_json || data_json[0] == '\0') {
+        data_json = "{}";
+    }
+    uint64_t seq = 0;
+    esp_err_t err = gtek_config_store_next_seq(&seq);
+    if (err != ESP_OK) {
+        return err;
+    }
+    char json[192]; // = sức chứa một phần tử hàng đợi
+    int n = snprintf(json, sizeof(json),
+                     "{\"type\":\"event\",\"name\":\"%s\",\"seq\":%llu,\"ts\":%lld,\"data\":%s}",
+                     name, (unsigned long long)seq, (long long)time(NULL), data_json);
+    if (n < 0 || n >= (int)sizeof(json)) {
+        ESP_LOGW(TAG, "event %s quá dài (%d byte) — bỏ", name, n);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    bool dropped = false;
+    err = gtek_payment_queue_append(seq, json, &dropped);
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (dropped) {
+        innoedge_alert("payment_queue_overflow_drop", "critical",
+                       "Hang doi day - mot su kien da bi mat", true);
+    }
+    try_send_queue_head();
+    return ESP_OK;
+}
+
 esp_err_t innoedge_alert(const char *code, const char *severity,
                          const char *message, bool active)
 {

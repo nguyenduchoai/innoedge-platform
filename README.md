@@ -77,7 +77,7 @@ idf.py flash monitor
 > Mặc định `https://cloud.example.com` là placeholder; SDK dừng với thông báo
 > rõ ràng nếu bạn quên đổi.
 
-Xong bước này là chạy được cả 9 example. Khi nào cần cloud thật thì đổi lại
+Xong bước này là chạy được cả 10 example. Khi nào cần cloud thật thì đổi lại
 đúng một dòng cấu hình đó. Chi tiết: [`tools/mock-cloud`](tools/mock-cloud).
 
 Lần đầu, máy chưa có WiFi:
@@ -121,6 +121,7 @@ Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nh
 | 07 | [qr-payment](examples/07-qr-payment) | QR động · webhook xác nhận tiền về | devkit |
 | 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
 | 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
+| 10 | [edu-tutor](examples/10-edu-tutor) | **Hai chiều**: AI gia sư ↔ bé trả lời bằng nút — lấy từ sản phẩm VIMATE Edu | devkit + API key |
 
 Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
 
@@ -128,7 +129,7 @@ Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, v
 
 ## API công khai
 
-Toàn bộ SDK là **14 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
+Toàn bộ SDK là **15 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
 là đủ — không cần đọc source.
 
 ### Vòng đời
@@ -143,6 +144,7 @@ const char *innoedge_device_id(void);
 ### Gửi lên cloud
 ```c
 esp_err_t innoedge_publish_payment(kind, count, amount_vnd); // vào NVS trước, gửi sau
+esp_err_t innoedge_publish_event(name, data_json);           // sự kiện tuỳ ý, cùng hàng đợi
 uint32_t  innoedge_queue_depth(void);
 esp_err_t innoedge_alert(code, severity, message, active);
 ```
@@ -249,7 +251,7 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   └── NN-*/                # mỗi example: CMakeLists + main/ + README
 ├── tools/
 │   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
-│   │   └── ai.go            #   -ai: Claude tool calling → lệnh xuống thiết bị
+│   │   └── ai.go            #   -ai: Claude tool calling; -persona device|edu
 │   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
 ├── .github/workflows/ci.yml # CI: test host + build 8 example bằng ESP-IDF thật
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo

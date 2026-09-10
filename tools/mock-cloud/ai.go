@@ -36,7 +36,32 @@ var (
 	aiModel  = flag.String("model", "claude-opus-5", "model Claude cho chế độ -ai")
 	aiEffort = flag.String("effort", "medium", "effort cho chế độ -ai: low|medium|high")
 	ackWait  = flag.Duration("ack-wait", 15*time.Second, "chờ thiết bị ack một lệnh")
+	persona  = flag.String("persona", "device", "bộ tool + vai của AI: device (example 09) | edu (example 10)")
 )
+
+// ── Sự kiện từ thiết bị → hội thoại ─────────────────────────────────────────
+// Máy gửi {"type":"event"} (bé chọn đáp án, nhấn nút…). Trong chế độ -ai, sự
+// kiện thành một lượt "user" để AI phản ứng — chiều ngược của tool call, và là
+// thứ làm demo thành hội thoại hai chiều thay vì điều khiển một chiều.
+
+type deviceEvent struct {
+	DeviceID string
+	Name     string
+	Data     json.RawMessage
+}
+
+var eventCh = make(chan deviceEvent, 16)
+
+func notifyDeviceEvent(deviceID, name string, data json.RawMessage) {
+	if !*aiMode {
+		return
+	}
+	select {
+	case eventCh <- deviceEvent{deviceID, name, data}:
+	default:
+		log.Printf("  ! hàng đợi sự kiện đầy, bỏ %s", name)
+	}
+}
 
 // ── Chờ ack theo commandId ──────────────────────────────────────────────────
 // Lệnh gửi đi là bất đồng bộ (WebSocket); AI cần kết quả đồng bộ để làm tool
@@ -88,6 +113,66 @@ func sendCommandAndWait(d *device, action string, params map[string]any, wait ti
 // cho thiết bị = thêm một handler ở firmware + một tool ở đây.
 
 func aiTools() []anthropic.ToolUnionParam {
+	if *persona == "edu" {
+		return eduTools()
+	}
+	return deviceTools()
+}
+
+func aiSystemPrompt() string {
+	if *persona == "edu" {
+		return eduSystem
+	}
+	return aiSystem
+}
+
+func mkTool(name, desc string, props map[string]any, required ...string) anthropic.ToolUnionParam {
+	if required == nil {
+		required = []string{}
+	}
+	t := anthropic.ToolParam{
+		Name:        name,
+		Description: anthropic.String(desc),
+		InputSchema: anthropic.ToolInputSchemaParam{Properties: props, Required: required},
+	}
+	return anthropic.ToolUnionParam{OfTool: &t}
+}
+
+// Persona "edu" — gia sư cho bé, tool theo đúng hợp đồng thiết bị VIMATE Edu
+// (show_card / quiz / show_reward). Example firmware: 10-edu-tutor.
+func eduTools() []anthropic.ToolUnionParam {
+	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
+	return []anthropic.ToolUnionParam{
+		mkTool("say", "Nói một câu với bé (máy phát/hiện câu này). Ngắn, thân thiện, tiếng Việt.",
+			map[string]any{"text": str("câu nói, tối đa 120 ký tự")}, "text"),
+		mkTool("show_card", "Hiện thẻ học một từ: từ tiếng Anh + gợi ý tiếng Việt.",
+			map[string]any{"word": str("từ tiếng Anh"), "hint": str("nghĩa/gợi ý tiếng Việt")}, "word", "hint"),
+		mkTool("quiz", "Hiện câu hỏi trắc nghiệm với 2-4 lựa chọn. Bé trả lời bằng nút bấm; "+
+			"kết quả về qua sự kiện quiz_answer (index bắt đầu từ 0). Gọi xong thì DỪNG và chờ bé.",
+			map[string]any{
+				"question": str("câu hỏi"),
+				"options":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "minItems": 2, "maxItems": 4},
+			}, "question", "options"),
+		mkTool("show_reward", "Thưởng sao cho bé sau khi trả lời đúng.",
+			map[string]any{"stars": map[string]any{"type": "integer", "minimum": 1, "maximum": 3}}, "stars"),
+	}
+}
+
+const eduSystem = `Bạn là Lily, gia sư tiếng Anh cho bé 5-7 tuổi, nói tiếng Việt, qua một thiết bị có màn hình và nút bấm.
+Bé KHÔNG nghe được bạn trừ khi bạn gọi tool "say". Mọi lời nói với bé phải đi qua "say", ngắn và vui.
+
+Bài hôm nay: 3 từ — apple (quả táo), cat (con mèo), sun (mặt trời). Với mỗi từ:
+1. show_card(word, hint) rồi say một câu giới thiệu.
+2. quiz(question, options) với 3 lựa chọn, đáp án đúng ở vị trí ngẫu nhiên. Rồi DỪNG — không gọi thêm tool, chờ bé bấm.
+3. Khi nhận sự kiện quiz_answer: đúng → say khen + show_reward(1); sai → say gợi ý nhẹ, hỏi lại cùng câu (tối đa 2 lần), sau đó nói đáp án và đi tiếp.
+Hết 3 từ: say tổng kết, show_reward(3).
+
+Sự kiện "wake" = bé gọi bạn: say chào và hỏi bé muốn học tiếp hay nghỉ.
+Người lớn gõ chữ trực tiếp là phụ huynh/giáo viên — trả lời họ bằng chữ thường, không qua "say".
+Không bịa kết quả tool. Tool lỗi thì nói với người lớn, không nói với bé.`
+
+// Persona "device" — điều khiển thiết bị chung (example 09).
+func deviceTools() []anthropic.ToolUnionParam {
 	mk := func(name, desc string, props map[string]any, required ...string) anthropic.ToolUnionParam {
 		if required == nil {
 			required = []string{}
@@ -145,7 +230,7 @@ func runTurn(ctx context.Context, client anthropic.Client, history []anthropic.M
 		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.Model(*aiModel),
 			MaxTokens: 4096,
-			System:    []anthropic.TextBlockParam{{Text: aiSystem}},
+			System:    []anthropic.TextBlockParam{{Text: aiSystemPrompt()}},
 			Tools:     aiTools(),
 			Messages:  history,
 			// Điều khiển thiết bị là việc đơn giản — effort thấp cho phản hồi
@@ -198,28 +283,53 @@ Mỗi tool call in ra dưới dạng lệnh InnoEdge thật (←) và ack của 
 
 func aiLoop(client anthropic.Client) {
 	fmt.Print(aiHelp)
+	if *persona == "edu" {
+		fmt.Println("Persona EDU: gõ \"bắt đầu bài học\" để Lily dạy; bé trả lời bằng nút trên máy.")
+	}
 	var history []anthropic.MessageParam
-	sc := bufio.NewScanner(os.Stdin)
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		switch line {
-		case "":
-			continue
-		case "h", "help":
-			fmt.Print(aiHelp)
-			continue
-		case "ls":
-			devicesMu.RLock()
-			for id := range devices {
-				fmt.Println(" •", id)
-			}
-			if len(devices) == 0 {
-				fmt.Println("(chưa máy nào nối)")
-			}
-			devicesMu.RUnlock()
-			continue
+
+	// stdin đọc trong goroutine riêng để select được cùng sự kiện thiết bị.
+	lines := make(chan string)
+	go func() {
+		sc := bufio.NewScanner(os.Stdin)
+		for sc.Scan() {
+			lines <- strings.TrimSpace(sc.Text())
 		}
-		history = append(history, anthropic.NewUserMessage(anthropic.NewTextBlock(line)))
+		close(lines)
+	}()
+
+	for {
+		var userText string
+		select {
+		case line, ok := <-lines:
+			if !ok {
+				return
+			}
+			switch line {
+			case "":
+				continue
+			case "h", "help":
+				fmt.Print(aiHelp)
+				continue
+			case "ls":
+				devicesMu.RLock()
+				for id := range devices {
+					fmt.Println(" •", id)
+				}
+				if len(devices) == 0 {
+					fmt.Println("(chưa máy nào nối)")
+				}
+				devicesMu.RUnlock()
+				continue
+			}
+			userText = line
+		case ev := <-eventCh:
+			// Sự kiện máy thành lượt user có đánh dấu nguồn — AI phân biệt được
+			// "bé bấm nút" với "phụ huynh gõ chữ".
+			userText = fmt.Sprintf("[sự kiện từ thiết bị %s] %s %s", ev.DeviceID, ev.Name, ev.Data)
+			fmt.Printf("⚡ %s\n", userText)
+		}
+		history = append(history, anthropic.NewUserMessage(anthropic.NewTextBlock(userText)))
 		history = runTurn(context.Background(), client, history)
 	}
 }

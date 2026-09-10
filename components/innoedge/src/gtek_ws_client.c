@@ -117,7 +117,13 @@ static void handle_text(const char *data, int len)
     int raw_len = len < (int)sizeof(raw) - 1 ? len : (int)sizeof(raw) - 1;
     memcpy(raw, data, raw_len);
     raw[raw_len] = '\0';
-    if (strcmp(type, "coin_ack") == 0) {
+    if (strcmp(type, "event_ack") == 0) {
+        // Ack cho innoedge_publish_event() — chỉ cần gỡ seq khỏi hàng đợi bền.
+        uint64_t seq = json_u64(root, "seq");
+        if (seq > 0 && s_handlers.on_ack) {
+            s_handlers.on_ack(seq, s_handlers.ctx);
+        }
+    } else if (strcmp(type, "coin_ack") == 0) {
         uint64_t seq = json_u64(root, "seq");
         if (seq > 0 && s_handlers.on_ack) {
             s_handlers.on_ack(seq, s_handlers.ctx);

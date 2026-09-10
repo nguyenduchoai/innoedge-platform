@@ -153,6 +153,8 @@ func handleFrame(d *device, data []byte) {
 		CommandID int64           `json:"commandId"`
 		Status    string          `json:"status"`
 		Result    json.RawMessage `json:"result"`
+		Name      string          `json:"name"` // event
+		Data      json.RawMessage `json:"data"` // event
 		IntentID  int64           `json:"intentId"`
 		FWVersion string          `json:"fw_version"`
 		RSSI      int             `json:"rssi"`
@@ -212,6 +214,15 @@ func handleFrame(d *device, data []byte) {
 			ack["seq"] = *env.Seq
 		}
 		d.send(ack)
+
+	case "event":
+		// Sự kiện tuỳ ý (v1.1): ack theo seq để gỡ khỏi hàng đợi bền của máy,
+		// rồi đưa cho AI (nếu -ai) như một tin từ thế giới thật.
+		if env.Seq != nil {
+			d.send(map[string]any{"type": "event_ack", "seq": *env.Seq})
+		}
+		log.Printf("  ⚡ sự kiện %s %s", env.Name, env.Data)
+		notifyDeviceEvent(d.id, env.Name, env.Data)
 
 	case "alert":
 		state := "BẬT"

@@ -107,6 +107,13 @@ const char *innoedge_device_id(void);   // MAC — định danh máy trên cloud
 esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
                                    int64_t amount_vnd);
 
+// Gửi một sự kiện tuỳ ý lên cloud (nút bấm, cảm biến, lựa chọn của người dùng…).
+//   {"type":"event","name":"<name>","seq":N,"ts":T,"data":<data_json>}
+// data_json là object JSON hợp lệ hoặc NULL (→ {}). Cùng hàng đợi bền với tiền:
+// mất mạng vẫn giữ, cloud phải trả {"type":"event_ack","seq":N}. Giới hạn cả
+// khung ~190 byte — data dài hơn ~120 byte sẽ bị từ chối (ESP_ERR_INVALID_SIZE).
+esp_err_t innoedge_publish_event(const char *name, const char *data_json);
+
 // Số giao dịch còn tồn chưa gửi được lên cloud (0 = đã đồng bộ hết).
 uint32_t innoedge_queue_depth(void);
 

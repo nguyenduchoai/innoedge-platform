@@ -53,6 +53,11 @@ lặp nằm trong `ai.go`, ~150 dòng, viết tay để đọc được từng b
 | `-model` | `claude-opus-5` | Model Claude |
 | `-effort` | `medium` | `low` nhanh hơn cho demo; `high` khi lệnh nhiều bước |
 | `-ack-wait` | `15s` | Máy không ack trong thời gian này → tool báo lỗi |
+| `-persona` | `device` | `device`: led/motor/show/… (example 09) · `edu`: gia sư Lily với say/show_card/quiz/show_reward (example 10) |
+
+Sự kiện máy gửi lên (`{"type":"event"}`) được ack theo `seq` và, trong chế độ
+`-ai`, đưa vào hội thoại thành một lượt có đánh dấu nguồn — AI phân biệt được
+"bé bấm nút" với "phụ huynh gõ chữ".
 
 Test chế độ AI không cần API key: `go test ./...` giả lập cả LLM lẫn thiết bị.
 

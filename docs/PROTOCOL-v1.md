@@ -70,6 +70,23 @@ tự reboot.
   không ack khi máy chưa gán đối tác hoặc ghi DB lỗi.
 - `ticket` và `coin_out` **không tính doanh thu** — chúng để đối soát.
 
+## 3b. Sự kiện tuỳ ý (device → cloud) — v1.1
+
+Cho những gì không phải tiền và không phải sự cố: nút bấm, lựa chọn của người
+dùng, số đo cảm biến theo yêu cầu.
+
+```jsonc
+{"type":"event","name":"quiz_answer","seq":1046,"ts":1765432100,"data":{"index":2}}
+// cloud → device
+{"type":"event_ack","seq":1046}
+```
+
+- Cùng hàng đợi bền và cùng `seq` với khung tiền — mất mạng vẫn giữ, gửi lại tới
+  khi có `event_ack`. Cloud dedupe theo `(device_id, seq)`.
+- `name` là định danh máy-đọc do application đặt; `data` là object tuỳ ý, ~120 byte.
+- **Thêm ở v1.1** — tương thích ngược: cloud v1.0 chưa biết `event` sẽ bỏ qua,
+  thiết bị giữ trong hàng đợi. Cloud phải cập nhật trước khi thiết bị dùng API này.
+
 ## 4. Cảnh báo (device → cloud)
 
 ```jsonc
