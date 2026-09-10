@@ -36,17 +36,16 @@ import (
 var (
 	voiceMode = flag.Bool("voice", false, "bật giọng nói: nhận PCM từ máy → ASR → AI → TTS → PCM về máy (cần -ai)")
 
-	// ASR — mặc định Qwen3-ASR (tiếng Việt tốt, cùng provider với VIMATE Edu).
-	asrKind  = flag.String("asr", "qwen3", "ASR: qwen3 (DashScope hoặc vLLM self-host) | whisper (API dạng OpenAI)")
-	asrURL   = flag.String("asr-url", "", "base URL ASR (rỗng = mặc định theo -asr)")
-	asrKey   = flag.String("asr-key", "", "API key ASR (rỗng = $DASHSCOPE_API_KEY cho qwen3, $OPENAI_API_KEY cho whisper)")
-	asrModel = flag.String("asr-model", "", "model ASR (rỗng = qwen3-asr-flash | whisper-1)")
+	// ASR — mặc định Qwen3-ASR self-host (tools/voice-stack, cùng provider với VIMATE Edu).
+	asrKind  = flag.String("asr", "qwen3", "ASR: qwen3 (vLLM self-host, tools/voice-stack) | dashscope (Qwen3 cloud) | whisper (API dạng OpenAI)")
+	asrURL   = flag.String("asr-url", "", "base URL ASR (rỗng = localhost:8000/v1 | DashScope intl | api.openai.com)")
+	asrKey   = flag.String("asr-key", "", "API key ASR (rỗng = $QWEN3_ASR_API_KEY | $DASHSCOPE_API_KEY | $OPENAI_API_KEY)")
+	asrModel = flag.String("asr-model", "", "model ASR (rỗng = Qwen/Qwen3-ASR-1.7B | qwen3-asr-flash | whisper-1)")
 	asrLang  = flag.String("asr-lang", "vi", "ngôn ngữ ASR (ISO-639-1)")
-	asrAudio = flag.String("asr-audio-field", "input_audio", "qwen3: input_audio (DashScope) | audio_url (vLLM self-host)")
 
-	// TTS — mặc định VieNeu (giọng Việt tự nhiên, sidecar self-host của VIMATE Edu).
-	ttsKind  = flag.String("tts", "vieneu", "TTS: vieneu (sidecar self-host) | openai (API dạng OpenAI)")
-	ttsURL   = flag.String("tts-url", "", "base URL TTS (rỗng = http://localhost:8080/v1 cho vieneu, api.openai.com cho openai)")
+	// TTS — mặc định VieNeu self-host (tools/voice-stack, giọng Việt tự nhiên, CPU).
+	ttsKind  = flag.String("tts", "vieneu", "TTS: vieneu (sidecar self-host, tools/voice-stack) | openai (API dạng OpenAI)")
+	ttsURL   = flag.String("tts-url", "", "base URL TTS (rỗng = localhost:8080/v1 | api.openai.com)")
 	ttsKey   = flag.String("tts-key", "", "API key TTS (rỗng = $VIENEU_TTS_API_KEY | $OPENAI_API_KEY)")
 	ttsModel = flag.String("tts-model", "", "model TTS (rỗng = vieneu-v3-turbo | tts-1)")
 	ttsVoice = flag.String("tts-voice", "", "giọng TTS (rỗng = \"Phạm Tuyên\" | nova)")
@@ -231,7 +230,7 @@ func asrConfig() (base, key, model string) {
 			model = "whisper-1"
 		}
 		return base, envOr(*asrKey, "OPENAI_API_KEY"), model
-	default: // qwen3
+	case "dashscope": // Qwen3 cloud của Alibaba
 		base = strings.TrimRight(*asrURL, "/")
 		if base == "" {
 			base = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
@@ -241,7 +240,26 @@ func asrConfig() (base, key, model string) {
 			model = "qwen3-asr-flash"
 		}
 		return base, envOr(*asrKey, "DASHSCOPE_API_KEY"), model
+	default: // qwen3 self-host qua vLLM — tools/voice-stack
+		base = strings.TrimRight(*asrURL, "/")
+		if base == "" {
+			base = "http://localhost:8000/v1"
+		}
+		model = *asrModel
+		if model == "" {
+			model = "Qwen/Qwen3-ASR-1.7B"
+		}
+		return base, envOr(*asrKey, "QWEN3_ASR_API_KEY"), model
 	}
+}
+
+// qwenAudioField: DashScope compatible-mode nhận input_audio; vLLM nhận audio_url.
+// Suy từ -asr thay vì bắt người dùng nhớ thêm một cờ.
+func qwenAudioField() string {
+	if *asrKind == "dashscope" {
+		return "input_audio"
+	}
+	return "audio_url"
 }
 
 func ttsConfig() (base, key, model, voice string) {
@@ -281,9 +299,10 @@ func voiceReady() error {
 	if *asrKind == "whisper" && akey == "" {
 		return fmt.Errorf("-asr whisper cần -asr-key hoặc $OPENAI_API_KEY")
 	}
-	if *asrKind == "qwen3" && akey == "" && *asrURL == "" {
-		return fmt.Errorf("-asr qwen3 cần -asr-key hoặc $DASHSCOPE_API_KEY (self-host vLLM thì đặt -asr-url)")
+	if *asrKind == "dashscope" && akey == "" {
+		return fmt.Errorf("-asr dashscope cần -asr-key hoặc $DASHSCOPE_API_KEY")
 	}
+	// qwen3 self-host / vieneu: key tuỳ sidecar có bật auth; thiếu thì sidecar báo 401.
 	_, tkey, _, _ := ttsConfig()
 	if *ttsKind == "openai" && tkey == "" {
 		return fmt.Errorf("-tts openai cần -tts-key hoặc $OPENAI_API_KEY")
@@ -295,7 +314,7 @@ func transcribe(pcm []byte) (string, error) {
 	if *asrKind == "whisper" {
 		return transcribeWhisper(pcm)
 	}
-	return transcribeQwen3(pcm)
+	return transcribeQwen3(pcm) // qwen3 self-host hoặc dashscope
 }
 
 func synthesize(text string) ([]byte, error) {
@@ -319,7 +338,7 @@ func transcribeQwen3(pcm []byte) (string, error) {
 	base, key, model := asrConfig()
 	dataURI := "data:audio/wav;base64," + base64.StdEncoding.EncodeToString(wavWrap(pcm, pcmRate))
 	var audioPart map[string]any
-	if *asrAudio == "audio_url" { // vLLM self-host
+	if qwenAudioField() == "audio_url" { // vLLM self-host
 		audioPart = map[string]any{"type": "audio_url", "audio_url": map[string]any{"url": dataURI}}
 	} else { // DashScope compatible-mode
 		audioPart = map[string]any{"type": "input_audio", "input_audio": map[string]any{"data": dataURI, "format": "wav"}}
@@ -429,7 +448,7 @@ func synthesizeVieNeu(text string) ([]byte, error) {
 	}
 	resp, err := (&http.Client{Timeout: 75 * time.Second}).Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("VieNeu: %w (sidecar có chạy ở %s không?)", err, base)
+		return nil, fmt.Errorf("VieNeu: %w (sidecar có chạy ở %s không? xem tools/voice-stack)", err, base)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {

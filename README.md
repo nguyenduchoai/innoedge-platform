@@ -122,7 +122,7 @@ Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nh
 | 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
 | 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
 | 10 | [edu-tutor](examples/10-edu-tutor) | **Hai chiều**: AI gia sư ↔ bé trả lời bằng nút — lấy từ sản phẩm VIMATE Edu | devkit + API key |
-| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → Qwen3-ASR → Claude → VieNeu TTS → loa | mic + amp I2S (~120k), key DashScope + sidecar VieNeu |
+| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → Qwen3-ASR → Claude → VieNeu TTS → loa, cả hai self-host | mic + amp I2S (~120k), `tools/voice-stack` |
 
 Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
 
@@ -255,6 +255,7 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
 │   │   ├── ai.go            #   -ai: Claude tool calling; -persona device|edu
 │   │   └── voice.go         #   -voice: PCM → ASR → Claude → TTS → PCM
+│   └── voice-stack/         # docker compose: Qwen3-ASR + VieNeu TTS trên server local
 │   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
 ├── .github/workflows/ci.yml # CI: test host + build 8 example bằng ESP-IDF thật
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo

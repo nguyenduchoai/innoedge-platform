@@ -18,9 +18,12 @@ func TestMacDinhLaQwen3VaVieNeu(t *testing.T) {
 	if *asrKind != "qwen3" || *ttsKind != "vieneu" {
 		t.Errorf("mặc định phải là qwen3 + vieneu (tiếng Việt), đang là %s + %s", *asrKind, *ttsKind)
 	}
-	_, _, m := asrConfig()
-	if m != "qwen3-asr-flash" {
-		t.Errorf("model qwen3 mặc định = %q", m)
+	ab, _, m := asrConfig()
+	if ab != "http://localhost:8000/v1" || m != "Qwen/Qwen3-ASR-1.7B" {
+		t.Errorf("qwen3 mặc định phải là self-host tools/voice-stack, đang là %s %s", ab, m)
+	}
+	if qwenAudioField() != "audio_url" {
+		t.Error("self-host vLLM phải dùng audio_url")
 	}
 	b, _, tm, v := ttsConfig()
 	if b != "http://localhost:8080/v1" || tm != "vieneu-v3-turbo" || v != "Phạm Tuyên" {
@@ -44,7 +47,7 @@ func TestQwen3ASRDungHopDongChatCompletions(t *testing.T) {
 	defer srv.Close()
 
 	oK, oU, oKey := *asrKind, *asrURL, *asrKey
-	*asrKind, *asrURL, *asrKey = "qwen3", srv.URL, "k"
+	*asrKind, *asrURL, *asrKey = "dashscope", srv.URL, "k"
 	defer func() { *asrKind, *asrURL, *asrKey = oK, oU, oKey }()
 
 	text, err := transcribe(make([]byte, pcmFrameB*20))
@@ -89,9 +92,9 @@ func TestQwen3SelfHostDungAudioURL(t *testing.T) {
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":[{"type":"text","text":"xin chào"}]}}]}`))
 	}))
 	defer srv.Close()
-	oK, oU, oA := *asrKind, *asrURL, *asrAudio
-	*asrKind, *asrURL, *asrAudio = "qwen3", srv.URL, "audio_url"
-	defer func() { *asrKind, *asrURL, *asrAudio = oK, oU, oA }()
+	oK, oU := *asrKind, *asrURL
+	*asrKind, *asrURL = "qwen3", srv.URL // self-host → tự dùng audio_url
+	defer func() { *asrKind, *asrURL = oK, oU }()
 
 	text, err := transcribe(make([]byte, pcmFrameB*20))
 	if err != nil {
@@ -172,14 +175,15 @@ func TestVieNeuTuChoiSampleRateSai(t *testing.T) {
 
 func TestVoiceReadyBaoThieuKeyRo(t *testing.T) {
 	oK, oKey, oU := *asrKind, *asrKey, *asrURL
-	*asrKind, *asrKey, *asrURL = "qwen3", "", ""
+	*asrKind, *asrKey, *asrURL = "dashscope", "", ""
 	defer func() { *asrKind, *asrKey, *asrURL = oK, oKey, oU }()
 	t.Setenv("DASHSCOPE_API_KEY", "")
 	if err := voiceReady(); err == nil || !strings.Contains(err.Error(), "DASHSCOPE") {
-		t.Errorf("thiếu key qwen3 phải báo tên biến, nhận: %v", err)
+		t.Errorf("thiếu key dashscope phải báo tên biến, nhận: %v", err)
 	}
-	*asrURL = "http://localhost:8000/v1" // self-host → không cần key
+	*asrKind = "qwen3" // self-host mặc định → không đòi key
+	t.Setenv("QWEN3_ASR_API_KEY", "")
 	if err := voiceReady(); err != nil {
-		t.Errorf("self-host có -asr-url thì không được đòi key: %v", err)
+		t.Errorf("qwen3 self-host không được đòi key: %v", err)
 	}
 }

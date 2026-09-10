@@ -64,10 +64,9 @@ Test chế độ AI không cần API key: `go test ./...` giả lập cả LLM l
 ## Chế độ giọng nói: `-ai -voice`
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # Claude
-export DASHSCOPE_API_KEY=sk-...       # Qwen3-ASR (mặc định)
-export VIENEU_TTS_API_KEY=...         # VieNeu TTS sidecar ở localhost:8080 (mặc định)
-go run ./tools/mock-cloud -ai -voice
+cd tools/voice-stack && docker compose --profile gpu up -d   # Qwen3-ASR + VieNeu TTS, local
+export ANTHROPIC_API_KEY=sk-ant-...
+go run ./tools/mock-cloud -ai -voice                         # mặc định trỏ localhost:8000/8080
 ```
 
 Máy gửi `listen start` + PCM 16 kHz + `listen stop` → mock gom clip → ASR →
@@ -76,22 +75,21 @@ câu nói thành lượt user của Claude → câu trả lời (và tool `say` 
 phát → mock huỷ TTS đang bơm (barge-in). Firmware mẫu:
 [`examples/11-voice-assistant`](../../examples/11-voice-assistant).
 
-Provider lấy đúng hợp đồng đã chạy thật bên VIMATE Edu:
+Provider theo đúng hợp đồng đã chạy thật bên VIMATE Edu:
 
-| Cờ | Mặc định | |
+| Cờ | Mặc định | Tuỳ chọn |
 |---|---|---|
-| `-asr` | `qwen3` | `qwen3` (DashScope cloud hoặc vLLM self-host) · `whisper` (API dạng OpenAI) |
-| `-asr-url` / `-asr-key` / `-asr-model` | DashScope intl / `$DASHSCOPE_API_KEY` / `qwen3-asr-flash` | whisper: api.openai.com / `$OPENAI_API_KEY` / `whisper-1` |
-| `-asr-audio-field` | `input_audio` | vLLM self-host dùng `audio_url` |
-| `-tts` | `vieneu` | `vieneu` (sidecar self-host, PCM 16k trực tiếp) · `openai` (24k, tự resample) |
-| `-tts-url` / `-tts-key` / `-tts-model` / `-tts-voice` | `localhost:8080/v1` / `$VIENEU_TTS_API_KEY` / `vieneu-v3-turbo` / `Phạm Tuyên` | openai: api.openai.com / `$OPENAI_API_KEY` / `tts-1` / `nova` |
-| `-tts-style` | `tu_nhien` | vieneu |
+| `-asr` | `qwen3` — vLLM self-host, `localhost:8000/v1`, `Qwen/Qwen3-ASR-1.7B`, content-part `audio_url` | `dashscope` (Qwen3 cloud, `$DASHSCOPE_API_KEY`, `input_audio`) · `whisper` (API dạng OpenAI) |
+| `-tts` | `vieneu` — sidecar self-host, `localhost:8080/v1`, `vieneu-v3-turbo`, giọng `Phạm Tuyên`, xin 16 kHz | `openai` (`tts-1`/`nova`, 24 kHz tự resample) |
+| `-asr-url` `-asr-key` `-asr-model` `-asr-lang` | theo `-asr` | key rỗng = `$QWEN3_ASR_API_KEY` / `$DASHSCOPE_API_KEY` / `$OPENAI_API_KEY` |
+| `-tts-url` `-tts-key` `-tts-model` `-tts-voice` `-tts-style` | theo `-tts` | key rỗng = `$VIENEU_TTS_API_KEY` / `$OPENAI_API_KEY` |
 
-Sidecar VieNeu: `Go-Xiaozhi/server` → `docker compose -f docker-compose.ai-local.yml --profile vieneu-tts up`.
+Self-host không bật auth thì không cần key; `dashscope`/`openai`/`whisper` cloud
+thiếu key là fail sớm với tên biến. Cài sidecar: [`tools/voice-stack`](../voice-stack).
 
-Test không cần key: `go test ./...` giả lập ASR/TTS/LLM/thiết bị — gồm hợp đồng
-Qwen3 (chat/completions + dọn `<asr_text>`/chữ Hán), VieNeu (xin 16k, kiểm
-header), nhịp gửi, barge-in.
+Test không cần key hay sidecar: `go test ./...` giả lập ASR/TTS/LLM/thiết bị —
+gồm hợp đồng Qwen3 (chat/completions, `audio_url` vs `input_audio`, dọn
+`<asr_text>`/chữ Hán), VieNeu (xin 16k, kiểm header), nhịp gửi, barge-in.
 
 ## Điều khiển máy: gõ lệnh rồi Enter
 

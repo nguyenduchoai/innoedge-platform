@@ -37,16 +37,19 @@ kênh — không có mic vẫn build và boot được.
 ## Chạy
 
 Mặc định dùng **Qwen3-ASR** (nghe) và **VieNeu TTS** (nói) — hai provider tiếng
-Việt đang chạy thật trên sản phẩm VIMATE Edu. Claude vẫn là bộ não.
+Việt đang chạy thật trên VIMATE Edu, **cài trên server local** của bạn. Claude là
+bộ não.
 
 ```bash
-# Terminal 1 — cloud giả có AI + giọng nói
-export ANTHROPIC_API_KEY=sk-ant-...        # Claude: hiểu và trả lời
-export DASHSCOPE_API_KEY=sk-...            # Qwen3-ASR cloud (DashScope)
-export VIENEU_TTS_API_KEY=...              # key của sidecar VieNeu (nếu sidecar bật auth)
-go run ./tools/mock-cloud -ai -voice       # cần VieNeu sidecar ở localhost:8080
+# Terminal 1 — voice stack (một lần; lần đầu tải model, xem tools/voice-stack)
+cd tools/voice-stack && docker compose --profile gpu up -d      # Qwen3 cần NVIDIA
+#   không GPU:  docker compose up -d vieneu-tts   rồi dùng -asr dashscope hoặc -asr whisper
 
-# Terminal 2 — thiết bị
+# Terminal 2 — cloud giả có AI + giọng nói (mặc định đã trỏ localhost:8000/8080)
+export ANTHROPIC_API_KEY=sk-ant-...
+go run ./tools/mock-cloud -ai -voice
+
+# Terminal 3 — thiết bị
 cd examples/11-voice-assistant
 idf.py set-target esp32s3 && idf.py menuconfig   # cloud base URL → http://<IP mock>:8080
 idf.py flash monitor
@@ -54,34 +57,16 @@ idf.py flash monitor
 
 Giữ BOOT, nói *"bật đèn"*, thả ra.
 
-### VieNeu TTS sidecar — chạy ở đâu
+Voice stack chạy trên máy khác (server có GPU): `-asr-url http://<ip>:8000/v1
+-tts-url http://<ip>:8080/v1`. Chi tiết, yêu cầu phần cứng, bật auth:
+[`tools/voice-stack/README.md`](../../tools/voice-stack/README.md).
 
-VieNeu là giọng Việt self-host (CPU, ONNX INT8), không có bản cloud. Sidecar
-Docker nằm trong repo VIMATE Edu (`Go-Xiaozhi/server/services/vieneu-tts`):
+### Hợp đồng hai provider (lấy từ Edu, không đoán)
 
-```bash
-cd Go-Xiaozhi/server
-VIENEU_TTS_API_KEY=abc docker compose -f docker-compose.ai-local.yml --profile vieneu-tts up -d
-# sẵn sàng khi: curl localhost:8080/health/ready → 200 (lần đầu tải model, vài phút)
-```
-
-Sidecar chạy trên máy khác (server Edu chẳng hạn): `-tts-url http://<ip>:8080/v1`.
-
-Hợp đồng: `POST /v1/audio/speech` `{model, input, voice, style, response_format:"pcm",
-sample_rate}` → PCM16 mono kèm header `X-Audio-Sample-Rate`. mock-cloud **xin
-thẳng 16 kHz** nên không resample; header sai → từ chối rõ ràng, không ra tiếng rè.
-
-### Qwen3-ASR — cloud hay self-host
-
-| | Lệnh |
-|---|---|
-| DashScope cloud (mặc định) | `export DASHSCOPE_API_KEY=...` — model `qwen3-asr-flash` |
-| DashScope Bắc Kinh | `-asr-url https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| vLLM self-host (GPU) | `-asr-url http://<ip>:8000/v1 -asr-model Qwen/Qwen3-ASR-1.7B -asr-audio-field audio_url` — profile `qwen-asr` trong compose của Edu |
-
-Qwen3 nhận audio qua `/chat/completions` (content-part), **không** phải
-`/audio/transcriptions`. Model đôi khi bọc kết quả trong `<asr_text>` hoặc lọt
-chữ Hán — mock-cloud dọn giống VIMATE.
+| | Endpoint | Điểm dễ sai |
+|---|---|---|
+| Qwen3-ASR | `POST /v1/chat/completions`, audio là content-part `audio_url` (vLLM) / `input_audio` (DashScope) | **không** phải `/audio/transcriptions`; kết quả có thể bọc `<asr_text>` hoặc lọt chữ Hán — mock dọn như VIMATE |
+| VieNeu TTS | `POST /v1/audio/speech` `{model, input, voice, style, response_format:"pcm", sample_rate}` | nhận `sample_rate` → mock **xin thẳng 16 kHz**, không resample; kiểm header `X-Audio-Sample-Rate`, sai thì từ chối |
 
 ## Kết quả mong đợi
 
@@ -107,25 +92,15 @@ Persona mặc định là `device` (example 09) nên nếu máy cũng chạy han
 thì đèn sáng thật — ở example này chỉ có LED báo "đang nói"; ghép với 09 nếu
 muốn AI điều khiển thật qua giọng.
 
-## Dùng Whisper / OpenAI thay thế
+## Không có GPU / không muốn tự host
 
-Không có DashScope hay sidecar VieNeu? Chuyển sang API dạng OpenAI — chỉ cần
-một key:
+| Muốn | Lệnh |
+|---|---|
+| Qwen3 cloud (DashScope, Alibaba) | `export DASHSCOPE_API_KEY=...` · `-asr dashscope` |
+| Whisper (OpenAI, hoặc faster-whisper-server local CPU) | `-asr whisper -asr-key ... [-asr-url http://...]` |
+| TTS OpenAI thay VieNeu | `-tts openai -tts-key ...` (24 kHz, mock tự resample) |
 
-```bash
-export OPENAI_API_KEY=sk-...
-go run ./tools/mock-cloud -ai -voice -asr whisper -tts openai
-```
-
-Hoặc server local cùng giao diện (faster-whisper-server, openedai-speech, LocalAI):
-
-```bash
-go run ./tools/mock-cloud -ai -voice -asr whisper -asr-url http://localhost:8000/v1 -asr-key x \
-    -tts openai -tts-url http://localhost:8001/v1 -tts-key x
-```
-
-Chất lượng tiếng Việt: Qwen3 + VieNeu tốt hơn rõ rệt — đó là lý do chúng là
-mặc định và là thứ VIMATE Edu dùng cho trẻ em.
+VieNeu CPU là đủ và không có bản cloud — laptop thường vẫn chạy được TTS.
 
 ## SDK core thêm gì để có giọng nói
 
@@ -172,8 +147,8 @@ Ba tham số gần như chắc chắn phải chỉnh khi có bo:
 
 | Triệu chứng | Nguyên nhân |
 |---|---|
-| `-asr qwen3 cần ... DASHSCOPE_API_KEY` | Thiếu key DashScope; self-host thì đặt `-asr-url` |
-| `VieNeu: ... sidecar có chạy ở localhost:8080 không?` | Chưa `docker compose --profile vieneu-tts up` bên repo Edu, hoặc chưa ready |
+| `Qwen3-ASR ... connection refused :8000` | Voice stack chưa lên, hoặc chưa `--profile gpu`; xem `docker compose ps` |
+| `VieNeu: ... sidecar có chạy ở localhost:8080 không?` | `cd tools/voice-stack && docker compose up -d vieneu-tts`, chờ `health/ready` |
 | `VieNeu HTTP 401` | Sidecar bật auth: `export VIENEU_TTS_API_KEY=` đúng key |
 | `VieNeu trả 24000 Hz, đã xin 16000` | Sidecar bản cũ không tôn trọng `sample_rate` — cập nhật sidecar |
 | Giữ BOOT không thấy `listen start` | Máy chưa online, hoặc mic `-1` |
