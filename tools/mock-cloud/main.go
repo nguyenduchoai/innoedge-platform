@@ -483,8 +483,14 @@ func main() {
 	if *voiceMode && !*aiMode {
 		log.Fatal("-voice cần -ai (ai trả lời câu nói?)")
 	}
-	if *voiceMode && speechAuth() == "" {
-		log.Fatal("-voice cần API key giọng nói: -speech-key hoặc $OPENAI_API_KEY")
+	if *voiceMode {
+		if err := voiceReady(); err != nil {
+			log.Fatal(err)
+		}
+		ab, _, am := asrConfig()
+		tb, _, tm, tv := ttsConfig()
+		fmt.Printf("  giọng nói: ASR %s (%s @ %s) · TTS %s (%s, giọng %q @ %s)\n",
+			*asrKind, am, ab, *ttsKind, tm, tv, tb)
 	}
 	if *aiMode {
 		go aiLoop(anthropic.NewClient())

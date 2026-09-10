@@ -65,6 +65,17 @@ func TestResample24to16(t *testing.T) {
 	}
 }
 
+// useFakeSpeech bật -voice với provider dạng OpenAI (whisper + openai) và key giả;
+// trả về hàm khôi phục mọi cờ. Test cho qwen3/vieneu tự đặt cờ riêng.
+func useFakeSpeech(t *testing.T) func() {
+	t.Helper()
+	oV, oAK, oTK, oAU, oTU, oAKey, oTKey := *voiceMode, *asrKind, *ttsKind, *asrURL, *ttsURL, *asrKey, *ttsKey
+	*voiceMode, *asrKind, *ttsKind, *asrKey, *ttsKey = true, "whisper", "openai", "test", "test"
+	return func() {
+		*voiceMode, *asrKind, *ttsKind, *asrURL, *ttsURL, *asrKey, *ttsKey = oV, oAK, oTK, oAU, oTU, oAKey, oTKey
+	}
+}
+
 // Server giả cho cả ASR lẫn TTS, ghi lại nó nhận được gì.
 func fakeSpeech(t *testing.T) (*httptest.Server, *string) {
 	t.Helper()
@@ -113,15 +124,17 @@ func fakeSpeech(t *testing.T) (*httptest.Server, *string) {
 }
 
 func TestVoiceVongTronDayDu(t *testing.T) {
-	oldV, oldA, oldURL, oldKey := *voiceMode, *aiMode, *speechURL, *speechKey
-	*voiceMode, *aiMode, *speechKey = true, true, "test"
-	defer func() { *voiceMode, *aiMode, *speechURL, *speechKey = oldV, oldA, oldURL, oldKey }()
+	restore := useFakeSpeech(t)
+	defer restore()
+	oldA := *aiMode
+	*aiMode = true
+	defer func() { *aiMode = oldA }()
 	for len(eventCh) > 0 {
 		<-eventCh
 	}
 
 	speech, gotTTS := fakeSpeech(t)
-	*speechURL = speech.URL
+	*asrURL, *ttsURL = speech.URL, speech.URL
 
 	cloud := httptest.NewServer(newMux())
 	defer cloud.Close()
@@ -198,13 +211,10 @@ func TestVoiceVongTronDayDu(t *testing.T) {
 }
 
 func TestVoiceClipQuaNganBiBo(t *testing.T) {
-	oldV := *voiceMode
-	*voiceMode = true
-	defer func() { *voiceMode = oldV }()
+	restore := useFakeSpeech(t)
+	defer restore()
 	speech, gotTTS := fakeSpeech(t)
-	old := *speechURL
-	*speechURL = speech.URL
-	defer func() { *speechURL = old }()
+	*asrURL, *ttsURL = speech.URL, speech.URL
 
 	processClip(&device{id: "X"}, make([]byte, pcmFrameB*3)) // 60ms — bấm nhầm
 	time.Sleep(100 * time.Millisecond)
@@ -235,16 +245,15 @@ func TestVoiceTranClip(t *testing.T) {
 // Lỗi review: listen start không huỷ speak() đang chạy → máy phát lại câu cũ đè
 // lên lúc thu. Sửa: speak huỷ được; listen start cancel; vẫn gửi tts stop.
 func TestBargeInHuySpeakDangChay(t *testing.T) {
-	oldV, oldURL, oldKey := *voiceMode, *speechURL, *speechKey
-	*voiceMode, *speechKey = true, "test"
-	defer func() { *voiceMode, *speechURL, *speechKey = oldV, oldURL, oldKey }()
+	restore := useFakeSpeech(t)
+	defer restore()
 
 	// TTS giả trả 2 giây audio @24k → speak() sẽ bơm ~100 khung trong 2s
 	long := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(make([]byte, 24000*2*2))
 	}))
 	defer long.Close()
-	*speechURL = long.URL
+	*ttsURL = long.URL
 
 	cloud := httptest.NewServer(newMux())
 	defer cloud.Close()

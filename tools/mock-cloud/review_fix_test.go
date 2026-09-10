@@ -162,9 +162,11 @@ func TestSuKienDayThiKhongAck(t *testing.T) {
 // Lỗi review: -persona edu -voice phát cả lời dành cho phụ huynh ra loa.
 // Sửa: persona edu chỉ nói qua tool say — TextBlock không speak.
 func TestEduVoiceKhongDocTextChoPhuHuynh(t *testing.T) {
-	oldP, oldV, oldURL, oldKey := *persona, *voiceMode, *speechURL, *speechKey
-	*persona, *voiceMode, *speechKey = "edu", true, "test"
-	defer func() { *persona, *voiceMode, *speechURL, *speechKey = oldP, oldV, oldURL, oldKey }()
+	restore := useFakeSpeech(t)
+	defer restore()
+	oldP := *persona
+	*persona = "edu"
+	defer func() { *persona = oldP }()
 
 	var ttsCalls int32
 	speech := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +174,7 @@ func TestEduVoiceKhongDocTextChoPhuHuynh(t *testing.T) {
 		_, _ = w.Write(make([]byte, 480))
 	}))
 	defer speech.Close()
-	*speechURL = speech.URL
+	*ttsURL = speech.URL
 
 	llm := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.ReadAll(r.Body)

@@ -36,11 +36,15 @@ kênh — không có mic vẫn build và boot được.
 
 ## Chạy
 
+Mặc định dùng **Qwen3-ASR** (nghe) và **VieNeu TTS** (nói) — hai provider tiếng
+Việt đang chạy thật trên sản phẩm VIMATE Edu. Claude vẫn là bộ não.
+
 ```bash
 # Terminal 1 — cloud giả có AI + giọng nói
 export ANTHROPIC_API_KEY=sk-ant-...        # Claude: hiểu và trả lời
-export OPENAI_API_KEY=sk-...               # Whisper (ASR) + TTS
-go run ./tools/mock-cloud -ai -voice
+export DASHSCOPE_API_KEY=sk-...            # Qwen3-ASR cloud (DashScope)
+export VIENEU_TTS_API_KEY=...              # key của sidecar VieNeu (nếu sidecar bật auth)
+go run ./tools/mock-cloud -ai -voice       # cần VieNeu sidecar ở localhost:8080
 
 # Terminal 2 — thiết bị
 cd examples/11-voice-assistant
@@ -49,6 +53,35 @@ idf.py flash monitor
 ```
 
 Giữ BOOT, nói *"bật đèn"*, thả ra.
+
+### VieNeu TTS sidecar — chạy ở đâu
+
+VieNeu là giọng Việt self-host (CPU, ONNX INT8), không có bản cloud. Sidecar
+Docker nằm trong repo VIMATE Edu (`Go-Xiaozhi/server/services/vieneu-tts`):
+
+```bash
+cd Go-Xiaozhi/server
+VIENEU_TTS_API_KEY=abc docker compose -f docker-compose.ai-local.yml --profile vieneu-tts up -d
+# sẵn sàng khi: curl localhost:8080/health/ready → 200 (lần đầu tải model, vài phút)
+```
+
+Sidecar chạy trên máy khác (server Edu chẳng hạn): `-tts-url http://<ip>:8080/v1`.
+
+Hợp đồng: `POST /v1/audio/speech` `{model, input, voice, style, response_format:"pcm",
+sample_rate}` → PCM16 mono kèm header `X-Audio-Sample-Rate`. mock-cloud **xin
+thẳng 16 kHz** nên không resample; header sai → từ chối rõ ràng, không ra tiếng rè.
+
+### Qwen3-ASR — cloud hay self-host
+
+| | Lệnh |
+|---|---|
+| DashScope cloud (mặc định) | `export DASHSCOPE_API_KEY=...` — model `qwen3-asr-flash` |
+| DashScope Bắc Kinh | `-asr-url https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| vLLM self-host (GPU) | `-asr-url http://<ip>:8000/v1 -asr-model Qwen/Qwen3-ASR-1.7B -asr-audio-field audio_url` — profile `qwen-asr` trong compose của Edu |
+
+Qwen3 nhận audio qua `/chat/completions` (content-part), **không** phải
+`/audio/transcriptions`. Model đôi khi bọc kết quả trong `<asr_text>` hoặc lọt
+chữ Hán — mock-cloud dọn giống VIMATE.
 
 ## Kết quả mong đợi
 
@@ -74,20 +107,25 @@ Persona mặc định là `device` (example 09) nên nếu máy cũng chạy han
 thì đèn sáng thật — ở example này chỉ có LED báo "đang nói"; ghép với 09 nếu
 muốn AI điều khiển thật qua giọng.
 
-## Không cần OpenAI — chạy local
+## Dùng Whisper / OpenAI thay thế
 
-Provider giọng nói là API **dạng OpenAI**, không phải OpenAI. Bất kỳ server nào
-nói cùng giao diện đều dùng được:
+Không có DashScope hay sidecar VieNeu? Chuyển sang API dạng OpenAI — chỉ cần
+một key:
 
 ```bash
-go run ./tools/mock-cloud -ai -voice \
-    -speech-url http://localhost:8000/v1 -speech-key x \
-    -asr-model Systran/faster-whisper-small -tts-model tts-1
+export OPENAI_API_KEY=sk-...
+go run ./tools/mock-cloud -ai -voice -asr whisper -tts openai
 ```
 
-Thử với [faster-whisper-server](https://github.com/fedirz/faster-whisper-server)
-(ASR) + [openedai-speech](https://github.com/matatonic/openedai-speech) (TTS),
-hoặc LocalAI có cả hai. Không có gì trong repo này phụ thuộc vào OpenAI.
+Hoặc server local cùng giao diện (faster-whisper-server, openedai-speech, LocalAI):
+
+```bash
+go run ./tools/mock-cloud -ai -voice -asr whisper -asr-url http://localhost:8000/v1 -asr-key x \
+    -tts openai -tts-url http://localhost:8001/v1 -tts-key x
+```
+
+Chất lượng tiếng Việt: Qwen3 + VieNeu tốt hơn rõ rệt — đó là lý do chúng là
+mặc định và là thứ VIMATE Edu dùng cho trẻ em.
 
 ## SDK core thêm gì để có giọng nói
 
@@ -134,7 +172,10 @@ Ba tham số gần như chắc chắn phải chỉnh khi có bo:
 
 | Triệu chứng | Nguyên nhân |
 |---|---|
-| `-voice cần API key` | Thiếu `OPENAI_API_KEY` (hoặc `-speech-key`) |
+| `-asr qwen3 cần ... DASHSCOPE_API_KEY` | Thiếu key DashScope; self-host thì đặt `-asr-url` |
+| `VieNeu: ... sidecar có chạy ở localhost:8080 không?` | Chưa `docker compose --profile vieneu-tts up` bên repo Edu, hoặc chưa ready |
+| `VieNeu HTTP 401` | Sidecar bật auth: `export VIENEU_TTS_API_KEY=` đúng key |
+| `VieNeu trả 24000 Hz, đã xin 16000` | Sidecar bản cũ không tôn trọng `sample_rate` — cập nhật sidecar |
 | Giữ BOOT không thấy `listen start` | Máy chưa online, hoặc mic `-1` |
 | `clip quá ngắn, bỏ` | Bấm dưới 200 ms |
 | ASR trả chữ vô nghĩa | Gain sai, hoặc L/R sai kênh → mic thu toàn 0 |

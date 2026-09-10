@@ -18,6 +18,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"flag"
@@ -34,13 +35,22 @@ import (
 
 var (
 	voiceMode = flag.Bool("voice", false, "bật giọng nói: nhận PCM từ máy → ASR → AI → TTS → PCM về máy (cần -ai)")
-	speechURL = flag.String("speech-url", "https://api.openai.com/v1",
-		"base URL API giọng nói dạng OpenAI (/audio/transcriptions + /audio/speech)")
-	speechKey = flag.String("speech-key", "", "API key giọng nói (mặc định: $OPENAI_API_KEY)")
-	asrModel  = flag.String("asr-model", "whisper-1", "model ASR")
-	ttsModel  = flag.String("tts-model", "tts-1", "model TTS")
-	ttsVoice  = flag.String("tts-voice", "nova", "giọng TTS")
-	asrLang   = flag.String("asr-lang", "vi", "ngôn ngữ ASR (ISO-639-1)")
+
+	// ASR — mặc định Qwen3-ASR (tiếng Việt tốt, cùng provider với VIMATE Edu).
+	asrKind  = flag.String("asr", "qwen3", "ASR: qwen3 (DashScope hoặc vLLM self-host) | whisper (API dạng OpenAI)")
+	asrURL   = flag.String("asr-url", "", "base URL ASR (rỗng = mặc định theo -asr)")
+	asrKey   = flag.String("asr-key", "", "API key ASR (rỗng = $DASHSCOPE_API_KEY cho qwen3, $OPENAI_API_KEY cho whisper)")
+	asrModel = flag.String("asr-model", "", "model ASR (rỗng = qwen3-asr-flash | whisper-1)")
+	asrLang  = flag.String("asr-lang", "vi", "ngôn ngữ ASR (ISO-639-1)")
+	asrAudio = flag.String("asr-audio-field", "input_audio", "qwen3: input_audio (DashScope) | audio_url (vLLM self-host)")
+
+	// TTS — mặc định VieNeu (giọng Việt tự nhiên, sidecar self-host của VIMATE Edu).
+	ttsKind  = flag.String("tts", "vieneu", "TTS: vieneu (sidecar self-host) | openai (API dạng OpenAI)")
+	ttsURL   = flag.String("tts-url", "", "base URL TTS (rỗng = http://localhost:8080/v1 cho vieneu, api.openai.com cho openai)")
+	ttsKey   = flag.String("tts-key", "", "API key TTS (rỗng = $VIENEU_TTS_API_KEY | $OPENAI_API_KEY)")
+	ttsModel = flag.String("tts-model", "", "model TTS (rỗng = vieneu-v3-turbo | tts-1)")
+	ttsVoice = flag.String("tts-voice", "", "giọng TTS (rỗng = \"Phạm Tuyên\" | nova)")
+	ttsStyle = flag.String("tts-style", "tu_nhien", "vieneu: phong cách giọng")
 )
 
 const (
@@ -152,12 +162,11 @@ func speak(d *device, text string) {
 	if !*voiceMode || d == nil || strings.TrimSpace(text) == "" {
 		return
 	}
-	pcm24, err := synthesize(text)
+	pcm, err := synthesize(text) // đã là PCM16 mono 16 kHz
 	if err != nil {
 		log.Printf("  ✗ TTS: %v", err)
 		return
 	}
-	pcm := resample24to16(pcm24)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c := clipOf(d.id)
@@ -199,28 +208,269 @@ func speak(d *device, text string) {
 	d.send(map[string]any{"type": "tts", "state": "stop"})
 }
 
-// ── Provider dạng OpenAI ────────────────────────────────────────────────────
+// ── Provider ────────────────────────────────────────────────────────────────
+// Hợp đồng lấy từ VIMATE Edu (Go-Xiaozhi/server/internal/voice): asr_qwen3.go
+// và tts_vieneu.go — đã chạy thật với trẻ em nói tiếng Việt.
 
-func speechAuth() string {
-	if *speechKey != "" {
-		return *speechKey
+func envOr(flagVal, env string) string {
+	if flagVal != "" {
+		return flagVal
 	}
-	return os.Getenv("OPENAI_API_KEY")
+	return os.Getenv(env)
+}
+
+func asrConfig() (base, key, model string) {
+	switch *asrKind {
+	case "whisper":
+		base = strings.TrimRight(*asrURL, "/")
+		if base == "" {
+			base = "https://api.openai.com/v1"
+		}
+		model = *asrModel
+		if model == "" {
+			model = "whisper-1"
+		}
+		return base, envOr(*asrKey, "OPENAI_API_KEY"), model
+	default: // qwen3
+		base = strings.TrimRight(*asrURL, "/")
+		if base == "" {
+			base = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+		}
+		model = *asrModel
+		if model == "" {
+			model = "qwen3-asr-flash"
+		}
+		return base, envOr(*asrKey, "DASHSCOPE_API_KEY"), model
+	}
+}
+
+func ttsConfig() (base, key, model, voice string) {
+	switch *ttsKind {
+	case "openai":
+		base = strings.TrimRight(*ttsURL, "/")
+		if base == "" {
+			base = "https://api.openai.com/v1"
+		}
+		model, voice = *ttsModel, *ttsVoice
+		if model == "" {
+			model = "tts-1"
+		}
+		if voice == "" {
+			voice = "nova"
+		}
+		return base, envOr(*ttsKey, "OPENAI_API_KEY"), model, voice
+	default: // vieneu
+		base = strings.TrimRight(*ttsURL, "/")
+		if base == "" {
+			base = "http://localhost:8080/v1"
+		}
+		model, voice = *ttsModel, *ttsVoice
+		if model == "" {
+			model = "vieneu-v3-turbo"
+		}
+		if voice == "" {
+			voice = "Phạm Tuyên"
+		}
+		return base, envOr(*ttsKey, "VIENEU_TTS_API_KEY"), model, voice
+	}
+}
+
+// voiceReady kiểm cấu hình lúc khởi động — thiếu key thì fail sớm, rõ ràng.
+func voiceReady() error {
+	_, akey, _ := asrConfig()
+	if *asrKind == "whisper" && akey == "" {
+		return fmt.Errorf("-asr whisper cần -asr-key hoặc $OPENAI_API_KEY")
+	}
+	if *asrKind == "qwen3" && akey == "" && *asrURL == "" {
+		return fmt.Errorf("-asr qwen3 cần -asr-key hoặc $DASHSCOPE_API_KEY (self-host vLLM thì đặt -asr-url)")
+	}
+	_, tkey, _, _ := ttsConfig()
+	if *ttsKind == "openai" && tkey == "" {
+		return fmt.Errorf("-tts openai cần -tts-key hoặc $OPENAI_API_KEY")
+	}
+	return nil // vieneu: key tuỳ sidecar; không có thì sidecar tự báo 401
 }
 
 func transcribe(pcm []byte) (string, error) {
+	if *asrKind == "whisper" {
+		return transcribeWhisper(pcm)
+	}
+	return transcribeQwen3(pcm)
+}
+
+func synthesize(text string) ([]byte, error) {
+	if *ttsKind == "openai" {
+		pcm24, err := synthesizeOpenAI(text)
+		if err != nil {
+			return nil, err
+		}
+		return resample24to16(pcm24), nil
+	}
+	return synthesizeVieNeu(text)
+}
+
+// ── Qwen3-ASR: audio đi trong content-part của /chat/completions ────────────
+// Khác Whisper hoàn toàn. Model có thể bọc kết quả trong <asr_text>…</asr_text>
+// và đôi khi trả chữ Hán — cleanQwenText xử lý giống VIMATE.
+
+const qwen3VietnameseInstruction = "Nhận dạng âm thanh bằng tiếng Việt. Chỉ trả transcript tiếng Việt dạng chữ Latin/Quốc ngữ, không trả tiếng Trung hoặc chữ Hán."
+
+func transcribeQwen3(pcm []byte) (string, error) {
+	base, key, model := asrConfig()
+	dataURI := "data:audio/wav;base64," + base64.StdEncoding.EncodeToString(wavWrap(pcm, pcmRate))
+	var audioPart map[string]any
+	if *asrAudio == "audio_url" { // vLLM self-host
+		audioPart = map[string]any{"type": "audio_url", "audio_url": map[string]any{"url": dataURI}}
+	} else { // DashScope compatible-mode
+		audioPart = map[string]any{"type": "input_audio", "input_audio": map[string]any{"data": dataURI, "format": "wav"}}
+	}
+	body := map[string]any{
+		"model": model,
+		"messages": []map[string]any{{
+			"role":    "user",
+			"content": []map[string]any{audioPart, {"type": "text", "text": qwen3VietnameseInstruction}},
+		}},
+		"stream":      false,
+		"asr_options": map[string]any{"language": *asrLang, "enable_itn": false},
+	}
+	payload, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", base+"/chat/completions", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	if key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode/100 != 2 {
+		return "", fmt.Errorf("Qwen3-ASR HTTP %d: %.200s", resp.StatusCode, raw)
+	}
+	var out struct {
+		Choices []struct {
+			Message struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", fmt.Errorf("Qwen3-ASR trả JSON lạ: %.200s", raw)
+	}
+	if out.Error != nil {
+		return "", fmt.Errorf("Qwen3-ASR: %s", out.Error.Message)
+	}
+	if len(out.Choices) == 0 {
+		return "", fmt.Errorf("Qwen3-ASR không có choices")
+	}
+	return cleanQwenText(qwenContentText(out.Choices[0].Message.Content)), nil
+}
+
+// content là string hoặc mảng content-part [{type,text}].
+func qwenContentText(raw json.RawMessage) string {
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	var parts []struct {
+		Text string `json:"text"`
+	}
+	if json.Unmarshal(raw, &parts) == nil {
+		var b strings.Builder
+		for _, p := range parts {
+			b.WriteString(p.Text)
+		}
+		return b.String()
+	}
+	return ""
+}
+
+func cleanQwenText(s string) string {
+	s = strings.TrimSpace(s)
+	if i := strings.Index(s, "<asr_text>"); i >= 0 {
+		s = s[i+len("<asr_text>"):]
+		if j := strings.LastIndex(s, "</asr_text>"); j >= 0 {
+			s = s[:j]
+		}
+	}
+	s = strings.ReplaceAll(s, "<asr_text>", "")
+	s = strings.ReplaceAll(s, "</asr_text>", "")
+	s = strings.Trim(strings.TrimSpace(s), " \t\r\n。！？!?.,，、;；:\"“”'‘’")
+	// Chữ Hán lọt vào (model song ngữ) → bỏ, giữ phần Quốc ngữ.
+	var b strings.Builder
+	for _, r := range s {
+		if r >= 0x4E00 && r <= 0x9FFF {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
+// ── VieNeu TTS: sidecar self-host, trả PCM16 mono ở sample_rate ta xin ───────
+// Xin thẳng 16 kHz → không resample. Kiểm header như VIMATE để một sidecar sai
+// cấu hình không thành tiếng rè khó hiểu.
+
+func synthesizeVieNeu(text string) ([]byte, error) {
+	base, key, model, voice := ttsConfig()
+	payload, _ := json.Marshal(map[string]any{
+		"model": model, "input": text, "voice": voice, "style": *ttsStyle,
+		"response_format": "pcm", "sample_rate": pcmRate,
+	})
+	req, _ := http.NewRequest("POST", base+"/audio/speech", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/octet-stream")
+	if key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := (&http.Client{Timeout: 75 * time.Second}).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("VieNeu: %w (sidecar có chạy ở %s không?)", err, base)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		return nil, fmt.Errorf("VieNeu HTTP %d: %.200s", resp.StatusCode, raw)
+	}
+	if f := resp.Header.Get("X-Audio-Format"); f != "" && f != "pcm_s16le" {
+		return nil, fmt.Errorf("VieNeu trả format %q, cần pcm_s16le", f)
+	}
+	if r := resp.Header.Get("X-Audio-Sample-Rate"); r != "" && r != fmt.Sprint(pcmRate) {
+		return nil, fmt.Errorf("VieNeu trả %s Hz, đã xin %d", r, pcmRate)
+	}
+	if c := resp.Header.Get("X-Audio-Channels"); c != "" && c != "1" {
+		return nil, fmt.Errorf("VieNeu trả %s kênh, cần mono", c)
+	}
+	pcm, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxClipByte)*3))
+	if err != nil {
+		return nil, err
+	}
+	if len(pcm) == 0 || len(pcm)%2 != 0 {
+		return nil, fmt.Errorf("VieNeu trả PCM %d byte (rỗng hoặc lẻ)", len(pcm))
+	}
+	return pcm, nil
+}
+
+// ── Whisper / OpenAI TTS: API dạng OpenAI, chạy được cả server local ────────
+
+func transcribeWhisper(pcm []byte) (string, error) {
+	base, key, model := asrConfig()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", "clip.wav")
 	_, _ = fw.Write(wavWrap(pcm, pcmRate))
-	_ = mw.WriteField("model", *asrModel)
+	_ = mw.WriteField("model", model)
 	_ = mw.WriteField("language", *asrLang)
 	_ = mw.WriteField("response_format", "json")
 	_ = mw.Close()
 
-	req, _ := http.NewRequest("POST", strings.TrimRight(*speechURL, "/")+"/audio/transcriptions", &body)
+	req, _ := http.NewRequest("POST", base+"/audio/transcriptions", &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
-	req.Header.Set("Authorization", "Bearer "+speechAuth())
+	req.Header.Set("Authorization", "Bearer "+key)
 	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
 	if err != nil {
 		return "", err
@@ -239,13 +489,14 @@ func transcribe(pcm []byte) (string, error) {
 	return out.Text, nil
 }
 
-func synthesize(text string) ([]byte, error) {
+func synthesizeOpenAI(text string) ([]byte, error) {
+	base, key, model, voice := ttsConfig()
 	payload, _ := json.Marshal(map[string]any{
-		"model": *ttsModel, "input": text, "voice": *ttsVoice, "response_format": "pcm",
+		"model": model, "input": text, "voice": voice, "response_format": "pcm",
 	})
-	req, _ := http.NewRequest("POST", strings.TrimRight(*speechURL, "/")+"/audio/speech", bytes.NewReader(payload))
+	req, _ := http.NewRequest("POST", base+"/audio/speech", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+speechAuth())
+	req.Header.Set("Authorization", "Bearer "+key)
 	resp, err := (&http.Client{Timeout: 60 * time.Second}).Do(req)
 	if err != nil {
 		return nil, err

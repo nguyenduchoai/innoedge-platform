@@ -122,7 +122,7 @@ Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nh
 | 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
 | 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
 | 10 | [edu-tutor](examples/10-edu-tutor) | **Hai chiều**: AI gia sư ↔ bé trả lời bằng nút — lấy từ sản phẩm VIMATE Edu | devkit + API key |
-| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → ASR → Claude → TTS → loa | mic + amp I2S (~120k), 2 API key |
+| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → Qwen3-ASR → Claude → VieNeu TTS → loa | mic + amp I2S (~120k), key DashScope + sidecar VieNeu |
 
 Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
 

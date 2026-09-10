@@ -65,24 +65,33 @@ Test chế độ AI không cần API key: `go test ./...` giả lập cả LLM l
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...   # Claude
-export OPENAI_API_KEY=sk-...          # Whisper + TTS (hoặc server local dạng OpenAI)
+export DASHSCOPE_API_KEY=sk-...       # Qwen3-ASR (mặc định)
+export VIENEU_TTS_API_KEY=...         # VieNeu TTS sidecar ở localhost:8080 (mặc định)
 go run ./tools/mock-cloud -ai -voice
 ```
 
 Máy gửi `listen start` + PCM 16 kHz + `listen stop` → mock gom clip → ASR →
 câu nói thành lượt user của Claude → câu trả lời (và tool `say` của persona edu)
-→ TTS → PCM về máy **đúng nhịp 20 ms** kèm `tts start/stop`. Firmware mẫu:
+→ TTS → PCM về máy **đúng nhịp 20 ms** kèm `tts start/stop`. Bấm nói khi đang
+phát → mock huỷ TTS đang bơm (barge-in). Firmware mẫu:
 [`examples/11-voice-assistant`](../../examples/11-voice-assistant).
+
+Provider lấy đúng hợp đồng đã chạy thật bên VIMATE Edu:
 
 | Cờ | Mặc định | |
 |---|---|---|
-| `-speech-url` | `https://api.openai.com/v1` | Bất kỳ server dạng OpenAI: faster-whisper-server, openedai-speech, LocalAI |
-| `-speech-key` | `$OPENAI_API_KEY` | |
-| `-asr-model` / `-tts-model` / `-tts-voice` | `whisper-1` / `tts-1` / `nova` | |
-| `-asr-lang` | `vi` | |
+| `-asr` | `qwen3` | `qwen3` (DashScope cloud hoặc vLLM self-host) · `whisper` (API dạng OpenAI) |
+| `-asr-url` / `-asr-key` / `-asr-model` | DashScope intl / `$DASHSCOPE_API_KEY` / `qwen3-asr-flash` | whisper: api.openai.com / `$OPENAI_API_KEY` / `whisper-1` |
+| `-asr-audio-field` | `input_audio` | vLLM self-host dùng `audio_url` |
+| `-tts` | `vieneu` | `vieneu` (sidecar self-host, PCM 16k trực tiếp) · `openai` (24k, tự resample) |
+| `-tts-url` / `-tts-key` / `-tts-model` / `-tts-voice` | `localhost:8080/v1` / `$VIENEU_TTS_API_KEY` / `vieneu-v3-turbo` / `Phạm Tuyên` | openai: api.openai.com / `$OPENAI_API_KEY` / `tts-1` / `nova` |
+| `-tts-style` | `tu_nhien` | vieneu |
 
-Test không cần key: `go test ./...` giả lập ASR/TTS/LLM/thiết bị, kiểm cả vòng
-và kiểm nhịp gửi (bắn cả clip một lúc là tràn đệm máy — test bắt).
+Sidecar VieNeu: `Go-Xiaozhi/server` → `docker compose -f docker-compose.ai-local.yml --profile vieneu-tts up`.
+
+Test không cần key: `go test ./...` giả lập ASR/TTS/LLM/thiết bị — gồm hợp đồng
+Qwen3 (chat/completions + dọn `<asr_text>`/chữ Hán), VieNeu (xin 16k, kiểm
+header), nhịp gửi, barge-in.
 
 ## Điều khiển máy: gõ lệnh rồi Enter
 
