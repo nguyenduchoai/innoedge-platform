@@ -218,11 +218,12 @@ func handleFrame(d *device, data []byte) {
 	case "event":
 		// Sự kiện tuỳ ý (v1.1): ack theo seq để gỡ khỏi hàng đợi bền của máy,
 		// rồi đưa cho AI (nếu -ai) như một tin từ thế giới thật.
-		if env.Seq != nil {
+		log.Printf("  ⚡ sự kiện %s %s", env.Name, env.Data)
+		// Vào hàng đợi AI TRƯỚC, ack SAU. Ack rồi mới drop = máy đã xoá khỏi
+		// hàng đợi bền → mất hẳn câu trả lời của bé.
+		if notifyDeviceEvent(d.id, env.Name, env.Data) && env.Seq != nil {
 			d.send(map[string]any{"type": "event_ack", "seq": *env.Seq})
 		}
-		log.Printf("  ⚡ sự kiện %s %s", env.Name, env.Data)
-		notifyDeviceEvent(d.id, env.Name, env.Data)
 
 	case "alert":
 		state := "BẬT"

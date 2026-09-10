@@ -19,12 +19,18 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type websocketConn = websocket.Conn
+
 // dial mở một phiên WebSocket giống hệt firmware: header Device-Id + Bearer.
 func dial(t *testing.T, srv *httptest.Server) *websocket.Conn {
+	return dialAs(t, srv, "AABBCCDDEEFF")
+}
+
+func dialAs(t *testing.T, srv *httptest.Server, deviceID string) *websocket.Conn {
 	t.Helper()
 	u := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/"
 	conn, resp, err := websocket.DefaultDialer.Dial(u, http.Header{
-		"Device-Id":     {"AABBCCDDEEFF"},
+		"Device-Id":     {deviceID},
 		"Authorization": {"Bearer factory-token-123456"},
 	})
 	if err != nil {
@@ -54,6 +60,22 @@ func readUntil(t *testing.T, c *websocket.Conn, typ string) map[string]any {
 	}
 	t.Fatalf("quá hạn, không thấy frame %q", typ)
 	return nil
+}
+
+// waitDevices chờ handleWS (goroutine riêng) đăng ký đủ n máy vào bảng.
+func waitDevices(t *testing.T, n int) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		devicesMu.RLock()
+		got := len(devices)
+		devicesMu.RUnlock()
+		if got >= n {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("không đủ %d máy đăng ký", n)
 }
 
 func num(t *testing.T, m map[string]any, k string) int64 {

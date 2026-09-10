@@ -426,8 +426,26 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
     if (!name || name[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
     }
+    // Khung này vào HÀNG ĐỢI BỀN (NVS, FIFO). Một khung JSON hỏng ở đầu hàng
+    // sẽ không bao giờ được cloud ack → chặn mọi giao dịch tiền phía sau, sống
+    // qua reboot. Nên kiểm nghiêm ở đây, KHÔNG tin caller.
+    for (const char *c = name; *c; c++) {
+        bool ok = (*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') ||
+                  (*c >= '0' && *c <= '9') || *c == '_' || *c == '.' || *c == '-';
+        if (!ok) {
+            ESP_LOGW(TAG, "event name '%s' có ký tự không hợp lệ — bỏ", name);
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
     if (!data_json || data_json[0] == '\0') {
         data_json = "{}";
+    }
+    cJSON *probe = cJSON_Parse(data_json);
+    bool is_object = probe && cJSON_IsObject(probe);
+    cJSON_Delete(probe);
+    if (!is_object) {
+        ESP_LOGW(TAG, "event %s: data không phải JSON object — bỏ", name);
+        return ESP_ERR_INVALID_ARG;
     }
     uint64_t seq = 0;
     esp_err_t err = gtek_config_store_next_seq(&seq);

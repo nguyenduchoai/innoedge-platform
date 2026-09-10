@@ -109,9 +109,12 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
 
 // Gửi một sự kiện tuỳ ý lên cloud (nút bấm, cảm biến, lựa chọn của người dùng…).
 //   {"type":"event","name":"<name>","seq":N,"ts":T,"data":<data_json>}
-// data_json là object JSON hợp lệ hoặc NULL (→ {}). Cùng hàng đợi bền với tiền:
-// mất mạng vẫn giữ, cloud phải trả {"type":"event_ack","seq":N}. Giới hạn cả
-// khung ~190 byte — data dài hơn ~120 byte sẽ bị từ chối (ESP_ERR_INVALID_SIZE).
+// name: chỉ [A-Za-z0-9_.-]. data_json: object JSON hợp lệ hoặc NULL (→ {}).
+// Cả hai được KIỂM trước khi vào hàng đợi — sai trả ESP_ERR_INVALID_ARG, vì một
+// khung hỏng ở đầu hàng đợi bền sẽ chặn mọi giao dịch tiền phía sau, qua reboot.
+// Cùng hàng đợi bền với tiền: mất mạng vẫn giữ, cloud phải trả
+// {"type":"event_ack","seq":N}. Giới hạn cả khung ~190 byte — data dài hơn
+// ~120 byte trả ESP_ERR_INVALID_SIZE.
 esp_err_t innoedge_publish_event(const char *name, const char *data_json);
 
 // Số giao dịch còn tồn chưa gửi được lên cloud (0 = đã đồng bộ hết).

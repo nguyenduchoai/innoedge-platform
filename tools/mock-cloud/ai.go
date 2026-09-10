@@ -52,14 +52,41 @@ type deviceEvent struct {
 
 var eventCh = make(chan deviceEvent, 16)
 
-func notifyDeviceEvent(deviceID, name string, data json.RawMessage) {
+// Máy "đang nói chuyện": máy vừa gửi sự kiện gần nhất. Lớp học có nhiều bo thì
+// Lily phải trả lời đúng bé vừa bấm, không phải bo ngẫu nhiên trong map.
+var (
+	activeMu       sync.Mutex
+	activeDeviceID string
+)
+
+func setActiveDevice(id string) {
+	activeMu.Lock()
+	activeDeviceID = id
+	activeMu.Unlock()
+}
+
+func targetDevice() *device {
+	activeMu.Lock()
+	id := activeDeviceID
+	activeMu.Unlock()
+	if d := pickDevice(id); d != nil {
+		return d
+	}
+	return pickDevice("") // chưa có sự kiện nào → máy bất kỳ (thường là duy nhất)
+}
+
+// Trả về false nếu hàng đợi AI đầy — caller KHÔNG ack, để máy giữ trong hàng
+// đợi bền và gửi lại. Không -ai thì không ai tiêu thụ → coi như đã nhận.
+func notifyDeviceEvent(deviceID, name string, data json.RawMessage) bool {
 	if !*aiMode {
-		return
+		return true
 	}
 	select {
 	case eventCh <- deviceEvent{deviceID, name, data}:
+		return true
 	default:
-		log.Printf("  ! hàng đợi sự kiện đầy, bỏ %s", name)
+		log.Printf("  ! hàng đợi sự kiện đầy — KHÔNG ack %s, máy sẽ gửi lại", name)
+		return false
 	}
 }
 
@@ -83,7 +110,12 @@ func deliverAck(id int64, r ackResult) {
 	ch, ok := ackWaiters[id]
 	ackMu.Unlock()
 	if ok {
-		ch <- r
+		// Không block: đây là goroutine đọc WS của thiết bị. Ack lặp cho cùng
+		// commandId (giao thức cho phép) mà block ở đây là treo cả kết nối.
+		select {
+		case ch <- r:
+		default:
+		}
 	}
 }
 
@@ -205,7 +237,7 @@ Yêu cầu nào không có tool thì nói thiết bị không làm được vi�
 
 // runDeviceTool: tool_use của LLM → lệnh xuống máy → ack → JSON cho tool_result.
 func runDeviceTool(name, rawInput string) (string, bool) {
-	d := pickDevice("")
+	d := targetDevice()
 	if d == nil {
 		return "chưa có thiết bị nào kết nối", true
 	}
@@ -261,11 +293,14 @@ func runTurn(ctx context.Context, client anthropic.Client, history []anthropic.M
 				results = append(results, anthropic.NewToolResultBlock(block.ID, out, isErr))
 			}
 		}
+		// Đã chạy tool nào thì tool_result PHẢI theo ngay sau tool_use, kể cả khi
+		// stop_reason là max_tokens — thiếu là API từ chối mọi lượt sau (400).
+		if len(results) > 0 {
+			history = append(history, anthropic.NewUserMessage(results...))
+		}
 		if resp.StopReason != anthropic.StopReasonToolUse {
 			return history
 		}
-		// Mọi tool_result của một lượt đi chung MỘT user message.
-		history = append(history, anthropic.NewUserMessage(results...))
 	}
 }
 
@@ -324,6 +359,7 @@ func aiLoop(client anthropic.Client) {
 			}
 			userText = line
 		case ev := <-eventCh:
+			setActiveDevice(ev.DeviceID) // tool tiếp theo đi về đúng máy này
 			// Sự kiện máy thành lượt user có đánh dấu nguồn — AI phân biệt được
 			// "bé bấm nút" với "phụ huynh gõ chữ".
 			userText = fmt.Sprintf("[sự kiện từ thiết bị %s] %s %s", ev.DeviceID, ev.Name, ev.Data)
