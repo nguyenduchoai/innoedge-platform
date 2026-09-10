@@ -14,6 +14,7 @@
 #include "freertos/stream_buffer.h"
 #include "freertos/task.h"
 #include "sdkconfig.h"
+#include <stdint.h>
 #include <string.h>
 
 static const char *TAG = "ie.audio";
@@ -29,6 +30,11 @@ static i2s_chan_handle_t s_rx, s_tx;
 static StreamBufferHandle_t s_play_buf;
 static volatile bool s_listening, s_playing;
 static TaskHandle_t s_capture_task;
+// Player task là chủ duy nhất của đệm phát: task khác chỉ đặt cờ, không reset.
+// (xStreamBufferReset() thất bại im lặng nếu có task đang chờ trên đệm.)
+static volatile bool s_flush_req;   // xả đệm rồi mới phát tiếp (barge-in / tts start)
+static volatile bool s_stop_req;    // cloud báo tts stop: hết đệm thì báo xong
+static volatile uint32_t s_listen_gen; // mỗi phiên thu một số; task cũ không gửi stop
 
 // ── I2S ─────────────────────────────────────────────────────────────────────
 
@@ -92,13 +98,13 @@ static esp_err_t init_speaker(void)
 
 static void capture_task(void *arg)
 {
-    (void)arg;
+    const uint32_t my_gen = (uint32_t)(uintptr_t)arg;
     static int32_t raw[FRAME_SAMPLES];
     static int16_t pcm[FRAME_SAMPLES];
     const int64_t deadline_us = esp_timer_get_time() +
                                 (int64_t)CONFIG_IE_AUDIO_MAX_LISTEN_SEC * 1000000;
 
-    while (s_listening) {
+    while (s_listening && s_listen_gen == my_gen) {
         if (esp_timer_get_time() > deadline_us) {
             ESP_LOGW(TAG, "thu quá %ds — tự dừng", CONFIG_IE_AUDIO_MAX_LISTEN_SEC);
             break;
@@ -109,17 +115,24 @@ static void capture_task(void *arg)
         }
         size_t n = got / sizeof(int32_t);
         for (size_t i = 0; i < n; i++) {
-            // 24-bit MSB-aligned trong 32 → lấy 16 bit cao sau khi khuếch đại.
-            int32_t v = raw[i] << CONFIG_IE_AUDIO_MIC_GAIN_SHIFT;
-            pcm[i] = (int16_t)(v >> 16);
+            // 24-bit MSB-aligned trong 32 → khuếch đại rồi lấy 16 bit cao.
+            // Tính trên 64 bit và KẸP: vỗ tay không được thành mẫu đảo dấu.
+            int64_t v = ((int64_t)raw[i] << CONFIG_IE_AUDIO_MIC_GAIN_SHIFT) >> 16;
+            if (v > INT16_MAX) v = INT16_MAX;
+            if (v < INT16_MIN) v = INT16_MIN;
+            pcm[i] = (int16_t)v;
         }
         // Mất mạng thì rơi khung — audio dòng không vào hàng đợi bền, đúng thiết kế.
         innoedge_send_binary((const uint8_t *)pcm, n * sizeof(int16_t));
     }
-    s_listening = false;
-    gtek_ws_client_send_text("{\"type\":\"listen\",\"state\":\"stop\"}");
-    ESP_LOGI(TAG, "listen stop");
-    s_capture_task = NULL;
+    // Chỉ phiên hiện hành mới được gửi stop — phiên mới đã mở thì im lặng, không
+    // thì cloud nhận start→start→stop và bỏ cả câu nói thứ hai.
+    if (s_listen_gen == my_gen) {
+        s_listening = false;
+        gtek_ws_client_send_text("{\"type\":\"listen\",\"state\":\"stop\"}");
+        ESP_LOGI(TAG, "listen stop");
+        s_capture_task = NULL;
+    }
     vTaskDelete(NULL);
 }
 
@@ -134,19 +147,22 @@ esp_err_t innoedge_audio_listen_start(void)
     if (!innoedge_is_online()) {
         return ESP_ERR_INVALID_STATE;
     }
-    // Đang phát trả lời mà người dùng bấm nói → ngắt phát (barge-in đơn giản).
+    // Đang phát trả lời mà người dùng bấm nói → barge-in: yêu cầu player xả đệm.
+    // Cloud cũng nhận listen start và tự dừng TTS phía nó.
     if (s_playing) {
-        xStreamBufferReset(s_play_buf);
-        s_playing = false;
-        if (s_ev.on_tts) s_ev.on_tts(false);
+        s_flush_req = true;
     }
+    // Phiên thu mới. Task của phiên trước (nếu còn đang thoát) sẽ thấy gen đổi
+    // và KHÔNG gửi stop nữa — cloud chỉ thấy đúng một start cho phiên này.
+    s_listen_gen++;
     esp_err_t err = gtek_ws_client_send_text(
         "{\"type\":\"listen\",\"state\":\"start\",\"format\":\"pcm16\",\"rate\":16000}");
     if (err != ESP_OK) {
         return err;
     }
     s_listening = true;
-    if (xTaskCreate(capture_task, "ie_capture", 4096, NULL, 6, &s_capture_task) != pdPASS) {
+    if (xTaskCreate(capture_task, "ie_capture", 4096, (void *)(uintptr_t)s_listen_gen, 6,
+                    &s_capture_task) != pdPASS) {
         s_listening = false;
         return ESP_ERR_NO_MEM;
     }
@@ -167,15 +183,33 @@ bool innoedge_audio_is_playing(void) { return s_playing; }
 // Task WS chỉ đẩy vào buffer (không block quá 50ms). Task phát kéo ra và ghi
 // I2S; I2S write block theo nhịp thật nên buffer là bộ hấp thụ jitter mạng.
 
+static void finish_playing(void)
+{
+    if (s_playing) {
+        s_playing = false;
+        if (s_ev.on_tts) s_ev.on_tts(false);
+    }
+}
+
 static void player_task(void *arg)
 {
     (void)arg;
     static int16_t chunk[FRAME_SAMPLES];
     while (true) {
-        size_t n = xStreamBufferReceive(s_play_buf, chunk, sizeof(chunk), pdMS_TO_TICKS(200));
+        // Yêu cầu xả: đọc-và-bỏ tới rỗng. Chỉ task này đụng vào đệm.
+        if (s_flush_req) {
+            s_flush_req = false;
+            while (xStreamBufferReceive(s_play_buf, chunk, sizeof(chunk), 0) > 0) {
+            }
+            finish_playing();
+            continue;
+        }
+        size_t n = xStreamBufferReceive(s_play_buf, chunk, sizeof(chunk), pdMS_TO_TICKS(FRAME_MS * 2));
         if (n == 0) {
-            if (s_playing && xStreamBufferIsEmpty(s_play_buf)) {
-                // Hết dữ liệu sau khi cloud báo stop → kết thúc phát.
+            // Cloud đã báo stop và đệm đã cạn → phát xong. Task WS không phải chờ.
+            if (s_stop_req && xStreamBufferIsEmpty(s_play_buf)) {
+                s_stop_req = false;
+                finish_playing();
             }
             continue;
         }
@@ -191,8 +225,12 @@ void innoedge_audio_on_binary(const uint8_t *data, size_t len)
     if (!s_play_buf || !s_tx) {
         return;
     }
+    if (s_flush_req) {
+        return; // đang xả vì barge-in: khung cũ còn trôi tới thì bỏ, không nạp lại
+    }
     if (!s_playing) {
         s_playing = true; // cloud có thể gửi binary trước khung tts start
+        s_stop_req = false;
         if (s_ev.on_tts) s_ev.on_tts(true);
     }
     size_t put = xStreamBufferSend(s_play_buf, data, len, pdMS_TO_TICKS(50));
@@ -211,16 +249,18 @@ void innoedge_audio_on_frame(const char *type, const char *raw_json)
         cJSON *state = cJSON_GetObjectItem(root, "state");
         const char *st = cJSON_IsString(state) ? state->valuestring : "";
         if (strcmp(st, "start") == 0) {
-            xStreamBufferReset(s_play_buf);
-            s_playing = true;
-            if (s_ev.on_tts) s_ev.on_tts(true);
-        } else if (strcmp(st, "stop") == 0) {
-            // Để phần còn lại trong buffer phát hết rồi mới báo xong.
-            while (s_tx && !xStreamBufferIsEmpty(s_play_buf)) {
-                vTaskDelay(pdMS_TO_TICKS(FRAME_MS));
+            // Câu mới thay câu cũ (nếu còn) — player xả, không reset từ đây.
+            if (s_playing && !xStreamBufferIsEmpty(s_play_buf)) {
+                s_flush_req = true;
             }
-            s_playing = false;
-            if (s_ev.on_tts) s_ev.on_tts(false);
+            s_stop_req = false;
+            if (!s_playing) {
+                s_playing = true;
+                if (s_ev.on_tts) s_ev.on_tts(true);
+            }
+        } else if (strcmp(st, "stop") == 0) {
+            // KHÔNG chờ ở đây (task WS). Player báo xong khi đệm cạn.
+            s_stop_req = true;
         }
     } else if (strcmp(type, "stt") == 0) {
         cJSON *text = cJSON_GetObjectItem(root, "text");

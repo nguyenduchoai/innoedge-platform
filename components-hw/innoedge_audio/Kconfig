@@ -25,6 +25,7 @@ config IE_AUDIO_SPK_DOUT_GPIO
 
 config IE_AUDIO_MIC_GAIN_SHIFT
     int "Khuếch đại mic (dịch bit, 0-8)"
+    range 0 8
     default 4
     help
       INMP441 xuất 24-bit trong khung 32-bit, biên độ nhỏ. Dịch trái N bit

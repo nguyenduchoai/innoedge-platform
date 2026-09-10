@@ -231,3 +231,59 @@ func TestVoiceTranClip(t *testing.T) {
 		t.Errorf("clip %d byte, trần phải là %d", n, maxClipByte)
 	}
 }
+
+// Lỗi review: listen start không huỷ speak() đang chạy → máy phát lại câu cũ đè
+// lên lúc thu. Sửa: speak huỷ được; listen start cancel; vẫn gửi tts stop.
+func TestBargeInHuySpeakDangChay(t *testing.T) {
+	oldV, oldURL, oldKey := *voiceMode, *speechURL, *speechKey
+	*voiceMode, *speechKey = true, "test"
+	defer func() { *voiceMode, *speechURL, *speechKey = oldV, oldURL, oldKey }()
+
+	// TTS giả trả 2 giây audio @24k → speak() sẽ bơm ~100 khung trong 2s
+	long := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(make([]byte, 24000*2*2))
+	}))
+	defer long.Close()
+	*speechURL = long.URL
+
+	cloud := httptest.NewServer(newMux())
+	defer cloud.Close()
+	dev := dial(t, cloud)
+	_ = dev.WriteJSON(map[string]any{"type": "hello"})
+	readUntil(t, dev, "hello")
+	waitDevices(t, 1)
+	d := pickDevice("")
+
+	done := make(chan struct{})
+	go func() { speak(d, "câu rất dài"); close(done) }()
+	readUntil(t, dev, "tts") // start
+
+	// Sau 200ms người dùng bấm nói → listen start
+	time.Sleep(200 * time.Millisecond)
+	_ = dev.WriteJSON(map[string]any{"type": "listen", "state": "start", "format": "pcm16", "rate": 16000})
+
+	// speak phải kết thúc NGAY (không đợi hết 2s) và gửi tts stop
+	select {
+	case <-done:
+	case <-time.After(700 * time.Millisecond):
+		t.Fatal("speak() không bị huỷ sau listen start — cloud vẫn bơm PCM đè lên lúc thu")
+	}
+	sawStop := false
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) && !sawStop {
+		_ = dev.SetReadDeadline(deadline)
+		mt, data, err := dev.ReadMessage()
+		if err != nil {
+			break
+		}
+		if mt == websocket.BinaryMessage {
+			continue
+		}
+		var m map[string]any
+		_ = json.Unmarshal(data, &m)
+		sawStop = m["type"] == "tts" && m["state"] == "stop"
+	}
+	if !sawStop {
+		t.Error("bị huỷ nhưng không gửi tts stop — máy không khép được trạng thái phát")
+	}
+}

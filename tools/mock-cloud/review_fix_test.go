@@ -158,3 +158,44 @@ func TestSuKienDayThiKhongAck(t *testing.T) {
 		}
 	}
 }
+
+// Lỗi review: -persona edu -voice phát cả lời dành cho phụ huynh ra loa.
+// Sửa: persona edu chỉ nói qua tool say — TextBlock không speak.
+func TestEduVoiceKhongDocTextChoPhuHuynh(t *testing.T) {
+	oldP, oldV, oldURL, oldKey := *persona, *voiceMode, *speechURL, *speechKey
+	*persona, *voiceMode, *speechKey = "edu", true, "test"
+	defer func() { *persona, *voiceMode, *speechURL, *speechKey = oldP, oldV, oldURL, oldKey }()
+
+	var ttsCalls int32
+	speech := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&ttsCalls, 1)
+		_, _ = w.Write(make([]byte, 480))
+	}))
+	defer speech.Close()
+	*speechURL = speech.URL
+
+	llm := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"m","type":"message","role":"assistant","model":"claude-opus-5",
+		  "content":[{"type":"text","text":"Bé đang ở từ thứ 2, sai 1 lần."}],
+		  "stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}`))
+	}))
+	defer llm.Close()
+
+	cloud := httptest.NewServer(newMux())
+	defer cloud.Close()
+	dev := dial(t, cloud)
+	_ = dev.WriteJSON(map[string]any{"type": "hello"})
+	readUntil(t, dev, "hello")
+	waitDevices(t, 1)
+	setActiveDevice("AABBCCDDEEFF")
+
+	client := anthropic.NewClient(option.WithBaseURL(llm.URL), option.WithAPIKey("x"))
+	runTurn(context.Background(), client,
+		[]anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock("bé học đến đâu"))})
+	time.Sleep(100 * time.Millisecond)
+	if n := atomic.LoadInt32(&ttsCalls); n != 0 {
+		t.Errorf("persona edu đã gọi TTS %d lần cho text dành cho phụ huynh", n)
+	}
+}

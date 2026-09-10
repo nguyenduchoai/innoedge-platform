@@ -17,6 +17,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"flag"
@@ -57,6 +58,7 @@ type clip struct {
 	buf       bytes.Buffer
 	listening bool
 	started   time.Time
+	cancelTTS context.CancelFunc // speak() đang chạy cho máy này, nếu có
 }
 
 var (
@@ -82,6 +84,12 @@ func handleListen(d *device, state string) {
 	defer clipsMu.Unlock()
 	switch state {
 	case "start":
+		// Barge-in: người dùng nói khi máy đang phát → dừng bơm PCM ngay. Máy đã
+		// tự xả đệm; nếu cloud cứ gửi tiếp thì máy lại phát câu cũ đè lên lúc thu.
+		if c.cancelTTS != nil {
+			c.cancelTTS()
+			c.cancelTTS = nil
+		}
 		c.buf.Reset()
 		c.listening = true
 		c.started = time.Now()
@@ -138,7 +146,8 @@ func processClip(d *device, pcm []byte) {
 	notifyDeviceEvent(d.id, "speech", json.RawMessage(fmt.Sprintf("%q", text)))
 }
 
-// speak: text → TTS → PCM 16k → máy, đúng nhịp thật.
+// speak: text → TTS → PCM 16k → máy, đúng nhịp thật. Huỷ được (barge-in):
+// listen start của cùng máy sẽ cancel; tts stop vẫn được gửi để máy khép trạng thái.
 func speak(d *device, text string) {
 	if !*voiceMode || d == nil || strings.TrimSpace(text) == "" {
 		return
@@ -149,6 +158,24 @@ func speak(d *device, text string) {
 		return
 	}
 	pcm := resample24to16(pcm24)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c := clipOf(d.id)
+	clipsMu.Lock()
+	if c.cancelTTS != nil {
+		c.cancelTTS() // câu mới thay câu cũ đang phát
+	}
+	c.cancelTTS = cancel
+	clipsMu.Unlock()
+	defer func() {
+		clipsMu.Lock()
+		if c.cancelTTS != nil {
+			c.cancelTTS = nil
+		}
+		clipsMu.Unlock()
+		cancel()
+	}()
+
 	log.Printf("  🔊 → %s: %.1fs \"%s\"", d.id, float64(len(pcm))/float64(pcmRate*2), text)
 	d.send(map[string]any{"type": "tts", "state": "start"})
 	// Gửi đúng 20ms mỗi 20ms: đệm phát của máy chỉ 1,5s — bắn cả clip một lúc
@@ -161,7 +188,13 @@ func speak(d *device, text string) {
 			end = len(pcm)
 		}
 		d.sendBinary(pcm[off:end])
-		<-tick.C
+		select {
+		case <-tick.C:
+		case <-ctx.Done():
+			log.Printf("  🔇 %s: bị ngắt (barge-in)", d.id)
+			d.send(map[string]any{"type": "tts", "state": "stop"})
+			return
+		}
 	}
 	d.send(map[string]any{"type": "tts", "state": "stop"})
 }

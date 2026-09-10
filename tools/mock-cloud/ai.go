@@ -294,7 +294,11 @@ func runTurn(ctx context.Context, client anthropic.Client, history []anthropic.M
 			switch v := block.AsAny().(type) {
 			case anthropic.TextBlock:
 				fmt.Printf("🤖 %s\n", strings.TrimSpace(v.Text))
-				speak(targetDevice(), v.Text) // -voice: câu trả lời thành tiếng
+				// -voice: câu trả lời thành tiếng. Persona edu thì KHÔNG — Lily
+				// chỉ nói với bé qua tool say; text là lời cho phụ huynh.
+				if *persona != "edu" {
+					speak(targetDevice(), v.Text)
+				}
 			case anthropic.ToolUseBlock:
 				out, isErr := runDeviceTool(v.Name, v.JSON.Input.Raw())
 				results = append(results, anthropic.NewToolResultBlock(block.ID, out, isErr))
