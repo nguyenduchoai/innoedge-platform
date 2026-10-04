@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
 
-// mock-cloud — InnoEdge Cloud giả, đủ để chạy hết 8 example mà KHÔNG cần tài
+// mock-cloud — InnoEdge Cloud giả, đủ để chạy hết 11 example mà KHÔNG cần tài
 // khoản, không cần internet, không cần database.
 //
 //	go run ./tools/mock-cloud

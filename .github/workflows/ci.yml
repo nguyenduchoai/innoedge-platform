@@ -16,7 +16,7 @@ jobs:
           go-version: "1.24"
       - run: ./tests/run.sh
 
-  # Build THẬT bằng ESP-IDF. Đây là thứ chứng minh 8 example còn chạy được —
+  # Build THẬT bằng ESP-IDF. Đây là thứ chứng minh 11 example còn chạy được —
   # đừng bỏ job này để CI nhanh hơn.
   build-examples:
     runs-on: ubuntu-latest

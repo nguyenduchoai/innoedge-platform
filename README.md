@@ -257,7 +257,7 @@ từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
 │   │   └── voice.go         #   -voice: PCM → ASR → Claude → TTS → PCM
 │   └── voice-stack/         # docker compose: Qwen3-ASR + VieNeu TTS trên server local
 │   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
-├── .github/workflows/ci.yml # CI: test host + build 8 example bằng ESP-IDF thật
+├── .github/workflows/ci.yml # CI: test host + build 11 example bằng ESP-IDF thật
 ├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo
 └── docs/PROTOCOL-v1.md      # đặc tả giao thức thiết bị ↔ cloud
 ```
@@ -334,7 +334,7 @@ cloud: handshake, heartbeat, khung tiền, cảnh báo, lệnh động, QR, cấ
 
 **Mở công khai có chủ đích.** Bạn không bị khoá vào một nhà cung cấp — có spec
 là tự viết được server thay thế. [`tools/mock-cloud`](tools/mock-cloud) là bằng
-chứng: ~450 dòng Go cài đặt lại đủ giao thức để chạy cả 8 example.
+chứng: ~450 dòng Go cài đặt lại đủ giao thức để chạy cả 11 example.
 
 Nhưng đừng tự dựng lại *client*: SDK đã xử lý retry, dedupe, hàng đợi bền,
 rollback — đúng những chỗ tự làm là mất tiền.
@@ -346,7 +346,7 @@ rollback — đúng những chỗ tự làm là mất tiền.
 | | |
 |---|---|
 | ESP-IDF | ≥ 5.1 |
-| Chip đã chạy thật | ESP32-S3 (build 8/8 trên ESP-IDF 5.5.4) |
+| Chip đã chạy thật | ESP32-S3 (build 11/11 trên ESP-IDF 5.5.4) |
 | Chip nên chạy được | ESP32, ESP32-S2, ESP32-C3 (chưa kiểm chứng) |
 | Transport | WebSocket over TLS — text (JSON) + binary (audio) |
 | Flash tối thiểu | 4MB — `examples/partitions.csv`: 2 slot OTA × 1,875 MB, không có factory |
@@ -361,13 +361,13 @@ trợ tới khi fleet flash xong.
 ## Trạng thái dự án
 
 **Pre-release (0.1.x).** Hạ tầng bên dưới đã chạy thật trên fleet máy coin-op
-đang vận hành; phần đóng gói thành SDK và 8 example thì mới.
+đang vận hành; phần đóng gói thành SDK và 11 example thì mới.
 
 Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
 
 | Việc | Trạng thái |
 |---|---|
-| 8 example đã `idf.py build` | **8/8 build thành công** trên ESP-IDF **5.5.4**, target esp32s3, mỗi bản ~1,23–1,24 MB (2026-09-10, máy tác giả). Lần build đầu bắt được 4 lỗi mà kiểm tra tĩnh không thấy — đã sửa hết (bảng partition, CMakeLists thiếu, tên component chỉ có từ IDF 5.3, Kconfig bool trong biểu thức C). |
+| 11 example đã `idf.py build` | **11/11 build thành công** trên ESP-IDF **5.5.4**, target esp32s3, mỗi bản ~1,23–1,26 MB (2026-09-10, máy tác giả). Lần build đầu bắt được 4 lỗi mà kiểm tra tĩnh không thấy — đã sửa hết (bảng partition, CMakeLists thiếu, tên component chỉ có từ IDF 5.3, Kconfig bool trong biểu thức C). |
 | Chưa build trên ESP-IDF 5.1 | README tuyên bố ≥ 5.1 nhưng mới build thật trên 5.5.4. CI có job `idf-floor` để chốt, nhưng CI đang bị chặn ở mức billing của GitHub Actions (miễn phí không giới hạn cho repo công khai). Tới lúc đó, coi 5.5 là bản đã kiểm chứng. |
 | Chưa flash lên bo thật trong lần verify này | Hạ tầng bên dưới đã chạy trên fleet thật; phần đóng gói SDK + example thì mới build, chưa chạy trên bo. |
 | mock-cloud chưa chạy đối đầu với thiết bị thật | Đã test bằng thiết bị giả nối vào (`go test`), đúng từng khung tin. Chưa có bo thật cắm vào. |

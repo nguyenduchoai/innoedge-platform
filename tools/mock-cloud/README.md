@@ -1,6 +1,6 @@
 # mock-cloud — InnoEdge Cloud giả
 
-Chạy hết 8 example **không cần tài khoản, không cần internet, không cần database**.
+Chạy hết 11 example **không cần tài khoản, không cần internet, không cần database**.
 
 ```bash
 go run ./tools/mock-cloud
