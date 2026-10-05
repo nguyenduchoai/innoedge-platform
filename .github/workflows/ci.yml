@@ -36,6 +36,10 @@ jobs:
           - 09-ai-agent
           - 10-edu-tutor
           - 11-voice-assistant
+          - 12-muse-gadget
+          - 13-stem-robot
+          - 14-digital-signage
+          - 15-central-audio
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.example }}
