@@ -11,6 +11,15 @@ cc -std=c11 -Wall -Wextra -Werror -O1 \
    -o /tmp/ie_test_command_bus
 /tmp/ie_test_command_bus
 
+echo "▸ industrial protocols (MDB cashless vending + Modbus RTU)"
+cc -std=c11 -Wall -Wextra -Werror -O1 \
+   -I stubs -I "$C/innoedge/include" -I ../components-hw/innoedge_hw/src \
+   test_industrial_protocols.c \
+   ../components-hw/innoedge_hw/src/innoedge_mdb.c \
+   ../components-hw/innoedge_hw/src/innoedge_modbus.c \
+   -o /tmp/ie_test_industrial
+/tmp/ie_test_industrial
+
 if command -v c++ >/dev/null 2>&1; then
     echo "▸ arduino C++ wrapper"
     c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only \

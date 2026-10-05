@@ -8,6 +8,8 @@ idf_component_register(
         "src/gtek_pulse_input.c"
         "src/gtek_relay_control.c"
         "src/gtek_wash_control.c"
+        "src/innoedge_mdb.c"
+        "src/innoedge_modbus.c"
     INCLUDE_DIRS "src"
     REQUIRES innoedge
     PRIV_REQUIRES driver esp_timer

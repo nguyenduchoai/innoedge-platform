@@ -272,6 +272,26 @@ Hệ thống loa thông báo công cộng (Public Address - PA) và phát nhạc
 
 ---
 
+## 🥤 Cookbook 10: Hộp Nâng Cấp Máy Bán Nước Tự Động Chuẩn MDB / ccTalk (Industrial MDB Retrofit Box)
+
+### Bài toán
+Hàng triệu máy bán nước ngọt, máy pha cà phê tự động cỡ lớn trên thị trường (FAS, Crane, Sanden Vendo, Necta, Fuji Electric) hoạt động bằng chuẩn công nghiệp **MDB (Multi-Drop Bus)** và **ccTalk**, không có kết nối Internet, không thể quét mã QR, và chủ máy phải đi thu tiền mặt thủ công mỗi ngày.
+
+### Giải pháp InnoEdge Retrofit Box
+Cắm một hộp điều khiển InnoEdge ESP32 trực tiếp vào giắc cắm cáp MDB 6-chân của máy bán nước (thông qua mạch cách ly Opto 9-bit UART). Bo mạch đóng vai trò là **MDB Cashless Device (Địa chỉ 0x10)**:
+1. **Lắng nghe phím bấm từ khách:** Khi khách chọn lon nước trên bàn phím máy, VMC gửi lệnh `0x13 0x00 VEND REQUEST` (kèm giá tiền và số khay hàng).
+2. **Kích hoạt thanh toán linh hoạt:**
+   * Màn hình ngoài hiển thị mã QR (VietQR / PromptPay / Stripe).
+   * Hoặc khách quét thẻ thành viên RFID.
+3. **Chấp thuận nhả hàng:** Khi nhận tín hiệu thanh toán thành công, InnoEdge phản hồi lệnh `0x05 VEND APPROVED` về máy bán nước.
+4. **Xác nhận hàng rơi:** Cảm biến quang học của máy bán nước phát hiện lon nước đã rơi vào hộc nhận và gửi lệnh `0x13 0x02 VEND SUCCESS` về InnoEdge để ghi nhận vào sổ cái NVS và báo cáo doanh thu lên Cloud.
+
+* **Phần cứng:** ESP32-S3 + Mạch chuyển mức MDB Optocoupler (9-bit UART) + Nguồn hạ áp cách ly từ 24V/34V DC của bus MDB.
+* **Mã nguồn Driver MDB chuẩn hóa:** [components-hw/innoedge_hw/src/innoedge_mdb.h](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/components-hw/innoedge_hw/src/innoedge_mdb.h) và [innoedge_mdb.c](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/components-hw/innoedge_hw/src/innoedge_mdb.c).
+* **Kiểm thử tự động:** Bộ test MDB hoàn chỉnh trong [tests/test_industrial_protocols.c](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/tests/test_industrial_protocols.c).
+
+---
+
 ## 🤝 Quy trình Đóng góp & Cơ chế RFC (Governance)
 
 InnoEdge là nền tảng mở. Chúng tôi khuyến khích mọi đóng góp từ cộng đồng theo chuẩn kỹ thuật cao:

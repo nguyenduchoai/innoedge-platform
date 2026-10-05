@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InnoEdge Web Tools — Zero-Install IoT & Edge AI Portal</title>
+    <meta name="description" content="Official Zero-Install Web Tools for InnoEdge Platform: Web Serial Flasher, Web Bluetooth Provisioning, and Scratch 3.0 BlockStudio.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0f1d;
+            --bg-card: rgba(17, 24, 39, 0.75);
+            --border: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(99, 102, 241, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.25);
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg-base) 65%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 20px;
+        }
+
+        .container {
+            max-width: 1080px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #818cf8;
+            margin-bottom: 18px;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            line-height: 1.15;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+
+        p.subtitle {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 680px;
+            margin: 0 auto 24px;
+            line-height: 1.6;
+        }
+
+        .lang-switch {
+            display: inline-flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 30px -10px var(--primary-glow);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+        }
+
+        .icon-flasher { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .icon-ble { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+        .icon-scratch { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .icon-docs { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+        .card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.55;
+            margin-bottom: 24px;
+            flex-grow: 1;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .tag {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: #e2e8f0;
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+
+        footer {
+            text-align: center;
+            border-top: 1px solid var(--border);
+            padding-top: 32px;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        footer a {
+            color: #818cf8;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge-pill">
+                <span>✦</span> InnoEdge Web Ecosystem
+            </div>
+            <h1 id="title">Zero-Install Embedded Web Tools</h1>
+            <p class="subtitle" id="subtitle">
+                Flash firmware, provision WiFi, and write Scratch 3.0 blocks directly from Google Chrome or Microsoft Edge with zero terminal setup.
+            </p>
+            <div class="lang-switch">
+                <button class="lang-btn active" onclick="setLang('en')">English</button>
+                <button class="lang-btn" onclick="setLang('vi')">Tiếng Việt</button>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Web Flasher -->
+            <div class="card">
+                <div>
+                    <div class="card-icon icon-flasher">⚡</div>
+                    <h2 id="card1-title">Web 1-Click Flasher</h2>
+                    <p id="card1-desc">
+                        Flash production binaries directly to your ESP32 / ESP32-S3 over USB using the Web Serial API. No Python, no drivers, and no ESP-IDF required.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag">Web Serial</span>
+                        <span class="tag">Chrome / Edge</span>
+                        <span class="tag">1-Click Flash</span>
+                    </div>
+                </div>
+                <a href="./flasher/" class="btn btn-primary" id="card1-btn">Launch Flasher →</a>
+            </div>
+
+            <!-- Web Provisioning -->
+            <div class="card">
+                <div>
+                    <div class="card-icon icon-ble">📶</div>
+                    <h2 id="card2-title">Web BLE Provisioning</h2>
+                    <p id="card2-desc">
+                        Configure device WiFi credentials wirelessly via Web Bluetooth. Eliminates the need for mobile apps during unboxing and test benches.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag">Web Bluetooth</span>
+                        <span class="tag">Zero App</span>
+                        <span class="tag">Fast Setup</span>
+                    </div>
+                </div>
+                <a href="./provision/" class="btn btn-primary" id="card2-btn">Open Provisioning →</a>
+            </div>
+
+            <!-- Scratch 3.0 BlockStudio -->
+            <div class="card">
+                <div>
+                    <div class="card-icon icon-scratch">🧩</div>
+                    <h2 id="card3-title">BlockStudio (Scratch 3.0)</h2>
+                    <p id="card3-desc">
+                        Drag-and-drop block coding environment for STEM education and robotics. Teach kids IoT, payment triggers, and ultrasonic obstacle avoidance visually.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag">Scratch 3.0</span>
+                        <span class="tag">STEM Robotics</span>
+                        <span class="tag">Visual Blocks</span>
+                    </div>
+                </div>
+                <a href="./scratch/" class="btn btn-primary" id="card3-btn">Open BlockStudio →</a>
+            </div>
+
+            <!-- GitHub & Documentation -->
+            <div class="card">
+                <div>
+                    <div class="card-icon icon-docs">📖</div>
+                    <h2 id="card4-title">Platform Documentation</h2>
+                    <p id="card4-desc">
+                        Explore 15 production examples, 10 industrial hardware cookbooks, schematic references, and open protocol specifications.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag">15 Examples</span>
+                        <span class="tag">10 Cookbooks</span>
+                        <span class="tag">Protocol v1</span>
+                    </div>
+                </div>
+                <a href="https://github.com/nguyenduchoai/innoedge-platform" class="btn btn-secondary" id="card4-btn">View on GitHub ↗</a>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                InnoEdge Platform is Open-Source software released under the <a href="https://github.com/nguyenduchoai/innoedge-platform/blob/main/LICENSE">Apache License 2.0</a>.
+                <br>
+                Crafted for modern IoT, Edge AI, and autonomous hardware monetization.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                title: "Zero-Install Embedded Web Tools",
+                subtitle: "Flash firmware, provision WiFi, and write Scratch 3.0 blocks directly from Google Chrome or Microsoft Edge with zero terminal setup.",
+                card1Title: "Web 1-Click Flasher",
+                card1Desc: "Flash production binaries directly to your ESP32 / ESP32-S3 over USB using the Web Serial API. No Python, no drivers, and no ESP-IDF required.",
+                card1Btn: "Launch Flasher →",
+                card2Title: "Web BLE Provisioning",
+                card2Desc: "Configure device WiFi credentials wirelessly via Web Bluetooth. Eliminates the need for mobile apps during unboxing and test benches.",
+                card2Btn: "Open Provisioning →",
+                card3Title: "BlockStudio (Scratch 3.0)",
+                card3Desc: "Drag-and-drop block coding environment for STEM education and robotics. Teach kids IoT, payment triggers, and ultrasonic obstacle avoidance visually.",
+                card3Btn: "Open BlockStudio →",
+                card4Title: "Platform Documentation",
+                card4Desc: "Explore 15 production examples, 10 industrial hardware cookbooks, schematic references, and open protocol specifications.",
+                card4Btn: "View on GitHub ↗"
+            },
+            vi: {
+                title: "Bộ Công Cụ Nhúng Web Không Cần Cài Đặt",
+                subtitle: "Nạp firmware, cài đặt WiFi và lập trình kéo thả khối lệnh Scratch 3.0 trực tiếp từ trình duyệt Chrome / Edge mà không cần cài môi trường.",
+                card1Title: "Web 1-Click Flasher",
+                card1Desc: "Nạp firmware trực tiếp vào ESP32 / ESP32-S3 qua cáp USB bằng Web Serial API. Không cần Python, không cần cài driver hay ESP-IDF.",
+                card1Btn: "Mở Trình Nạp Firmware →",
+                card2Title: "Web Bluetooth Cài WiFi",
+                card2Desc: "Cài đặt WiFi cho thiết bị mới qua chuẩn Web Bluetooth Low Energy (BLE). Không cần tải hay cài đặt app di động.",
+                card2Btn: "Mở Cài Đặt WiFi →",
+                card3Title: "BlockStudio (Scratch 3.0)",
+                card3Desc: "Môi trường lập trình khối lệnh kéo thả cho giáo dục STEM và Robot. Dạy học sinh IoT, kích hoạt thanh toán và né vật cản trực quan.",
+                card3Btn: "Mở BlockStudio →",
+                card4Title: "Tài Liệu Nền Tảng",
+                card4Desc: "Khám phá 15 ví dụ thực chiến, 10 công thức thiết kế phần cứng mẫu, sơ đồ mạch và đặc tả giao thức Protocol v1.",
+                card4Btn: "Xem Trên GitHub ↗"
+            }
+        };
+
+        function setLang(lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            if (lang === 'vi') {
+                document.querySelectorAll('.lang-btn')[1].classList.add('active');
+            } else {
+                document.querySelectorAll('.lang-btn')[0].classList.add('active');
+            }
+
+            const t = translations[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('card1-title').textContent = t.card1Title;
+            document.getElementById('card1-desc').textContent = t.card1Desc;
+            document.getElementById('card1-btn').textContent = t.card1Btn;
+            document.getElementById('card2-title').textContent = t.card2Title;
+            document.getElementById('card2-desc').textContent = t.card2Desc;
+            document.getElementById('card2-btn').textContent = t.card2Btn;
+            document.getElementById('card3-title').textContent = t.card3Title;
+            document.getElementById('card3-desc').textContent = t.card3Desc;
+            document.getElementById('card3-btn').textContent = t.card3Btn;
+            document.getElementById('card4-title').textContent = t.card4Title;
+            document.getElementById('card4-desc').textContent = t.card4Desc;
+            document.getElementById('card4-btn').textContent = t.card4Btn;
+        }
+    </script>
+</body>
+</html>

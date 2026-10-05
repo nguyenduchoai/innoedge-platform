@@ -1,0 +1,54 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages Site Directory
+        run: |
+          mkdir -p _site/flasher _site/provision _site/scratch _site/docs
+          
+          # Root Portal
+          cp tools/web-portal/index.html _site/index.html
+          
+          # Web 1-Click Flasher
+          cp tools/web-flasher/index.html _site/flasher/index.html
+          
+          # Web Bluetooth Provisioning
+          cp tools/web-provision/index.html _site/provision/index.html
+          
+          # Scratch 3.0 BlockStudio
+          cp tools/scratch/index.html _site/scratch/index.html
+          cp tools/scratch/innoedge-scratch-extension.js _site/scratch/innoedge-scratch-extension.js
+          
+          # Docs
+          cp docs/*.md _site/docs/ || true
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

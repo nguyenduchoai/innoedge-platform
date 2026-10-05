@@ -11,7 +11,7 @@
 [![MicroPython](https://img.shields.io/badge/MicroPython-STEM%20Robot-yellow.svg)](micropython/)
 [![Protocol](https://img.shields.io/badge/Protocol-v1%20Open-green.svg)](docs/PROTOCOL-v1.md)
 [![Examples](https://img.shields.io/badge/Examples-15%20Ready-brightgreen.svg)](examples/)
-[![Cookbooks](https://img.shields.io/badge/Cookbooks-9%20Hardware%20Designs-purple.svg)](docs/COMMUNITY-COOKBOOKS.md)
+[![Cookbooks](https://img.shields.io/badge/Cookbooks-10%20B%E1%BA%A3n%20Thi%E1%BA%BFt%20K%E1%BA%BF-purple.svg)](docs/COMMUNITY-COOKBOOKS.md)
 
 ---
 
@@ -55,7 +55,7 @@ app.start()
 1. [Kiến Trúc & Khả Năng Đa Nền Tảng](#kiến-trúc--khả-năng-đa-nền-tảng)
 2. [Bắt Đầu Trong 10 Phút](#bắt-đầu-trong-10-phút)
 3. [Danh Sách 15 Ví Dụ Chạy Thật](#danh-sách-15-ví-dụ-chạy-thật)
-4. [9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)](#9-community-cookbooks-thiết-kế-phần-cứng-mẫu)
+4. [10 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)](#10-community-cookbooks-thiết-kế-phần-cứng-mẫu)
 5. [Bộ Công Cụ Tiện Ích Trực Quan](#bộ-công-cụ-tiện-ích-trực-quan)
 6. [API Công Khai](#api-công-khai)
 7. [Những Thứ Khó Mà InnoEdge Đã Giải](#những-thứ-khó-mà-innoedge-đã-giải)
@@ -153,9 +153,9 @@ Mỗi thư mục example đều có mã nguồn đầy đủ, file cấu hình, 
 
 ---
 
-## 9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)
+## 10 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)
 
-Tài liệu [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) chứa công thức chế tạo, danh mục linh kiện (BOM), sơ đồ mạch cách ly opto và mã nguồn ứng dụng mẫu cho 9 dòng sản phẩm:
+Tài liệu [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) chứa công thức chế tạo, danh mục linh kiện (BOM), sơ đồ mạch cách ly opto và mã nguồn ứng dụng mẫu cho 10 dòng sản phẩm:
 
 1. **Tủ Locker Gửi Đồ Tự Động:** Quản lý hàng chục ngăn tủ, thanh toán theo giờ lưu kho, mở ngăn qua VietQR.
 2. **Trạm Sạc Xe Máy Điện / Xe Đạp Điện:** Đo đếm kWh (PZEM-004T), thanh toán tiền điện theo thời gian hoặc số điện thực tế.
@@ -166,6 +166,7 @@ Tài liệu [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) chứa 
 7. **Máy Pha Cà Phê & Bán Nước Tự Động:** Điều khiển motor khay chứa lon nước, cảm biến rơi hàng chống kẹt tiền.
 8. **Bảng Quảng Cáo Kỹ Thuật Số (Digital Signage):** Quản lý chiến dịch tập trung, báo cáo Proof-of-Play (POW) cho đối tác truyền thông.
 9. **Hệ Thống Âm Thanh & Loa Thông Báo Tập Trung:** Phân vùng âm thanh tòa nhà (Zone 1/2), phát thông báo ưu tiên, còi báo động khẩn cấp.
+10. **Hộp Nâng Cấp Máy Bán Nước Tự Động Chuẩn MDB / Modbus RTU:** Tích hợp giao thức Multi-Drop Bus (NAMA MDB / ICP Cashless Level 1/2/3) và Modbus RTU RS485 nâng cấp các dòng máy bán hàng tự động & PLC công nghiệp.
 
 Xem thêm sơ đồ mạch điện chi tiết tại [`docs/HARDWARE-REFERENCE.md`](docs/HARDWARE-REFERENCE.md).
 
@@ -173,13 +174,17 @@ Xem thêm sơ đồ mạch điện chi tiết tại [`docs/HARDWARE-REFERENCE.md
 
 ## Bộ Công Cụ Tiện Ích Trực Quan
 
+> 🚀 **Trải nghiệm trực tuyến trên Web:** Khởi chạy toàn bộ công cụ trực tiếp tại [**nguyenduchoai.github.io/innoedge-platform**](https://nguyenduchoai.github.io/innoedge-platform/) ngay trên trình duyệt (Chrome/Edge) — không cần cài đặt môi trường, không cần cài driver!
+
 Nhà phát triển và cộng đồng có thể triển khai hệ thống mà không cần cài đặt môi trường phức tạp:
 
 | Công Cụ | Thư Mục | Tính Năng |
 |---|---|---|
+| **InnoEdge Web Portal** | [`tools/web-portal/`](tools/web-portal/) | Trang điều hướng trực quan kết nối công cụ nạp flash, cấu hình Bluetooth và lập trình kéo thả. |
 | **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Lập trình kéo thả khối lệnh Scratch 3.0 trực quan cho giáo dục STEM và người mới bắt đầu. |
 | **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Nạp firmware nhúng trực tiếp qua trình duyệt web bằng Web Serial API (Chrome/Edge), không cần terminal. |
 | **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | PWA cài đặt WiFi nhanh chóng cho thiết bị mới qua chuẩn BLE chuẩn hóa. |
+| **Global Gateways Connector** | [`tools/connectors/global-gateways/`](tools/connectors/global-gateways/) | Microservice kết nối đa cổng thanh toán quốc tế (Stripe, PayPal, PromptPay Thái Lan QR) và VietQR. |
 | **Mock-Cloud & Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Server giả lập đầy đủ giao thức v1, dashboard giao diện realtime, trình kích hoạt webhook ngân hàng. |
 | **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Bộ Docker Compose hoàn chỉnh + Caddy tự động cấp SSL miễn phí để tự host cloud riêng. |
 | **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Cung cấp ngữ cảnh API và luật bảo vệ an toàn tiền tệ cho các AI IDE (Claude Code, Cursor, Windsurf). |
@@ -222,6 +227,8 @@ esp_err_t   innoedge_ota_check(void);
 * **Không nhả tiền hai lần:** Cloud gửi lại lệnh sau khi mạng chập chờn là điều tất yếu. SDK lưu vết watermark `commandId` trong NVS và đánh dấu **trước khi** kích hoạt rơ-le nhả hàng. Nếu mất điện đột ngột trong lúc đang nhả hàng, lệnh gửi lại sau khi khởi động sẽ bị chặn ngay lập tức.
 * **Quy tắc vàng:** Chỉ có sự kiện `on_paid` được ngân hàng chứng thực mới được phép kích hoạt giao hàng hoặc cấp dịch vụ.
 * **Cập nhật OTA không biến máy thành cục gạch:** Firmware mới chỉ được công nhận hợp lệ sau khi máy kết nối thành công tới Cloud. Nếu xảy ra lỗi bootloader sẽ tự động rollback về bản firmware trước đó.
+* **Hỗ trợ Giao thức Công nghiệp Vending (MDB & Modbus RTU):** Máy trạng thái 9-bit MDB Cashless peripheral chuẩn NAMA và module Modbus RTU RS485 công nghiệp cách ly quang học, gắn trực tiếp vào bo mạch máy bán hàng tự động và PLC.
+* **Đa dạng Cổng Thanh toán Toàn cầu:** Microservice cổng thanh toán tích hợp sẵn Stripe, PayPal, PromptPay Thái Lan QR và VietQR với đối soát webhook tức thì.
 
 ---
 
@@ -233,9 +240,9 @@ esp_err_t   innoedge_ota_check(void);
 ├── arduino/InnoEdge/        # Thư viện InnoEdge cho Arduino & PlatformIO (C++)
 ├── micropython/             # InnoBot HAL & MicroPython cho Robot STEM
 ├── linux/                   # Hỗ trợ Raspberry Pi, Banana Pi, Orange Pi (Python + Go Agent)
-├── components-hw/           # Driver phần cứng mẫu (Đầu đọc xu, relay, audio I2S)
+├── components-hw/           # Driver phần cứng mẫu (MDB vending, Modbus RTU, đầu đọc xu, relay, audio I2S)
 ├── examples/                # 15 ví dụ hoàn chỉnh (01-hello đến 15-central-audio)
-├── tools/                   # Mock-cloud, Web Flasher, Web Provision, Scratch, Cloud Lite, MCP
+├── tools/                   # Web Portal, Mock-cloud, Global Gateways, Web Flasher, Web Provision, Scratch, Cloud Lite, MCP
 ├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
 └── tests/run.sh             # Bộ test toàn diện chạy độc lập trên máy tính
 ```
@@ -250,13 +257,14 @@ InnoEdge đi kèm bộ kiểm thử toàn diện không cần phần cứng và 
 ./tests/run.sh
 ```
 
-Bao phủ 6 khối kiểm tra tự động:
+Bao phủ 7 khối kiểm tra tự động:
 1. **C Command Bus:** Chống chạy trùng lệnh bền vững qua reboot.
-2. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
-3. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
-4. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
-5. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
-6. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
+2. **Giao thức Công nghiệp:** Máy trạng thái MDB Cashless & bộ sinh khung tin Modbus RTU CRC16.
+3. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
+4. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
+5. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
+6. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
+7. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
 
 ---
 
@@ -265,7 +273,7 @@ Bao phủ 6 khối kiểm tra tự động:
 InnoEdge vận hành theo mô hình **Open Core** chuẩn mực trong ngành công nghệ IoT toàn cầu (tương tự ESPHome, Home Assistant, Linux Foundation):
 
 ### 1. Phần Mở — Apache License 2.0 (Miễn phí vĩnh viễn)
-* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 9 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
+* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Giao thức công nghiệp (MDB & Modbus RTU), Global Gateways, Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
 * Quyền lợi: Doanh nghiệp, nhà nghiên cứu và lập trình viên được quyền thương mại hóa, nhúng vào sản phẩm bán lẻ, và tùy biến không giới hạn mà không bị ràng buộc mở mã nguồn thương mại của mình.
 * Mục tiêu: Đóng vai trò là "cổng vào" chuẩn mực, tạo dựng cộng đồng hàng ngàn nhà phát triển thiết bị.
 

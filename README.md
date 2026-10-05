@@ -11,7 +11,7 @@
 [![MicroPython](https://img.shields.io/badge/MicroPython-STEM%20Robot-yellow.svg)](micropython/)
 [![Protocol](https://img.shields.io/badge/Protocol-v1%20Open-green.svg)](docs/PROTOCOL-v1.md)
 [![Examples](https://img.shields.io/badge/Examples-15%20Ready-brightgreen.svg)](examples/)
-[![Cookbooks](https://img.shields.io/badge/Cookbooks-9%20Hardware%20Designs-purple.svg)](docs/COMMUNITY-COOKBOOKS.md)
+[![Cookbooks](https://img.shields.io/badge/Cookbooks-10%20Hardware%20Designs-purple.svg)](docs/COMMUNITY-COOKBOOKS.md)
 
 ---
 
@@ -55,7 +55,7 @@ app.start()
 1. [Cross-Platform Architecture](#cross-platform-architecture)
 2. [Quick Start in 10 Minutes](#quick-start-in-10-minutes)
 3. [15 Production-Ready Examples](#15-production-ready-examples)
-4. [9 Hardware Reference Cookbooks](#9-hardware-reference-cookbooks)
+4. [10 Hardware Reference Cookbooks](#10-hardware-reference-cookbooks)
 5. [Zero-Install Web Developer Tools](#zero-install-web-developer-tools)
 6. [Public C API](#public-c-api)
 7. [The Hard Engineering Problems InnoEdge Solves](#the-hard-engineering-problems-innoedge-solves)
@@ -153,9 +153,9 @@ Every example includes complete source code, wiring diagrams, expected serial ou
 
 ---
 
-## 9 Hardware Reference Cookbooks
+## 10 Hardware Reference Cookbooks
 
-The community hardware reference guide [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) provides complete schematics, opto-isolated bill of materials (BOM), and production firmware recipes for 9 industries:
+The community hardware reference guide [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) provides complete schematics, opto-isolated bill of materials (BOM), and production firmware recipes for 10 industries:
 
 1. **Smart Locker Systems:** Multi-compartment solenoid control, storage time pricing, QR unlocking.
 2. **EV & E-Bike Charging Stations:** High-power relay control, energy metering (PZEM-004T), pay-per-kWh.
@@ -166,6 +166,7 @@ The community hardware reference guide [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMM
 7. **Coffee & Beverage Vending Machines:** Motorized spiral spirals, drop detection beam sensors to prevent coin traps.
 8. **Digital Signage & Smart Billboards:** Proof-of-play (POW) advertiser audit trails, emergency broadcast interruptions.
 9. **Centralized Multi-Zone IP Audio:** Facility-wide background music, priority paging announcements, 100% volume fire siren override.
+10. **Industrial MDB Vending Retrofit Box:** Multi-Drop Bus (NAMA MDB / ICP Cashless Level 1/2/3) & Modbus RTU RS485 for retrofitting legacy beverage/snack vending machines and industrial PLCs.
 
 See detailed schematic diagrams and isolation circuits at [`docs/HARDWARE-REFERENCE.md`](docs/HARDWARE-REFERENCE.md).
 
@@ -173,13 +174,17 @@ See detailed schematic diagrams and isolation circuits at [`docs/HARDWARE-REFERE
 
 ## Zero-Install Web Developer Tools
 
+> 🚀 **Live Web Tools Online:** Access all web tools directly at [**nguyenduchoai.github.io/innoedge-platform**](https://nguyenduchoai.github.io/innoedge-platform/) right in your browser (Chrome/Edge) — zero installation, zero drivers!
+
 Developers can configure, test, and program InnoEdge devices right from modern web browsers:
 
 | Tool | Directory | Capabilities |
 |---|---|---|
+| **InnoEdge Web Portal** | [`tools/web-portal/`](tools/web-portal/) | Unified web landing dashboard connecting to flasher, Bluetooth provisioning, and visual programming. |
 | **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Visual Scratch 3.0 drag-and-drop extension for STEM education and beginners. |
 | **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Flash embedded firmware directly from Chrome or Edge via Web Serial API. |
 | **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | Install-free PWA to configure device WiFi via Bluetooth Low Energy (BLE). |
+| **Global Gateways Connector** | [`tools/connectors/global-gateways/`](tools/connectors/global-gateways/) | Unified microservice for Stripe, PayPal, PromptPay Thailand QR, and VietQR. |
 | **Mock-Cloud & Web Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Full protocol v1 emulator, live WebSocket monitor, and automated bank webhook triggers. |
 | **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Complete Docker Compose bundle with Caddy auto-SSL for self-hosting. |
 | **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Model Context Protocol server giving AI IDEs (Claude Code, Cursor) full SDK context. |
@@ -222,6 +227,8 @@ esp_err_t   innoedge_ota_check(void);
 * **Actuators Never Fire Twice:** The cloud frequently retries commands over shaky cellular networks. InnoEdge records high-watermark `commandId`s in NVS *before* executing the hardware handler. A sudden reboot during a dispense operation will safely drop the duplicate retry.
 * **The Golden Safety Rule:** Only the cryptographic `on_paid` event (certified by bank webhooks) is permitted to dispense inventory or activate high-power relays.
 * **Brick-Proof OTA Upgrades:** New firmware is only validated after the device successfully authenticates with the cloud. Any panic or boot failure triggers automatic bootloader rollback to the previous partition.
+* **Industrial Vending Bus (NAMA MDB & Modbus RTU):** Built-in opto-isolated 9-bit MDB Cashless peripheral state machine and industrial Modbus RTU RS485 master/slave engine for direct legacy vending machine and industrial PLC retrofitting.
+* **Global Payment Agnostic:** Built-in connector microservice supporting international gateways (Stripe, PayPal, PromptPay Thailand QR) and local instant bank transfers (VietQR).
 
 ---
 
@@ -233,9 +240,9 @@ esp_err_t   innoedge_ota_check(void);
 ├── arduino/InnoEdge/        # Arduino & PlatformIO C++ library wrapper
 ├── micropython/             # InnoBot HAL & MicroPython for STEM robotics
 ├── linux/                   # Raspberry Pi & Banana Pi (Python SDK + Go Daemon)
-├── components-hw/           # Hardware sample drivers (coin acceptor, relays, I2S)
+├── components-hw/           # Hardware sample drivers (MDB vending, Modbus RTU, coin acceptor, relays, I2S)
 ├── examples/                # 15 runnable examples (01-hello to 15-central-audio)
-├── tools/                   # Mock-cloud, Web Flasher, Web Provision, Scratch, MCP
+├── tools/                   # Web Portal, Mock-cloud, Global Gateways, Web Flasher, Web Provision, Scratch, MCP
 ├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
 └── tests/run.sh             # Host test runner (runs without ESP-IDF or hardware)
 ```
@@ -250,13 +257,14 @@ InnoEdge includes an automated test runner that validates the entire stack local
 ./tests/run.sh
 ```
 
-Runs 6 test suites across multiple languages:
+Runs 7 test suites across multiple languages:
 1. **C Command Bus:** Registry validation and reboot-safe de-duplication.
-2. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
-3. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
-4. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
-5. **Linux SBC Agent (Go):** Background daemon compilation check.
-6. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
+2. **Industrial Protocols:** MDB Cashless peripheral state machine & Modbus RTU CRC16 packet builder.
+3. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
+4. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
+5. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
+6. **Linux SBC Agent (Go):** Background daemon compilation check.
+7. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
 
 ---
 
@@ -265,7 +273,7 @@ Runs 6 test suites across multiple languages:
 InnoEdge adopts the proven **Open Core** business model used by industry-leading infrastructure platforms (e.g., ESPHome, Docker, MongoDB, Linux Foundation):
 
 ### 1. Open Source Foundation — Apache License 2.0 (Free Forever)
-* Applies to: Core SDK (`components/innoedge`), Arduino library, MicroPython InnoBot, Linux Python SDK, 15 Examples, 9 Cookbooks, Mock-Cloud, and Protocol specifications.
+* Applies to: Core SDK (`components/innoedge`), Industrial Protocols (MDB & Modbus RTU), Global Gateways, Arduino library, MicroPython InnoBot, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, and Protocol specifications.
 * Commercial Rights: OEM manufacturers, system integrators, and independent developers can freely build commercial devices and embed the firmware without paying royalties or open-sourcing their proprietary product logic.
 
 ### 2. Commercial Monetization Strategies

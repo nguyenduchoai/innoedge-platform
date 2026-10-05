@@ -100,6 +100,41 @@ Dành cho thiết bị lắp đặt ngoài trời không có WiFi:
 
 ---
 
+### Khối D: Mạch chuyển mức MDB 9-bit cách ly quang (Vending Machine Bus)
+
+Chuẩn MDB (Multi-Drop Bus) hoạt động ở điện áp bus **24V–34V DC** không đối xứng với dòng kéo Open-Collector. Để kết nối an toàn với chân UART của ESP32:
+
+```
+  MDB Master TX (+) ─────[ 1kΩ ]───┐
+                                    ▼  LED
+                             ┌──────────────┐
+                             │  Opto PC817  │
+                             └──────────────┘
+                                    │ Phototransistor
+  ESP32 RX (GPIO 18) ◄──────────────┴───[ Trở kéo 4.7kΩ lên 3.3V ]
+
+  ESP32 TX (GPIO 17) ─────[ 1kΩ ]───┐
+                                    ▼  LED
+                             ┌──────────────┐
+                             │  Opto PC817  │
+                             └──────────────┘
+                                    │ Phototransistor Open-Collector
+  MDB Master RX (-)  ◄──────────────┘  (Kéo bus MDB xuống GND khi phát bit 0)
+```
+
+---
+
+### Khối E: Giao tiếp RS485 / Modbus RTU công nghiệp
+
+Dùng IC chuyển đổi mức **SP3485 / MAX485** hoạt động ở nguồn 3.3V kèm điện trở phối hợp trở kháng 120Ω và diode bảo vệ TVS:
+
+* **Chân RO:** Nối vào ESP32 UART RX (GPIO 21).
+* **Chân DI:** Nối vào ESP32 UART TX (GPIO 22).
+* **Chân RE / DE:** Nối chung vào chân điều khiển hướng (Direction Pin - GPIO 19). Kéo HIGH khi truyền, kéo LOW khi nhận.
+* **Bảo vệ đường truyền A/B:** 2 Diode TVS SMBJ6.8CA chống xung sét lan truyền trên đường dây cáp dài.
+
+---
+
 ## 📌 3. Bảng gán chân GPIO khuyến nghị (Pinout Map)
 
 | Chức năng | ESP32-S3 | ESP32-C3 | Ghi chú |
@@ -110,15 +145,24 @@ Dành cho thiết bị lắp đặt ngoài trời không có WiFi:
 | **Relay 2 (Phụ)** | GPIO 7 | GPIO 3 | Kích mức HIGH qua ULN2003 |
 | **Relay 3 (Phụ)** | GPIO 15 | GPIO 4 | |
 | **Relay 4 (Phụ)** | GPIO 16 | GPIO 5 | |
-| **UART 4G TX** | GPIO 17 | GPIO 6 | Nối vào 4G RXD |
-| **UART 4G RX** | GPIO 18 | GPIO 7 | Nối vào 4G TXD |
-| **Màn hình I2C (SDA)** | GPIO 8 | GPIO 8 | Màn OLED 0.96" hoặc LCD 1602 |
-| **Màn hình I2C (SCL)** | GPIO 9 | GPIO 9 | Màn OLED 0.96" hoặc LCD 1602 |
+| **MDB Opto TX** | GPIO 17 | GPIO 6 | UART 9-bit Mode |
+| **MDB Opto RX** | GPIO 18 | GPIO 7 | UART 9-bit Mode |
+| **RS485 TX (DI) / RX (RO)** | GPIO 21 / 22 | GPIO 8 / 10 | Modbus RTU |
+| **RS485 DE/RE (Direction)** | GPIO 19 | GPIO 3 | Kéo HIGH khi gửi |
+| **Màn hình I2C (SDA / SCL)** | GPIO 8 / 9 | GPIO 8 / 9 | Màn OLED 0.96" hoặc LCD 1602 |
 | **Nút nhấn Reset WiFi** | GPIO 0 | GPIO 9 | Giữ 5s để xoá WiFi về mode BLE |
 
 ---
 
-## 💰 4. Bảng danh mục linh kiện & Dự toán giá thành (BOM)
+## 🏭 4. Thiết kế cơ khí & Đóng gói công nghiệp (Enclosure)
+
+Để phục vụ lắp đặt trong tủ điện công nghiệp tại trạm sạc xe, tiệm giặt sấy hoặc máy rửa xe:
+* **Hộp gắn thanh ray DIN-Rail (35mm):** Vỏ nhựa chống cháy ABS kích thước 88 x 72 x 59 mm (chuẩn 4 module DIN).
+* **Đầu nối Terminal Domino:** Cọc vặn ốc có thể tháo rời (Pluggable Terminal Blocks) giúp thợ lắp đặt và bảo hành dễ dàng rút thay thế bo mà không cần cắt dây.
+
+---
+
+## 💰 5. Bảng danh mục linh kiện & Dự toán giá thành (BOM)
 
 | STT | Tên linh kiện | Mã tham chiếu | Số lượng | Đơn giá ước tính |
 |:---:|---|---|:---:|:---:|
@@ -126,10 +170,13 @@ Dành cho thiết bị lắp đặt ngoài trời không có WiFi:
 | 2 | IC nguồn xung hạ áp | MP1584EN hoặc XL4015 (Module/Chip) | 1 | 18.000 đ |
 | 3 | LDO 3.3V | AMS1117-3.3 SOT-223 | 1 | 2.500 đ |
 | 4 | Diode triệt áp TVS | SMAJ24A / SMBJ28A | 2 | 4.000 đ |
-| 5 | Cách ly quang Opto | PC817C DIP-4 | 2 | 3.000 đ |
+| 5 | Cách ly quang Opto | PC817C DIP-4 | 4 | 6.000 đ |
 | 6 | Rơ le 12V 10A | Songle SRD-12VDC-SL-C | 4 | 28.000 đ |
 | 7 | IC đệm kích relay | ULN2003A SOP-16 | 1 | 3.500 đ |
-| 8 | Diode dập hồ quang | 1N4007 + Tụ chống sét VDR | 4 | 5.000 đ |
-| 9 | Cọc đấu dây vặn ốc | KF301-2P / KF301-3P | 6 | 12.000 đ |
-| 10 | Mạch in 2 lớp (PCB) | Đặt làm 10x10 cm tại JLCPCB/trong nước | 1 | 25.000 đ |
-| **Tổng** | **Chi phí phần cứng hoàn thiện 1 bo** | | | **~156.000 đ** |
+| 8 | IC giao tiếp RS485 | SP3485EEN SOP-8 | 1 | 6.000 đ |
+| 9 | Diode dập hồ quang | 1N4007 + Tụ chống sét VDR | 4 | 5.000 đ |
+| 10 | Cọc đấu dây vặn ốc | KF301-2P / KF301-3P | 6 | 12.000 đ |
+| 11 | Mạch in 2 lớp (PCB) | Đặt làm 10x10 cm tại JLCPCB/trong nước | 1 | 25.000 đ |
+| 12 | Vỏ hộp DIN-Rail 4M | Nhựa ABS chống cháy chuẩn thanh ray 35mm | 1 | 35.000 đ |
+| **Tổng** | **Chi phí phần cứng công nghiệp hoàn thiện 1 bo** | | | **~200.000 đ (~$8)** |
+
