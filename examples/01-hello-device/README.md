@@ -1,79 +1,68 @@
 # 01 — Hello Device
 
-Đưa một ESP32 trắng lên InnoEdge Cloud. Đây là example đầu tiên nên chạy.
+[English](README.md) | [Tiếng Việt](README_vi.md)
 
-## Yêu cầu
+Bring a clean ESP32 online to the InnoEdge Cloud. This is the first example you should run.
+
+## Requirements
 - ESP-IDF ≥ 5.1
-- Bo ESP32-S3 bất kỳ (không cần màn hình, không cần relay)
-- Một cloud để nối vào — **không cần đăng ký gì**, dùng cloud giả trong repo
+- Any ESP32-S3 board (no external screen or relay needed)
+- A cloud endpoint — **no account needed**, use the included local mock-cloud
 
-## Chạy cloud giả trước (terminal riêng)
+## Step 1: Run the Local Mock-Cloud (Separate Terminal)
 ```bash
 go run ../../tools/mock-cloud
 ```
-Nó in ra IP LAN cần dùng ở bước sau. Xem [`tools/mock-cloud`](../../tools/mock-cloud)
-để biết cách gõ lệnh điều khiển máy.
+The terminal prints the local LAN IP to use in the next step. See [`tools/mock-cloud`](../../tools/mock-cloud) for details.
 
-## Build & flash
+## Step 2: Build & Flash
 ```bash
 idf.py set-target esp32s3
-idf.py menuconfig      # InnoEdge SDK → cloud base URL → http://<IP mock in ra>:8080
+idf.py menuconfig      # InnoEdge SDK → Cloud base URL → http://<mock-cloud-ip>:8080
 idf.py flash monitor
 ```
 
-## Cấu hình
-| Nơi đổi | Tham số |
-|---|---|
-| `../sdkconfig.defaults` | `CONFIG_GTEK_SERVER_BASE_URL` — địa chỉ cloud (mặc định là placeholder, PHẢI đổi) |
-| `menuconfig` | InnoEdge SDK → mọi tham số hạ tầng |
-
-## Kết quả mong đợi
-
-Lần đầu (máy chưa có WiFi):
-```
-W (2100) hello: CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng GTEK-Setup
-```
-Ba cách cài WiFi — **không cách nào bắt buộc phải có app**:
-
-| Cách | Làm thế nào | Dùng khi |
+## Configuration
+| Location | Parameter | Description |
 |---|---|---|
-| **Điện thoại, không app** | Vào WiFi, nối mạng `GTEK-Setup-XX:XX` → mở trình duyệt `http://192.168.4.1` → chọn mạng, nhập mật khẩu | Lớp học, demo, lần đầu thử |
-| **Nạp sẵn lúc build** | `menuconfig → InnoEdge SDK → Factory WiFi SSID/password` | Bàn thử nghiệm, CI, nhiều bo cùng một mạng |
-| App di động (BLE) | App tìm `GTEK-Setup-XXXX` qua Bluetooth | Sản phẩm thật, chủ máy tự cài |
+| `../sdkconfig.defaults` | `CONFIG_GTEK_SERVER_BASE_URL` | Cloud server URL (default placeholder MUST be updated) |
+| `menuconfig` | InnoEdge SDK | All infrastructure parameters |
 
-Máy mở **cả SoftAP lẫn BLE cùng lúc**, chọn đường nào cũng được. Cài xong máy tự reboot.
+## Expected Output
 
-Sau khi có WiFi:
+First boot (device has no WiFi credentials):
+```
+W (2100) hello: WAITING FOR WIFI PROVISIONING — Open app or web to configure
+```
+
+Three ways to configure WiFi — **no mobile app required**:
+
+| Method | How-To | Best For |
+|---|---|---|
+| **Web Browser (BLE)** | Open Chrome/Edge to `http://localhost:8080/provision/` (or [`tools/web-provision`](../../tools/web-provision)), click "Scan & Connect" via Web Bluetooth | Demos, fast testing, no install |
+| **Captive Portal** | Connect to WiFi network `GTEK-Setup-XX:XX`, browse to `http://192.168.4.1`, submit credentials | Classroom, offline setups |
+| **Pre-compiled WiFi** | `menuconfig → InnoEdge SDK → Factory WiFi SSID/password` | Test benches, automated CI |
+
+The device runs **both SoftAP and BLE simultaneously**. Once credentials are received, it automatically reboots and connects.
+
+After WiFi connects:
 ```
 I (1200) innoedge: SDK 1.0.0 · device=AABBCCDDEEFF · fw=0.1.0 · assigned=0
-I (1210) hello: device_id (MAC) = AABBCCDDEEFF — dùng mã này để thêm máy trên cloud
-W (4300) hello: Máy CHƯA gán đối tác — thêm máy trong app rồi quét mã kích hoạt
-I (5000) hello: online=có  assigned=chưa  hàng đợi tồn=0
+I (1210) hello: device_id (MAC) = AABBCCDDEEFF — use this ID to assign device
+W (4300) hello: Device NOT yet assigned to a partner — scan QR in app to activate
+I (5000) hello: online=yes  assigned=no  queue_depth=0
 ```
-→ Thêm máy trên app bằng `device_id` ở trên → kích hoạt:
+→ Assign the device in the Web Dashboard (`http://localhost:8080/`) using the `device_id` above → Device activates:
 ```
-I (9100) innoedge: lệnh nền tảng: activation_complete
-I (9110) hello: Máy đã được gán cho đối tác — sẵn sàng phục vụ
+I (9100) innoedge: platform command: activation_complete
+I (9110) hello: Device assigned to partner — ready to serve customers
 ```
 
-Máy hiện đã online trên dashboard, gửi heartbeat mỗi 30s, và tự nhận OTA.
-
-## Máy làm gì mà mình không phải viết
-| Việc | Ai lo |
-|---|---|
-| Cài WiFi qua BLE/SoftAP | SDK |
-| Kết nối lại khi rớt mạng (có backoff) | SDK |
-| Xác thực với cloud, lưu token riêng vào NVS | SDK |
-| Heartbeat (fw, RSSI, heap, lý do reboot) | SDK |
-| Kiểm tra + tải + xác thực + rollback OTA | SDK |
-| Đồng bộ giờ NTP | SDK |
+The device is now online on the dashboard, sends heartbeats every 30s, and is ready to receive commands and OTA updates.
 
 ## Troubleshooting
-| Triệu chứng | Nguyên nhân thường gặp |
+| Symptom | Cause & Solution |
 |---|---|
-| Không thấy mạng `GTEK-Setup-XX:XX` | Máy ĐÃ có WiFi lưu sẵn nên không mở provisioning (xoá bằng `idf.py erase-flash`), hoặc còn đang boot |
-| Vào `192.168.4.1` không lên | Điện thoại tự nhảy về 4G vì mạng này không có internet — tắt dữ liệu di động tạm thời |
-| SDK dừng ngay, báo "vẫn là placeholder" | Chưa đổi `CONFIG_GTEK_SERVER_BASE_URL` — đúng như thiết kế |
-| `online=không` mãi | Sai địa chỉ cloud; dùng mock thì phải là **IP LAN**, không phải `127.0.0.1`, và máy tính phải cùng WiFi với ESP32 |
-| `assigned=chưa` mãi | Cloud thật: chưa thêm máy trên app / sai `device_id`. Mock: tự gán sau 1s, chưa thấy thì kiểm tra WS đã nối chưa |
-| Boot lặp sau OTA | Bản mới crash trước khi vào cloud → bootloader tự quay bản cũ (đúng như thiết kế) |
+| `CONFIG_GTEK_SERVER_BASE_URL is still placeholder` | You forgot to set your mock-cloud LAN IP in `menuconfig`. |
+| `WIFI_EVENT_STA_DISCONNECTED` | Wrong WiFi SSID/password, or 5GHz WiFi used (ESP32 only supports 2.4GHz). |
+| BLE provisioning not found | Check if Bluetooth is enabled on your computer or phone. |

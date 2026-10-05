@@ -1,70 +1,51 @@
-# 06 — Coin & Relay (máy coin-op hoàn chỉnh)
+# 06 — Coin & Relay (Complete 2-Way Coin-Op Machine)
 
-Tiền vào (đầu đọc xu/bill) và tiền ra (relay nhả credit) — hai chiều đầy đủ.
+[English](README.md) | [Tiếng Việt](README_vi.md)
 
-## Đấu dây
+Money in (coin/bill pulses) and money out (solenoid/relay pulse credit) — a complete bidirectional commercial machine.
 
-| Chân | Nối tới | Ghi chú |
+## Wiring Diagram
+
+| ESP32 Pin | Connects to | Notes |
 |---|---|---|
-| GPIO4 | chân COIN của đầu đọc xu | active-low, cần pull-up |
-| GND | GND đầu đọc | **bắt buộc chung mass** |
-| GPIO42 | chân IN của module relay | |
-| 12V | nguồn đầu đọc | nguồn riêng, KHÔNG lấy từ 5V của ESP32 |
+| GPIO4 | COIN pulse pin of coin acceptor | Active-low, requires pull-up |
+| GND | GND of coin acceptor | **Common ground mandatory** |
+| GPIO42 | IN pin of relay module | Active-high / active-low selectable |
+| 12V DC | 12V power supply for acceptor | Separate power supply, DO NOT power from ESP32 5V |
 
-Đổi chân trong `sdkconfig.defaults` của example này (hoặc `menuconfig → InnoEdge HW drivers`, rồi `idf.py fullclean`).
+Configure GPIO pins in `sdkconfig.defaults` or `menuconfig → InnoEdge HW drivers`.
 
-> Đầu đọc xu chạy 12V, ESP32 chạy 3.3V. Nối thẳng chân xung 12V vào GPIO là
-> **cháy chip**. Dùng opto-coupler hoặc module chuyển mức.
+> **Caution:** Coin acceptors run on 12V DC, while the ESP32 operates at 3.3V logic. Connecting a 12V pulse directly to a GPIO pin will **permanently burn the chip**. Always use an optocoupler (e.g., PC817) or voltage divider.
 
-## Build
+## Build & Flash
 ```bash
 idf.py set-target esp32s3
-# sửa sdkconfig.defaults nếu chân khác mặc định
 idf.py flash monitor
 ```
+*Note:* You can test without hardware by setting GPIO pins to `-1`, which runs the driver in simulation log mode.
 
-Không có phần cứng vẫn build và boot được: đặt mọi GPIO `-1`, driver chỉ ghi log.
-
-## Kết quả mong đợi
-Bỏ 3 xu:
+## Expected Output
+Customer inserts 3 coins:
 ```
-I (12400) coinop: khách bỏ 3 xu
-I (12900) telemetry: cloud đã ghi: method=coin coins=3 amount=3000 đơn giá=1000
+I (12400) coinop: Customer inserted 3 coins
+I (12900) telemetry: Cloud recorded payment: method=coin count=3 amount=3000 unit_price=1000
 ```
-Cloud gửi `{"action":"dispense","params":{"amountVnd":20000}}`:
+Cloud dispatches dispense command `{"action":"dispense","params":{"amountVnd":20000}}`:
 ```
-I (30100) innoedge: lệnh động id=112 action=dispense
-I (30400) coinop: da nha 2 xung
+I (30100) innoedge: Dynamic command id=112 action=dispense
+I (30400) coinop: Dispensed 2 pulses to relay
 ```
 
-## Ba luật của máy có tiền
+## Three Golden Rules of Monetized Hardware
 
-**1. Firmware KHÔNG tự nhân giá.** Gửi **số xu**, để cloud quy đổi. Mỗi đối tác
-một đơn giá, đổi được từ app — nhét giá vào firmware là phải flash lại cả fleet.
+1. **Firmware NEVER multiplies prices.** Send **raw coin counts** to the cloud; let the cloud compute fiat currency. Different operators set different pricing in their mobile apps — hardcoding prices into firmware requires re-flashing your entire fleet whenever prices change.
+2. **Always enforce hardware safety ceilings.** `GTEK_DISPENSE_MAX_PULSES` prevents a malicious or buggy cloud payload from emptying your entire hopper.
+3. **Rely on SDK idempotency.** The SDK saves the high-watermark `commandId` **in NVS before** firing the relay. Sudden power loss during dispensing will safely reject duplicate retries upon reboot.
 
-**2. Luôn có trần an toàn.** `GTEK_DISPENSE_MAX_PULSES` chặn một `params` sai
-biến thành lệnh nhả sạch hopper.
+## Hardware Pulse Debounce
+Mechanical coin acceptors produce noisy electrical pulses. Adjust these two parameters for your specific mechanism:
 
-**3. Dựa vào chống-trùng của SDK, đừng tự làm.** Cloud gửi lại `dispense` sau khi
-mạng rớt là bình thường. SDK giữ high-watermark `commandId` **trong NVS** và đánh
-dấu **trước** khi chạy handler → mất điện giữa lúc nhả tiền, lần gửi lại sau
-reboot sẽ bị chặn. Đây là lỗi từng làm máy nhả tiền hai lần; đừng viết lại logic này.
-
-## Debounce
-Đầu đọc cơ khí nhả xung bẩn. Hai tham số phải chỉnh theo đầu đọc thật:
-
-| Tham số | Ý nghĩa | Chỉnh khi |
+| Parameter | Meaning | Adjustment Rule |
 |---|---|---|
-| `GTEK_PULSE_MIN_MS` (35) | xung hẹp hơn = nhiễu, bỏ | đếm dư → tăng |
-| `GTEK_PULSE_GAP_MS` (300) | im lặng bấy nhiêu = hết chuỗi | 5 xu thành 2 lần 2+3 → tăng |
-
-Không có con số đúng cho mọi đầu đọc — phải đo trên máy thật.
-
-## Troubleshooting
-| Triệu chứng | Nguyên nhân |
-|---|---|
-| Đếm dư xu | Nhiễu → tăng `PULSE_MIN_MS`, kiểm tra pull-up và mass chung |
-| Đếm thiếu xu | `PULSE_MIN_MS` quá lớn so với độ rộng xung thật |
-| Một lượt bị tách hai giao dịch | Tăng `PULSE_GAP_MS` |
-| Relay kêu mà không nhả | Nguồn relay yếu / thiếu diode flyback |
-| Nhả tiền hai lần | Đang tự xử lý dedupe thay vì để SDK lo |
+| `GTEK_PULSE_MIN_MS` (35ms) | Shorter pulses are ignored as noise | If phantom coins are counted → increase |
+| `GTEK_PULSE_GAP_MS` (300ms) | Silence duration marking the end of a coin burst | If 5 coins register as 2 + 3 → increase |
