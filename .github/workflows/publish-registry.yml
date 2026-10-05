@@ -33,4 +33,8 @@ jobs:
           compote component upload \
             --namespace innoedge \
             --name innoedge \
+            --project-dir components/innoedge || \
+          compote component upload \
+            --namespace nguyenduchoai \
+            --name innoedge \
             --project-dir components/innoedge

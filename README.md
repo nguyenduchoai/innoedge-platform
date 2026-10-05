@@ -6,6 +6,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%E2%89%A55.1-red.svg)](https://docs.espressif.com/projects/esp-idf/)
+[![ESP Component Registry](https://components.espressif.com/components/nguyenduchoai/innoedge/badge.svg)](https://components.espressif.com/components/nguyenduchoai/innoedge)
 [![Linux SBC](https://img.shields.io/badge/Linux%20SBC-Raspberry%20Pi%20%7C%20Banana%20Pi-orange.svg)](linux/)
 [![Arduino](https://img.shields.io/badge/Arduino%20%26%20PlatformIO-Supported-teal.svg)](arduino/)
 [![MicroPython](https://img.shields.io/badge/MicroPython-STEM%20Robot-yellow.svg)](micropython/)
