@@ -1,9 +1,9 @@
-version: "0.1.0"
+version: "0.1.1"
 description: >-
-  InnoEdge SDK — hạ tầng IoT cho thiết bị ESP32 vận hành bằng tiền:
-  provisioning WiFi qua BLE/SoftAP, kết nối cloud có reconnect backoff, hàng đợi
-  giao dịch bền qua mất điện, lệnh từ xa có chống trùng bền qua reboot, cấu hình
-  động chạy được offline, và OTA có xác thực SHA-256 + rollback.
+  InnoEdge SDK — IoT device infrastructure for ESP32 monetization:
+  WiFi BLE/SoftAP provisioning, persistent NVS transaction queue,
+  idempotent command bus with deduplication, dynamic config caching,
+  brick-proof TLS OTA with rollback, and multi-WAN failover.
 url: https://github.com/nguyenduchoai/innoedge-platform
 repository: https://github.com/nguyenduchoai/innoedge-platform.git
 documentation: https://github.com/nguyenduchoai/innoedge-platform#readme
