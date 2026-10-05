@@ -1,4 +1,4 @@
-version: "0.1.1"
+version: "0.1.2"
 description: >-
   InnoEdge SDK — IoT device infrastructure for ESP32 monetization:
   WiFi BLE/SoftAP provisioning, persistent NVS transaction queue,
@@ -31,6 +31,21 @@ dependencies:
   espressif/esp_websocket_client:
     version: "^1.4.0"
 
-# Không khai "examples:" ở đây: đường dẫn phải nằm TRONG gói component, mà
-# example của SDK nằm ở examples/ ngoài thư mục này. Người dùng xem example trên
-# GitHub (link documentation ở trên).
+files:
+  exclude:
+    - "**/*.log"
+    - "**/build/**/*"
+    - "**/build_*/**/*"
+    - "**/managed_components/**/*"
+    - "**/dependencies.lock"
+    - "**/sdkconfig"
+    - "**/sdkconfig.old"
+
+examples:
+  - path: ../../examples/01-hello-device
+  - path: ../../examples/02-telemetry
+  - path: ../../examples/03-remote-command
+  - path: ../../examples/04-device-config
+  - path: ../../examples/05-ota
+  - path: ../../examples/07-qr-payment
+
