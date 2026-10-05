@@ -229,6 +229,11 @@ esp_err_t   innoedge_ota_check(void);
 * **Cập nhật OTA không biến máy thành cục gạch:** Firmware mới chỉ được công nhận hợp lệ sau khi máy kết nối thành công tới Cloud. Nếu xảy ra lỗi bootloader sẽ tự động rollback về bản firmware trước đó.
 * **Hỗ trợ Giao thức Công nghiệp Vending (MDB & Modbus RTU):** Máy trạng thái 9-bit MDB Cashless peripheral chuẩn NAMA và module Modbus RTU RS485 công nghiệp cách ly quang học, gắn trực tiếp vào bo mạch máy bán hàng tự động và PLC.
 * **Đa dạng Cổng Thanh toán Toàn cầu:** Microservice cổng thanh toán tích hợp sẵn Stripe, PayPal, PromptPay Thái Lan QR và VietQR với đối soát webhook tức thì.
+* **Hộp Đen Chẩn Đoán & Ghi Vết Sự Cố (Blackbox Crash Recorder):** Tự động lưu vết breadcrumb và gửi báo cáo chẩn đoán sự cố (panic, watchdog timeout, sụt áp brownout) lên Cloud sau khi phục hồi.
+* **Bộ Nhớ Xác Định Chống Phân Mảnh RAM (Deterministic Memory):** Static block memory pools và ring buffer luân chuyển lũy thừa 2 loại trừ rủi ro phân mảnh heap, đảm bảo vận hành 24/7/365 không bao giờ cạn kiệt RAM.
+* **Đa Kênh Mạng Dự Phòng Tự Chuyển Mạch (Multi-WAN Failover):** Tự động giám sát độ trễ và chuyển hướng kết nối sang mạng 4G LTE khi WiFi bị rớt cáp, tự phục hồi về WiFi khi đường truyền ổn định.
+* **Gom Cụm Thiết Bị Nội Bộ (Fleet Master-Worker Mesh):** Cho phép kết nối cụm lên tới 32 máy con (máy giặt, trạm sạc xe) qua ESP-NOW / RS485 về 1 máy Master duy nhất có mạng.
+* **Chữ Ký Mật Mã Giao Dịch Chống Sửa Đổi (TAC HMAC-SHA256):** Bảo vệ tính toàn vẹn của từng giao dịch trong NVS, chống can thiệp vật lý vào chip flash.
 
 ---
 
@@ -236,7 +241,7 @@ esp_err_t   innoedge_ota_check(void);
 
 ```
 .
-├── components/innoedge/     # SDK lõi chuẩn hóa cho ESP-IDF (C)
+├── components/innoedge/     # SDK lõi chuẩn hóa cho ESP-IDF C (Hộp đen, Failover, Cluster, Crypto, Bus, Queue)
 ├── arduino/InnoEdge/        # Thư viện InnoEdge cho Arduino & PlatformIO (C++)
 ├── micropython/             # InnoBot HAL & MicroPython cho Robot STEM
 ├── linux/                   # Hỗ trợ Raspberry Pi, Banana Pi, Orange Pi (Python + Go Agent)
@@ -257,14 +262,15 @@ InnoEdge đi kèm bộ kiểm thử toàn diện không cần phần cứng và 
 ./tests/run.sh
 ```
 
-Bao phủ 7 khối kiểm tra tự động:
+Bao phủ 8 khối kiểm tra tự động:
 1. **C Command Bus:** Chống chạy trùng lệnh bền vững qua reboot.
 2. **Giao thức Công nghiệp:** Máy trạng thái MDB Cashless & bộ sinh khung tin Modbus RTU CRC16.
-3. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
-4. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
-5. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
-6. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
-7. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
+3. **CORE Tăng Cường (Resilience):** Hộp đen chẩn đoán sự cố, static memory pool, chuyển mạch mạng Multi-WAN, mesh Master-Worker, và chữ ký mật mã TAC HMAC-SHA256.
+4. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
+5. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
+6. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
+7. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
+8. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
 
 ---
 

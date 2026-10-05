@@ -20,6 +20,18 @@ cc -std=c11 -Wall -Wextra -Werror -O1 \
    -o /tmp/ie_test_industrial
 /tmp/ie_test_industrial
 
+echo "▸ core resilience (blackbox + mem pool + failover + cluster + crypto)"
+cc -std=c11 -Wall -Wextra -Werror -O1 \
+   -I stubs -I "$C/innoedge/include" -I "$C/innoedge/src" \
+   test_core_resilience.c \
+   "$C/innoedge/src/gtek_blackbox.c" \
+   "$C/innoedge/src/gtek_mem_pool.c" \
+   "$C/innoedge/src/gtek_net_failover.c" \
+   "$C/innoedge/src/gtek_cluster.c" \
+   "$C/innoedge/src/gtek_crypto.c" \
+   -o /tmp/ie_test_core_resilience
+/tmp/ie_test_core_resilience
+
 if command -v c++ >/dev/null 2>&1; then
     echo "▸ arduino C++ wrapper"
     c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only \

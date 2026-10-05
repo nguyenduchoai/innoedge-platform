@@ -7,10 +7,15 @@
 idf_component_register(
     SRCS
         "src/gtek_asset_client.c"
+        "src/gtek_blackbox.c"
+        "src/gtek_cluster.c"
         "src/gtek_command_bus.c"
         "src/gtek_config_client.c"
         "src/gtek_config_store.c"
+        "src/gtek_crypto.c"
         "src/gtek_fault.c"
+        "src/gtek_mem_pool.c"
+        "src/gtek_net_failover.c"
         "src/gtek_ota_client.c"
         "src/gtek_payment_queue.c"
         "src/gtek_provisioning.c"

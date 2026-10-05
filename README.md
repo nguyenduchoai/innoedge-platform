@@ -229,6 +229,11 @@ esp_err_t   innoedge_ota_check(void);
 * **Brick-Proof OTA Upgrades:** New firmware is only validated after the device successfully authenticates with the cloud. Any panic or boot failure triggers automatic bootloader rollback to the previous partition.
 * **Industrial Vending Bus (NAMA MDB & Modbus RTU):** Built-in opto-isolated 9-bit MDB Cashless peripheral state machine and industrial Modbus RTU RS485 master/slave engine for direct legacy vending machine and industrial PLC retrofitting.
 * **Global Payment Agnostic:** Built-in connector microservice supporting international gateways (Stripe, PayPal, PromptPay Thailand QR) and local instant bank transfers (VietQR).
+* **Blackbox Flight Recorder & Remote Diagnostics:** Automatic breadcrumb logging and crash diagnostic snapshots sent to Cloud upon recovery from brownout, panic, or watchdog reset.
+* **Deterministic Zero-Fragmentation Memory:** Pre-allocated static block pools and lockless power-of-two circular ring buffers eliminate heap fragmentation for 24/7/365 uninterrupted uptime.
+* **Multi-WAN Failover (WiFi ↔ 4G LTE):** Automatic connection health tracking and seamless switchover to secondary cellular uplink upon network degradation.
+* **Fleet Clustering (Master-Worker Mesh):** Bridge up to 32 worker subnodes (washers, EV bays) via ESP-NOW/RS485 through a single master gateway.
+* **Cryptographic Transaction Signing (TAC):** Tamper-proof HMAC-SHA256 Transaction Authentication Codes prevent NVS flash tampering.
 
 ---
 
@@ -236,7 +241,7 @@ esp_err_t   innoedge_ota_check(void);
 
 ```
 .
-├── components/innoedge/     # Core ESP-IDF C SDK
+├── components/innoedge/     # Core ESP-IDF C SDK (Resilience, Bus, Queue, Config, OTA)
 ├── arduino/InnoEdge/        # Arduino & PlatformIO C++ library wrapper
 ├── micropython/             # InnoBot HAL & MicroPython for STEM robotics
 ├── linux/                   # Raspberry Pi & Banana Pi (Python SDK + Go Daemon)
@@ -257,14 +262,15 @@ InnoEdge includes an automated test runner that validates the entire stack local
 ./tests/run.sh
 ```
 
-Runs 7 test suites across multiple languages:
+Runs 8 test suites across multiple languages:
 1. **C Command Bus:** Registry validation and reboot-safe de-duplication.
 2. **Industrial Protocols:** MDB Cashless peripheral state machine & Modbus RTU CRC16 packet builder.
-3. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
-4. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
-5. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
-6. **Linux SBC Agent (Go):** Background daemon compilation check.
-7. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
+3. **Core Resilience:** Blackbox flight recorder, deterministic memory pool, multi-WAN failover, fleet clustering, and cryptographic TAC signing.
+4. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
+5. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
+6. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
+7. **Linux SBC Agent (Go):** Background daemon compilation check.
+8. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
 
 ---
 

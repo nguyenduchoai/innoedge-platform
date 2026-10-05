@@ -16,6 +16,11 @@
 #include "gtek_provisioning.h"
 #include "gtek_wifi_manager.h"
 #include "gtek_ws_client.h"
+#include "gtek_blackbox.h"
+#include "gtek_cluster.h"
+#include "gtek_crypto.h"
+#include "gtek_mem_pool.h"
+#include "gtek_net_failover.h"
 #include "esp_check.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -325,6 +330,10 @@ esp_err_t innoedge_init(const innoedge_config_t *cfg)
     ESP_RETURN_ON_ERROR(gtek_config_store_load(&s_dev), TAG, "nạp cấu hình thiết bị");
     ESP_RETURN_ON_ERROR(gtek_payment_queue_init(), TAG, "hàng đợi giao dịch");
     ESP_RETURN_ON_ERROR(gtek_command_bus_init(), TAG, "command bus");
+    gtek_blackbox_init();
+    gtek_mem_pool_init();
+    gtek_net_failover_init();
+    gtek_cluster_init(INNOEDGE_CLUSTER_STANDALONE);
     if (s_ev.on_provisioning) {
         gtek_provisioning_set_ui_notify(s_ev.on_provisioning);
     }
@@ -541,3 +550,45 @@ esp_err_t innoedge_ota_check(void)
 {
     return gtek_ota_client_check_once(&s_dev, NULL);
 }
+
+// ── Enterprise Resiliency & Diagnostics ────────────────────────────────────
+
+esp_err_t innoedge_blackbox_record(const char *tag, const char *details)
+{
+    gtek_blackbox_record_breadcrumb(tag, details);
+    return ESP_OK;
+}
+
+esp_err_t innoedge_blackbox_get_report(char *out, size_t out_len)
+{
+    return gtek_blackbox_format_report(out, out_len);
+}
+
+innoedge_net_interface_t innoedge_net_active_interface(void)
+{
+    return gtek_net_failover_get_active();
+}
+
+esp_err_t innoedge_net_report_link(innoedge_net_interface_t iface, bool is_up)
+{
+    gtek_net_failover_report_link(iface, is_up);
+    return ESP_OK;
+}
+
+esp_err_t innoedge_cluster_init(innoedge_cluster_role_t role)
+{
+    return gtek_cluster_init(role);
+}
+
+esp_err_t innoedge_crypto_sign_tx(uint32_t seq, int kind, int count,
+                                  int64_t amount_vnd, char *tac_out, size_t out_len)
+{
+    return gtek_crypto_sign_transaction(s_dev.mac, seq, kind, count, amount_vnd, tac_out, out_len);
+}
+
+bool innoedge_crypto_verify_tx(uint32_t seq, int kind, int count,
+                               int64_t amount_vnd, const char *expected_tac)
+{
+    return gtek_crypto_verify_transaction(s_dev.mac, seq, kind, count, amount_vnd, expected_tac);
+}
+
