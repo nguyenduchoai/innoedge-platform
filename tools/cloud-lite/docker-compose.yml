@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 InnoEdge
+
+services:
+  # Caddy Reverse Proxy: Tự động cấp và gia hạn SSL Let's Encrypt miễn phí
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - innoedge-server
+
+  # InnoEdge Cloud Server (Go)
+  innoedge-server:
+    build:
+      context: ../mock-cloud
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - ADDR=:8080
+      - RATE_VND=${RATE_VND:-1000}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-innoedge_secret_key}
+    volumes:
+      - server_data:/app/data
+    expose:
+      - "8080"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  server_data:

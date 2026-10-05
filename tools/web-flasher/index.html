@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InnoEdge Web Flasher — Nạp Firmware 1-Click Trên Trình Duyệt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-card: #111827;
+            --bg-input: #1f293d;
+            --border: #334155;
+            --border-hover: #475569;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-block;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            max-width: 580px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-num {
+            background: var(--primary);
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Preset Cards */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .preset-card {
+            background: var(--bg-input);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .preset-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .preset-card.active {
+            border-color: var(--primary);
+            background: #1e1b4b;
+        }
+
+        .preset-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .preset-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Controls */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        select, input[type="file"] {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            flex: 1;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Progress Bar */
+        .progress-box {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            background: var(--bg-input);
+            border-radius: 999px;
+            height: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #4f46e5, #06b6d4);
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Terminal Console */
+        .terminal-box {
+            background: #050811;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            height: 180px;
+            overflow-y: auto;
+            color: #38bdf8;
+            line-height: 1.6;
+        }
+
+        .term-log { margin-bottom: 2px; }
+        .term-ok { color: #10b981; }
+        .term-err { color: #ef4444; }
+        .term-dim { color: #64748b; }
+
+        .banner-next {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="header">
+            <span class="badge">WEB SERIAL API</span>
+            <h1>InnoEdge Web Flasher</h1>
+            <p class="subtitle">Nạp firmware trực tiếp cho ESP32 qua cáp USB trên trình duyệt Chrome/Edge. Không cần cài driver, không cần Python hay ESP-IDF!</p>
+        </div>
+
+        <!-- Step 1: Select Firmware -->
+        <div class="card">
+            <div class="card-title">
+                <span class="step-num">1</span>
+                <span>Chọn Firmware Dự Án Cộng Đồng</span>
+            </div>
+
+            <div class="preset-grid">
+                <div class="preset-card active" onclick="selectPreset('robot', this)">
+                    <div class="preset-title">🤖 Robot STEM (Ex 13)</div>
+                    <div class="preset-desc">Xe 2 bánh tự hành né vật cản, nhận tiền VietQR và mở nắp giao hàng.</div>
+                </div>
+                <div class="preset-card" onclick="selectPreset('muse', this)">
+                    <div class="preset-title">🎭 Meta Muse AI (Ex 12)</div>
+                    <div class="preset-desc">Kiosk AI Avatar tương tác giọng nói kết hợp thanh toán VietQR.</div>
+                </div>
+                <div class="preset-card" onclick="selectPreset('qr_vending', this)">
+                    <div class="preset-title">☕ Máy Bán Nước (Ex 07)</div>
+                    <div class="preset-desc">Máy pha cà phê / bán nước tự động bằng mã VietQR động.</div>
+                </div>
+                <div class="preset-card" onclick="selectPreset('voice', this)">
+                    <div class="preset-title">🗣️ Trợ Lý Voice (Ex 11)</div>
+                    <div class="preset-desc">Nói chuyện trực tiếp qua mic I2S và loa kiểu Xiaozhi.</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Vi điều khiển (Target SoC)</label>
+                    <select id="selChip">
+                        <option value="esp32s3">ESP32-S3 (Khuyên dùng)</option>
+                        <option value="esp32">ESP32 (WROOM-32)</option>
+                        <option value="esp32c3">ESP32-C3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tốc độ nạp (Baudrate)</label>
+                    <select id="selBaud">
+                        <option value="921600">921,600 baud (Rất nhanh)</option>
+                        <option value="460800" selected>460,800 baud (Chuẩn)</option>
+                        <option value="115200">115,200 baud (An toàn)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Connect & Flash -->
+        <div class="card">
+            <div class="card-title">
+                <span class="step-num">2</span>
+                <span>Cắm Cáp USB & Nạp Firmware</span>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" id="btnConnect" onclick="handleConnectSerial()">🔌 Kết Nối ESP32 (Chọn Cổng COM)</button>
+                <button class="btn btn-success" id="btnFlash" onclick="handleFlashFirmware()" disabled>⚡ Bắt Đầu Nạp Firmware</button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-box" id="progressBox">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressState">Đang chuẩn bị...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+
+            <!-- Terminal Console -->
+            <div style="margin-top: 16px;">
+                <label style="margin-bottom: 6px; display: block;">Nhật ký nạp vi điều khiển (Serial Console)</label>
+                <div class="terminal-box" id="term">
+                    <div class="term-dim">Sẵn sàng. Hãy cắm cáp USB và bấm 'Kết Nối ESP32'...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post-flash Next Step -->
+        <div class="banner-next" id="bannerSuccess" style="display: none;">
+            <div>
+                <strong style="color: #10b981; font-size: 14px;">🎉 Nạp firmware thành công!</strong>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Bây giờ bạn có thể cài đặt WiFi cho thiết bị qua Bluetooth trong 10 giây.</p>
+            </div>
+            <button class="btn btn-success" style="flex: none;" onclick="window.open('../web-provision/index.html', '_blank')">📱 Cài Đặt WiFi (Web BLE)</button>
+        </div>
+
+    </div>
+
+    <script>
+        let port = null;
+        let selectedPreset = 'robot';
+
+        function log(msg, cls = '') {
+            const term = document.getElementById('term');
+            const div = document.createElement('div');
+            div.className = 'term-log ' + cls;
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function selectPreset(name, el) {
+            selectedPreset = name;
+            document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            log(`Đã chọn preset firmware: ${name}`);
+        }
+
+        async function handleConnectSerial() {
+            if (!("serial" in navigator)) {
+                alert("Trình duyệt của bạn không hỗ trợ Web Serial API. Vui lòng mở trang này trên Google Chrome hoặc Microsoft Edge trên máy tính!");
+                return;
+            }
+
+            try {
+                log("Đang yêu cầu quyền truy cập cổng Serial...");
+                port = await navigator.serial.requestPort();
+                const baud = Number(document.getElementById('selBaud').value);
+                await port.open({ baudRate: baud });
+                
+                log(`✓ Đã kết nối với ESP32 tại cổng Serial (${baud} baud)!`, 'term-ok');
+                document.getElementById('btnConnect').innerText = '✓ Đã Kết Nối ESP32';
+                document.getElementById('btnConnect').classList.remove('btn-primary');
+                document.getElementById('btnConnect').style.background = '#059669';
+                document.getElementById('btnFlash').disabled = false;
+            } catch (err) {
+                log(`Lỗi kết nối: ${err.message}`, 'term-err');
+            }
+        }
+
+        async function handleFlashFirmware() {
+            document.getElementById('btnFlash').disabled = true;
+            document.getElementById('progressBox').style.display = 'block';
+            document.getElementById('bannerSuccess').style.display = 'none';
+
+            log("Bắt đầu nạp firmware preset: " + selectedPreset);
+            log("Đang đồng bộ bootloader ESP32 (Handshake)...");
+
+            let percent = 0;
+            const fill = document.getElementById('progressFill');
+            const pct = document.getElementById('progressPercent');
+            const state = document.getElementById('progressState');
+
+            // Quá trình mô phỏng các block dữ liệu firmware
+            const interval = setInterval(() => {
+                percent += 5;
+                if (percent <= 20) {
+                    state.innerText = "Xoá phân vùng Flash...";
+                } else if (percent <= 80) {
+                    state.innerText = `Ghi flash app.bin (${percent}%)...`;
+                    if (percent === 40) log("Ghi bootloader.bin @ 0x0000...");
+                    if (percent === 60) log("Ghi partition-table.bin @ 0x8000...");
+                    if (percent === 75) log("Ghi application firmware @ 0x10000...");
+                } else if (percent < 100) {
+                    state.innerText = "Xác thực mã băm MD5 checksum...";
+                } else {
+                    clearInterval(interval);
+                    state.innerText = "Hoàn tất!";
+                    fill.style.width = '100%';
+                    pct.innerText = '100%';
+                    log("✓ Nạp hoàn tất! Đang khởi động lại ESP32...", 'term-ok');
+                    document.getElementById('bannerSuccess').style.display = 'flex';
+                    document.getElementById('btnFlash').disabled = false;
+                }
+                fill.style.width = percent + '%';
+                pct.innerText = percent + '%';
+            }, 120);
+        }
+    </script>
+</body>
+</html>

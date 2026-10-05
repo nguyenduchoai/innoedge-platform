@@ -109,3 +109,28 @@ func TestPersonaMacDinhLaDevice(t *testing.T) {
 		t.Errorf("persona device sai bộ tool: %v", names)
 	}
 }
+
+func TestPersonaMuseToolVaPrompt(t *testing.T) {
+	old := *persona
+	*persona = "muse"
+	defer func() { *persona = old }()
+
+	names := map[string]bool{}
+	for _, tu := range aiTools() {
+		names[tu.OfTool.Name] = true
+	}
+	for _, want := range []string{"request_payment", "dispense", "show_avatar", "status"} {
+		if !names[want] {
+			t.Errorf("persona muse thiếu tool %s", want)
+		}
+	}
+	if names["quiz"] || names["say"] {
+		t.Error("persona muse không được có tool quiz hay say của edu")
+	}
+	sys := aiSystemPrompt()
+	for _, k := range []string{"Meta Muse", "VietQR", "paid", "dispense", "show_avatar"} {
+		if !strings.Contains(sys, k) {
+			t.Errorf("system prompt muse thiếu %q", k)
+		}
+	}
+}

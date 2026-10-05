@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InnoEdge BlockStudio — Lập Trình Kéo Thả Robot STEM & IoT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #111827;
+            --bg-card: #1f293d;
+            --bg-canvas: #0f172a;
+            --border: #334155;
+            --border-light: #475569;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --purple: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 20;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .brand-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 8px;
+            padding-left: 8px;
+            border-left: 1px solid var(--border);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .btn:hover {
+            border-color: var(--border-light);
+            background: #27354f;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar: Toolbox */
+        .toolbox {
+            width: 260px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .toolbox-header {
+            padding: 14px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .category-group {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .category-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-left: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .block-item {
+            background: var(--bg-card);
+            border-left: 4px solid var(--primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .block-item:hover {
+            transform: translateX(3px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .block-event { border-left-color: var(--success); }
+        .block-motion { border-left-color: #3b82f6; }
+        .block-sensor { border-left-color: var(--warning); }
+        .block-hardware { border-left-color: var(--purple); }
+        .block-speech { border-left-color: var(--info); }
+
+        /* Canvas: Center Area */
+        .canvas-container {
+            flex: 1;
+            background: var(--bg-canvas);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .canvas-toolbar {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .canvas-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .block-stack {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        /* Dropped Active Block Cards */
+        .active-block {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 580px;
+            overflow: hidden;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .active-block-header {
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+        }
+
+        .header-event { background: linear-gradient(90deg, #059669, #10b981); }
+        .header-motion { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .header-sensor { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .header-hardware { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+        .header-speech { background: linear-gradient(90deg, #0891b2, #06b6d4); }
+
+        .active-block-body {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            background: var(--bg-card);
+        }
+
+        .active-block-body input, .active-block-body select {
+            background: #0f172a;
+            border: 1px solid var(--border-light);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .btn-remove-block {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+        }
+
+        .btn-remove-block:hover {
+            color: white;
+        }
+
+        /* Right Panel: Code Generator */
+        .code-panel {
+            width: 420px;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            display: flex;
+            background: #090d16;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            border-bottom: 2px solid var(--primary);
+            background: var(--bg-surface);
+        }
+
+        .code-content {
+            flex: 1;
+            padding: 14px;
+            overflow: auto;
+            background: #090d16;
+        }
+
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            display: block;
+        }
+
+        .code-actions {
+            padding: 10px 14px;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Simulation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 680px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #simCanvas {
+            background: #090d16;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <span class="brand-badge">INNOEDGE</span>
+            <span class="brand-title">BlockStudio</span>
+            <span class="brand-sub">Kéo Thả Robot STEM & Kiosk IoT</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn" id="btnSimulate">🎮 Chạy Giả Lập</button>
+            <button class="btn" id="btnExport">💾 Xuất File</button>
+            <button class="btn btn-primary" id="btnWebFlasher" onclick="window.open('../web-flasher/index.html', '_blank')">⚡ Nạp Firmware 1-Click</button>
+            <button class="btn btn-success" id="btnCopyCode">📋 Sao Chép Mã</button>
+        </div>
+    </header>
+
+    <!-- Workspace -->
+    <div class="workspace">
+        
+        <!-- Left: Toolbox -->
+        <div class="toolbox">
+            <div class="toolbox-header">Khối Lệnh STEM (Bấm để thêm)</div>
+            
+            <!-- Category: Events -->
+            <div class="category-group">
+                <div class="category-title" style="color: var(--success);">🟢 Sự Kiện & Tiền Tệ</div>
+                <div class="block-item block-event" onclick="addBlock('on_paid')">Khi nhận VietQR [20.000 đ] ➕</div>
+                <div class="block-item block-event" onclick="addBlock('on_cmd')">Khi nhận lệnh từ xa [bot_move] ➕</div>
+                <div class="block-item block-event" onclick="addBlock('request_qr')">Tạo VietQR động [25.000 đ] ➕</div>
+            </div>
+
+            <!-- Category: Motion -->
+            <div class="category-group">
+                <div class="category-title" style="color: #3b82f6;">🚗 Chuyển Động Robot</div>
+                <div class="block-item block-motion" onclick="addBlock('bot_move')">Robot di chuyển [Tiến / 80%] ➕</div>
+                <div class="block-item block-motion" onclick="addBlock('bot_stop')">Robot dừng lại ➕</div>
+            </div>
+
+            <!-- Category: Sensors -->
+            <div class="category-group">
+                <div class="category-title" style="color: var(--warning);">📏 Cảm Biến Siêu Âm</div>
+                <div class="block-item block-sensor" onclick="addBlock('check_obstacle')">Né vật cản < [15 cm] ➕</div>
+            </div>
+
+            <!-- Category: Actuators -->
+            <div class="category-group">
+                <div class="category-title" style="color: var(--purple);">🦾 Cơ Cấu & Servo</div>
+                <div class="block-item block-hardware" onclick="addBlock('set_servo')">Quay Servo [Cửa thùng đồ / 90°] ➕</div>
+                <div class="block-item block-hardware" onclick="addBlock('set_relay')">Kích Relay bơm / nhả hàng [3s] ➕</div>
+            </div>
+
+            <!-- Category: Speech -->
+            <div class="category-group">
+                <div class="category-title" style="color: var(--info);">🗣️ Giọng Nói & AI</div>
+                <div class="block-item block-speech" onclick="addBlock('speak')">Robot phát loa câu nói ➕</div>
+                <div class="block-item block-speech" onclick="addBlock('avatar')">Đổi biểu cảm Avatar Muse ➕</div>
+            </div>
+        </div>
+
+        <!-- Center: Canvas Stack -->
+        <div class="canvas-container">
+            <div class="canvas-toolbar">
+                <div class="canvas-title">
+                    <span>📌 Không gian khối lệnh đã ghép</span>
+                    <span style="font-size: 11px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;" id="blockCount">3 khối</span>
+                </div>
+                <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="resetBlocks()">Xoá hết</button>
+            </div>
+            <div class="block-stack" id="blockStack">
+                <!-- Blocks rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- Right: Realtime Code Generator -->
+        <div class="code-panel">
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('arduino')">Arduino C++</button>
+                <button class="tab-btn" onclick="switchTab('python')">MicroPython</button>
+                <button class="tab-btn" onclick="switchTab('json')">InnoEdge WS JSON</button>
+            </div>
+            <div class="code-content">
+                <pre><code id="codeOutput">// Đang sinh mã nguồn...</code></pre>
+            </div>
+            <div class="code-actions">
+                <span style="font-size: 12px; color: var(--text-muted);" id="syntaxStatus">✓ Tự động đồng bộ</span>
+                <button class="btn" style="font-size: 11px;" onclick="copyCode()">Copy Code</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Simulator Modal -->
+    <div class="modal-overlay" id="simModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 style="font-size: 15px; font-weight: 700;">🎮 Giả Lập Robot STEM & Kiosk Ảo</h3>
+                <button class="btn-remove-block" onclick="closeSim()">✕</button>
+            </div>
+            <div class="modal-body">
+                <canvas id="simCanvas" width="480" height="320"></canvas>
+                <div style="margin-top: 15px; display: flex; gap: 10px; width: 100%; justify-content: center;">
+                    <button class="btn btn-success" onclick="simTriggerPayment()">💳 Giả lập Quét VietQR 20.000 đ</button>
+                    <button class="btn" onclick="simSpawnObstacle()">⚠️ Đặt Vật Cản Trước Mặt</button>
+                    <button class="btn" onclick="simReset()">Làm Mới</button>
+                </div>
+                <div id="simLog" style="margin-top: 10px; font-size: 12px; color: #38bdf8; font-family: monospace;">Robot sẵn sàng nhận lệnh...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentTab = 'arduino';
+        let blocks = [
+            { id: 1, type: 'on_paid', amount: 20000 },
+            { id: 2, type: 'bot_move', direction: 'forward', speed: 80, duration: 2 },
+            { id: 3, type: 'set_servo', angle: 90 }
+        ];
+
+        // Renders active blocks in center canvas
+        function renderBlocks() {
+            const container = document.getElementById('blockStack');
+            container.innerHTML = '';
+            document.getElementById('blockCount').innerText = `${blocks.length} khối`;
+
+            blocks.forEach((b, index) => {
+                const card = document.createElement('div');
+                card.className = 'active-block';
+
+                let headerClass = 'header-motion';
+                let headerTitle = 'Chuyển Động Robot';
+                let bodyHtml = '';
+
+                switch (b.type) {
+                    case 'on_paid':
+                        headerClass = 'header-event';
+                        headerTitle = '🟢 SỰ KIỆN: Khi Khách Quét VietQR Thành Công';
+                        bodyHtml = `Số tiền: <input type="number" value="${b.amount}" style="width: 100px;" onchange="updateBlock(${b.id}, 'amount', Number(this.value))"> đ (Ngân hàng báo tiền về)`;
+                        break;
+                    case 'on_cmd':
+                        headerClass = 'header-event';
+                        headerTitle = '⚡ SỰ KIỆN: Khi Nhận Lệnh Từ Xa (Cloud / AI)';
+                        bodyHtml = `Lệnh: <select onchange="updateBlock(${b.id}, 'cmd', this.value)">
+                            <option value="bot_move">bot_move (Di chuyển)</option>
+                            <option value="bot_deliver">bot_deliver (Giao hàng)</option>
+                            <option value="dispense">dispense (Nhả đồ)</option>
+                        </select>`;
+                        break;
+                    case 'request_qr':
+                        headerClass = 'header-event';
+                        headerTitle = '💳 HÀNH ĐỘNG: Xin Mã VietQR Động';
+                        bodyHtml = `Số tiền: <input type="number" value="${b.amount || 25000}" style="width: 100px;" onchange="updateBlock(${b.id}, 'amount', Number(this.value))"> đ`;
+                        break;
+                    case 'bot_move':
+                        headerClass = 'header-motion';
+                        headerTitle = '🚗 ROBOT: Di Chuyển 2 Bánh';
+                        bodyHtml = `Hướng: <select onchange="updateBlock(${b.id}, 'direction', this.value)">
+                            <option value="forward" ${b.direction === 'forward' ? 'selected' : ''}>Tiến lên ⬆️</option>
+                            <option value="backward" ${b.direction === 'backward' ? 'selected' : ''}>Lùi lại ⬇️</option>
+                            <option value="left" ${b.direction === 'left' ? 'selected' : ''}>Rẽ trái ⬅️</option>
+                            <option value="right" ${b.direction === 'right' ? 'selected' : ''}>Rẽ phải ➡️</option>
+                        </select>
+                        Tốc độ: <input type="number" value="${b.speed || 80}" style="width: 60px;" min="10" max="100" onchange="updateBlock(${b.id}, 'speed', Number(this.value))">%
+                        Thời gian: <input type="number" value="${b.duration || 2}" style="width: 60px;" step="0.5" onchange="updateBlock(${b.id}, 'duration', Number(this.value))">s`;
+                        break;
+                    case 'bot_stop':
+                        headerClass = 'header-motion';
+                        headerTitle = '🛑 ROBOT: Phanh Dừng Lại';
+                        bodyHtml = `Dừng lập tức 2 động cơ DC bánh xe`;
+                        break;
+                    case 'check_obstacle':
+                        headerClass = 'header-sensor';
+                        headerTitle = '📏 CẢM BIẾN: Kiểm Tra Vật Cản (HC-SR04)';
+                        bodyHtml = `Nếu khoảng cách phía trước < <input type="number" value="${b.dist || 15}" style="width: 60px;" onchange="updateBlock(${b.id}, 'dist', Number(this.value))"> cm thì phanh dừng lại`;
+                        break;
+                    case 'set_servo':
+                        headerClass = 'header-hardware';
+                        headerTitle = '🦾 SERVO: Cửa Thùng Đồ / Gắp Hàng';
+                        bodyHtml = `Quay góc: <input type="number" value="${b.angle || 90}" style="width: 70px;" min="0" max="180" onchange="updateBlock(${b.id}, 'angle', Number(this.value))">° (0° = Đóng, 90° = Mở nắp)`;
+                        break;
+                    case 'set_relay':
+                        headerClass = 'header-hardware';
+                        headerTitle = '⚡ RELAY: Cơ Cấu Bơm / Nhả Hàng';
+                        bodyHtml = `Kênh: <input type="number" value="${b.channel || 1}" style="width: 50px;" min="1" max="4"> trong <input type="number" value="${b.sec || 3}" style="width: 50px;"> giây`;
+                        break;
+                    case 'speak':
+                        headerClass = 'header-speech';
+                        headerTitle = '🗣️ GIỌNG NÓI: Robot Phát Loa';
+                        bodyHtml = `Nói: <input type="text" value="${b.text || 'Cảm ơn bạn! Đồ của bạn đây.'}" style="width: 280px;" onchange="updateBlock(${b.id}, 'text', this.value)">`;
+                        break;
+                    case 'avatar':
+                        headerClass = 'header-speech';
+                        headerTitle = '🤖 AVATAR: Đổi Biểu Cảm Meta Muse';
+                        bodyHtml = `Biểu cảm: <select onchange="updateBlock(${b.id}, 'mood', this.value)">
+                            <option value="happy">HAPPY (Vui vẻ)</option>
+                            <option value="listening">LISTENING (Lắng nghe)</option>
+                            <option value="dispense">DISPENSING (Đang giao)</option>
+                        </select>`;
+                        break;
+                }
+
+                card.innerHTML = `
+                    <div class="active-block-header ${headerClass}">
+                        <span>${headerTitle}</span>
+                        <button class="btn-remove-block" onclick="removeBlock(${b.id})">✕</button>
+                    </div>
+                    <div class="active-block-body">
+                        ${bodyHtml}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            generateCode();
+        }
+
+        function addBlock(type) {
+            const newId = Date.now();
+            let newBlock = { id: newId, type: type };
+            if (type === 'on_paid') newBlock.amount = 20000;
+            if (type === 'bot_move') { newBlock.direction = 'forward'; newBlock.speed = 80; newBlock.duration = 2; }
+            if (type === 'set_servo') newBlock.angle = 90;
+            if (type === 'check_obstacle') newBlock.dist = 15;
+            blocks.push(newBlock);
+            renderBlocks();
+        }
+
+        function removeBlock(id) {
+            blocks = blocks.filter(b => b.id !== id);
+            renderBlocks();
+        }
+
+        function updateBlock(id, key, val) {
+            const b = blocks.find(x => x.id === id);
+            if (b) {
+                b[key] = val;
+                generateCode();
+            }
+        }
+
+        function resetBlocks() {
+            blocks = [];
+            renderBlocks();
+        }
+
+        // Code Generation
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            generateCode();
+        }
+
+        function generateCode() {
+            const out = document.getElementById('codeOutput');
+            if (currentTab === 'arduino') {
+                out.innerText = generateArduinoCode();
+            } else if (currentTab === 'python') {
+                out.innerText = generateMicroPythonCode();
+            } else {
+                out.innerText = generateJsonProtocol();
+            }
+        }
+
+        function generateArduinoCode() {
+            let code = `// Mã nguồn tự động sinh bởi InnoEdge BlockStudio\n`;
+            code += `#include <Arduino.h>\n#include <InnoEdge.h>\n#include <ESP32Servo.h>\n\n`;
+            code += `Servo cargoServo;\n`;
+            code += `#define MOTOR_L_IN1 4\n#define MOTOR_L_IN2 5\n#define MOTOR_R_IN1 6\n#define MOTOR_R_IN2 7\n#define TRIG_PIN 15\n#define ECHO_PIN 16\n#define SERVO_PIN 18\n\n`;
+            code += `void setup() {\n`;
+            code += `    Serial.begin(115200);\n`;
+            code += `    cargoServo.attach(SERVO_PIN);\n`;
+            code += `    cargoServo.write(0); // Đóng nắp ban đầu\n\n`;
+            code += `    InnoEdge.begin("1.0.0");\n\n`;
+
+            blocks.forEach(b => {
+                if (b.type === 'on_paid') {
+                    code += `    // Khi nhận tiền VietQR: chỉ on_paid mới giao hàng!\n`;
+                    code += `    InnoEdge.onPaid([](int64_t intentId, int64_t amountVnd) {\n`;
+                    code += `        Serial.printf("Đã nhận %lld đ. Bắt đầu nhiệm vụ!\\n", amountVnd);\n`;
+                    code += `        // Robot di chuyển phục vụ khách\n`;
+                    code += `        digitalWrite(MOTOR_L_IN1, HIGH); digitalWrite(MOTOR_R_IN1, HIGH);\n`;
+                    code += `        delay(2000);\n`;
+                    code += `        digitalWrite(MOTOR_L_IN1, LOW); digitalWrite(MOTOR_R_IN1, LOW);\n`;
+                    code += `        cargoServo.write(90); // Mở thùng đồ\n`;
+                    code += `    });\n\n`;
+                }
+            });
+
+            code += `    InnoEdge.start();\n}\n\n`;
+            code += `void loop() {\n    delay(20);\n}\n`;
+            return code;
+        }
+
+        function generateMicroPythonCode() {
+            let code = `# Mã nguồn MicroPython sinh bởi InnoEdge BlockStudio\n`;
+            code += `import time\nfrom innoedge import InnoBot\n\n`;
+            code += `bot = InnoBot(version="1.0.0")\n\n`;
+
+            blocks.forEach(b => {
+                if (b.type === 'on_paid') {
+                    code += `@bot.on_paid\ndef on_payment(intent_id, amount_vnd):\n`;
+                    code += `    print(f"✓ Đã nhận {amount_vnd} đ qua VietQR")\n`;
+                    code += `    bot.speak("Cảm ơn bạn! Robot đang giao hàng")\n`;
+                    code += `    bot.forward(speed=80, seconds=2)\n`;
+                    code += `    bot.set_servo(channel=1, angle=90)\n\n`;
+                }
+            });
+
+            code += `bot.run()\n`;
+            return code;
+        }
+
+        function generateJsonProtocol() {
+            let proto = {
+                device_type: "innoedge_stem_robot",
+                firmware: "1.0.0",
+                registered_commands: ["bot_move", "bot_servo", "bot_mode", "request_payment"],
+                configured_blocks: blocks.map(b => ({ type: b.type, params: b }))
+            };
+            return JSON.stringify(proto, null, 2);
+        }
+
+        function copyCode() {
+            const text = document.getElementById('codeOutput').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const el = document.getElementById('syntaxStatus');
+                el.innerText = '✅ Đã sao chép vào bộ nhớ đệm!';
+                setTimeout(() => { el.innerText = '✓ Tự động đồng bộ'; }, 2000);
+            });
+        }
+
+        // Simulator
+        const modal = document.getElementById('simModal');
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let robotX = 60, robotY = 160;
+        let cargoOpen = false;
+        let obstacle = { x: 340, y: 140, w: 20, h: 40 };
+
+        document.getElementById('btnSimulate').onclick = () => {
+            modal.style.display = 'flex';
+            drawSim();
+        };
+
+        function closeSim() { modal.style.display = 'none'; }
+
+        function drawSim() {
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid
+            ctx.strokeStyle = '#1e293b';
+            for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+            // Obstacle
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px Inter';
+            ctx.fillText('VẬT CẢN', obstacle.x - 5, obstacle.y - 6);
+
+            // Robot Body
+            ctx.fillStyle = '#4f46e5';
+            ctx.beginPath();
+            ctx.roundRect(robotX, robotY - 25, 60, 50, 8);
+            ctx.fill();
+
+            // Wheels
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(robotX + 5, robotY - 32, 20, 8);
+            ctx.fillRect(robotX + 5, robotY + 24, 20, 8);
+
+            // Sensor Ultrasonic
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(robotX + 58, robotY - 10, 6, 0, Math.PI * 2);
+            ctx.arc(robotX + 58, robotY + 10, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cargo Lid
+            ctx.fillStyle = cargoOpen ? '#10b981' : '#f59e0b';
+            ctx.fillRect(robotX + 15, robotY - 12, 25, 24);
+            ctx.fillStyle = '#fff';
+            ctx.font = '9px Inter';
+            ctx.fillText(cargoOpen ? 'MỞ' : 'KHOÁ', robotX + 17, robotY + 4);
+        }
+
+        function simTriggerPayment() {
+            document.getElementById('simLog').innerText = '💳 Khách quét VietQR 20.000 đ thành công -> Robot nhận on_paid() -> Bắt đầu chạy!';
+            cargoOpen = false;
+            let timer = setInterval(() => {
+                if (robotX < obstacle.x - 75) {
+                    robotX += 4;
+                    drawSim();
+                } else {
+                    clearInterval(timer);
+                    cargoOpen = true;
+                    drawSim();
+                    document.getElementById('simLog').innerText = '🎉 Robot đã đến điểm giao, né vật cản an toàn và MỞ NẮP THÙNG ĐỒ!';
+                }
+            }, 50);
+        }
+
+        function simSpawnObstacle() {
+            obstacle.x = 260;
+            drawSim();
+            document.getElementById('simLog').innerText = '⚠️ Đã đặt vật cản ở khoảng cách 20cm!';
+        }
+
+        function simReset() {
+            robotX = 60;
+            robotY = 160;
+            cargoOpen = false;
+            obstacle.x = 340;
+            drawSim();
+            document.getElementById('simLog').innerText = 'Đã đặt lại vị trí Robot.';
+        }
+
+        // Init
+        renderBlocks();
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[Unit]
+Description=InnoEdge Linux SBC IoT Agent & Payment Gateway
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/local/bin/innoedge-agent -cloud ws://cloud.innoedge.io:8080/ws -port 8089
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

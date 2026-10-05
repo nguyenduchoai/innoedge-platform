@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InnoEdge — Web Bluetooth Provisioning</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --accent: #2ea043;
+      --accent-hover: #3fb950;
+      --blue: #58a6ff;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --heading: #f0f6fc;
+      --danger: #f85149;
+      --warning: #d29922;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      padding-bottom: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 999px;
+      background: rgba(46, 160, 67, 0.15);
+      color: var(--accent-hover);
+      border: 1px solid rgba(46, 160, 67, 0.3);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      color: var(--heading);
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      color: var(--heading);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--heading);
+      margin-bottom: 0.4rem;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: #090d13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--heading);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.15s ease, transform 0.05s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.99);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-blue {
+      background: #1f6feb;
+      color: #fff;
+    }
+
+    .btn-blue:hover:not(:disabled) {
+      background: #388bfd;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-panel {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #090d13;
+      border: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .dot.connected { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .dot.connecting { background: var(--warning); animation: pulse 1.2s infinite; }
+    .dot.error { background: var(--danger); }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .log-box {
+      background: #05080c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      height: 140px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .log-item { word-break: break-all; }
+    .log-item.info { color: var(--blue); }
+    .log-item.success { color: var(--accent-hover); }
+    .log-item.warn { color: var(--warning); }
+    .log-item.error { color: var(--danger); }
+
+    .browser-alert {
+      background: rgba(210, 153, 34, 0.15);
+      border: 1px solid var(--warning);
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.88rem;
+      color: #e3b341;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding-top: 1rem;
+    }
+
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge">InnoEdge Platform</div>
+      <h1>Cài đặt WiFi Thiết Bị (BLE)</h1>
+      <p class="subtitle">Kết nối thiết bị ESP32 qua Web Bluetooth trực tiếp từ trình duyệt</p>
+    </header>
+
+    <div id="browserWarning" class="browser-alert">
+      ⚠️ Trình duyệt của bạn hiện không hỗ trợ <strong>Web Bluetooth API</strong>.
+      Vui lòng mở trang này trên <strong>Google Chrome, Microsoft Edge, Opera</strong> (trên Mac, Windows, Linux, Android)
+      hoặc trình duyệt <strong>Bluefy</strong> (trên iPhone / iPad).
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>1. Kết nối Bluetooth</span>
+      </div>
+
+      <div class="status-panel">
+        <div id="statusDot" class="dot"></div>
+        <div id="statusText">Chưa kết nối thiết bị</div>
+      </div>
+
+      <button id="btnConnect" class="btn btn-blue" onclick="toggleConnect()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
+        <span>Tìm & Kết nối thiết bị</span>
+      </button>
+    </div>
+
+    <div class="card" id="formCard">
+      <div class="card-title">
+        <span>2. Cấu hình WiFi & Cloud</span>
+      </div>
+
+      <form id="provForm" onsubmit="sendProvisioning(event)">
+        <div class="form-group">
+          <label for="ssid">Tên mạng WiFi (SSID) *</label>
+          <input type="text" id="ssid" placeholder="VD: Nha-Rieng, Cafe-WiFi" required autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mật khẩu WiFi</label>
+          <input type="password" id="password" placeholder="Nhập mật khẩu (để trống nếu mở)">
+        </div>
+
+        <div class="form-group">
+          <label for="serverUrl">Cloud Base URL</label>
+          <input type="text" id="serverUrl" placeholder="http://192.168.1.42:8080">
+          <div class="hint">Địa chỉ mock-cloud hoặc InnoEdge Cloud thật. Ví dụ: http://192.168.1.x:8080</div>
+        </div>
+
+        <div class="form-group">
+          <label for="authToken">Mã kích hoạt / Token (Tuỳ chọn)</label>
+          <input type="text" id="authToken" placeholder="mock-token hoặc để trống">
+        </div>
+
+        <button type="submit" id="btnSubmit" class="btn btn-primary" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <span>Gửi cấu hình sang thiết bị</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>3. Nhật ký hoạt động</span>
+      </div>
+      <div id="logBox" class="log-box"></div>
+    </div>
+
+    <footer>
+      InnoEdge SDK • Open Protocol v1 • <a href="https://github.com/nguyenduchoai/innoedge-platform" target="_blank">Tài liệu & Mã nguồn</a>
+    </footer>
+  </div>
+
+  <script>
+    // UUIDs từ innoedge-sdk-esp32/components/innoedge/src/gtek_provisioning.c
+    const SERVICE_UUID = '2f234454-cf6d-4a0f-adf2-f4911ba9ffa6';
+    const COMMAND_UUID = '2f234455-cf6d-4a0f-adf2-f4911ba9ffa6';
+    const STATUS_UUID  = '2f234456-cf6d-4a0f-adf2-f4911ba9ffa6';
+
+    let bluetoothDevice = null;
+    let commandChar = null;
+    let statusChar = null;
+
+    const btnConnect = document.getElementById('btnConnect');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const logBox = document.getElementById('logBox');
+
+    function log(msg, type = 'info') {
+      const line = document.createElement('div');
+      line.className = `log-item ${type}`;
+      const time = new Date().toLocaleTimeString('vi-VN');
+      line.textContent = `[${time}] ${msg}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    if (!navigator.bluetooth) {
+      document.getElementById('browserWarning').style.display = 'block';
+      btnConnect.disabled = true;
+      log('Web Bluetooth không được hỗ trợ trên trình duyệt này.', 'error');
+    } else {
+      log('Trình duyệt sẵn sàng. Hãy bấm "Tìm & Kết nối thiết bị".', 'info');
+    }
+
+    function setStatus(text, state = 'idle') {
+      statusText.textContent = text;
+      statusDot.className = 'dot ' + state;
+    }
+
+    async function toggleConnect() {
+      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+        disconnect();
+        return;
+      }
+      try {
+        setStatus('Đang quét tìm thiết bị BLE...', 'connecting');
+        log('Bắt đầu quét BLE: tìm thiết bị có tiền tố GTEK-Setup hoặc InnoEdge...', 'info');
+
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'GTEK-Setup' },
+            { namePrefix: 'InnoEdge' },
+            { services: [SERVICE_UUID] }
+          ],
+          optionalServices: [SERVICE_UUID]
+        });
+
+        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        log(`Đã chọn thiết bị: ${bluetoothDevice.name} (${bluetoothDevice.id})`, 'info');
+
+        setStatus(`Đang kết nối tới ${bluetoothDevice.name}...`, 'connecting');
+        const server = await bluetoothDevice.gatt.connect();
+
+        log('Đã kết nối GATT Server. Đang lấy Service Provisioning...', 'info');
+        const service = await server.getPrimaryService(SERVICE_UUID);
+
+        log('Lấy Characteristics...', 'info');
+        commandChar = await service.getCharacteristic(COMMAND_UUID);
+        statusChar  = await service.getCharacteristic(STATUS_UUID);
+
+        // Đăng ký nhận thông báo thay đổi trạng thái
+        await statusChar.startNotifications();
+        statusChar.addEventListener('characteristicvaluechanged', onStatusChanged);
+
+        // Đọc trạng thái ban đầu
+        const val = await statusChar.readValue();
+        const initialStatus = new TextDecoder().decode(val);
+        log(`Trạng thái ban đầu của thiết bị: ${initialStatus}`, 'info');
+
+        setStatus(`Đã kết nối: ${bluetoothDevice.name}`, 'connected');
+        btnConnect.innerHTML = '<span>Ngắt kết nối</span>';
+        btnConnect.className = 'btn btn-primary';
+        btnSubmit.disabled = false;
+      } catch (err) {
+        log(`Lỗi kết nối: ${err.message}`, 'error');
+        setStatus('Kết nối thất bại', 'error');
+      }
+    }
+
+    function onStatusChanged(event) {
+      const val = new TextDecoder().decode(event.target.value);
+      log(`Thiết bị báo: ${val}`, 'info');
+      try {
+        const obj = JSON.parse(val);
+        if (obj.state === 'saving') {
+          setStatus('Thiết bị đang lưu cấu hình...', 'connecting');
+        } else if (obj.state === 'ok') {
+          setStatus('Lưu thành công! Thiết bị đang khởi động lại...', 'connected');
+          log('✅ Cài WiFi thành công! Thiết bị đang reboot để vào mạng.', 'success');
+        } else if (obj.state === 'error') {
+          setStatus(`Lỗi: ${obj.detail || 'không xác định'}`, 'error');
+          log(`❌ Lỗi từ thiết bị: ${obj.detail}`, 'error');
+        }
+      } catch (e) {}
+    }
+
+    function onDisconnected() {
+      log('Đã ngắt kết nối với thiết bị.', 'warn');
+      setStatus('Đã ngắt kết nối', 'idle');
+      btnConnect.innerHTML = '<span>Tìm & Kết nối thiết bị</span>';
+      btnConnect.className = 'btn btn-blue';
+      btnSubmit.disabled = true;
+      commandChar = null;
+      statusChar = null;
+    }
+
+    function disconnect() {
+      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+        bluetoothDevice.gatt.disconnect();
+      }
+    }
+
+    async function sendProvisioning(e) {
+      e.preventDefault();
+      if (!commandChar) {
+        alert('Chưa kết nối thiết bị!');
+        return;
+      }
+
+      const ssid = document.getElementById('ssid').value.trim();
+      const password = document.getElementById('password').value;
+      const serverUrl = document.getElementById('serverUrl').value.trim();
+      const authToken = document.getElementById('authToken').value.trim();
+
+      if (!ssid) {
+        alert('Vui lòng nhập SSID WiFi');
+        return;
+      }
+
+      const payload = { ssid, password };
+      if (serverUrl) payload.serverUrl = serverUrl;
+      if (authToken) payload.authToken = authToken;
+
+      const jsonStr = JSON.stringify(payload);
+      log(`Gửi cấu hình sang thiết bị: ${jsonStr}`, 'info');
+      setStatus('Đang truyền cấu hình qua BLE...', 'connecting');
+
+      try {
+        const data = new TextEncoder().encode(jsonStr);
+        await commandChar.writeValue(data);
+        log('Đã truyền dữ liệu thành công. Đang chờ thiết bị phản hồi...', 'success');
+      } catch (err) {
+        log(`Lỗi khi gửi dữ liệu: ${err.message}`, 'error');
+        setStatus('Gửi thất bại', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

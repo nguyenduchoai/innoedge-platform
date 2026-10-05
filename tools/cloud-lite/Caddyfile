@@ -1,0 +1,23 @@
+# Thay your-domain.com bằng tên miền hoặc IP tĩnh của bạn
+# Caddy sẽ tự động đăng ký SSL HTTPS qua Let's Encrypt
+{$DOMAIN:localhost} {
+    # WebSocket endpoint thiết bị
+    handle /ws/* {
+        reverse_proxy innoedge-server:8080
+    }
+
+    # REST APIs & Webhooks thanh toán
+    handle /api/* {
+        reverse_proxy innoedge-server:8080
+    }
+
+    # Cập nhật OTA
+    handle /ota/* {
+        reverse_proxy innoedge-server:8080
+    }
+
+    # Web Bluetooth Provisioning & Web Dashboard
+    handle {
+        reverse_proxy innoedge-server:8080
+    }
+}

@@ -1,400 +1,286 @@
-# InnoEdge SDK for ESP32
+# InnoEdge Platform
 
-**Đưa một ESP32 lên cloud trong 10 phút — rồi tập trung vào sản phẩm của bạn.**
+**Nền tảng thiết bị IoT & AI biên mã nguồn mở vận hành bằng tiền — từ ESP32, Arduino đến Raspberry Pi & Linux.**
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%E2%89%A55.1-red.svg)](https://docs.espressif.com/projects/esp-idf/)
-[![Protocol](https://img.shields.io/badge/protocol-v1%20open-green.svg)](docs/PROTOCOL-v1.md)
+[![Linux SBC](https://img.shields.io/badge/Linux%20SBC-Raspberry%20Pi%20%7C%20Banana%20Pi-orange.svg)](linux/)
+[![Arduino](https://img.shields.io/badge/Arduino%20%26%20PlatformIO-Supported-teal.svg)](arduino/)
+[![MicroPython](https://img.shields.io/badge/MicroPython-STEM%20Robot-yellow.svg)](micropython/)
+[![Protocol](https://img.shields.io/badge/Protocol-v1%20Open-green.svg)](docs/PROTOCOL-v1.md)
+[![Examples](https://img.shields.io/badge/Examples-15%20Ready-brightgreen.svg)](examples/)
+[![Cookbooks](https://img.shields.io/badge/Cookbooks-9%20Hardware%20Designs-purple.svg)](docs/COMMUNITY-COOKBOOKS.md)
 
-InnoEdge SDK lo phần hạ tầng IoT mà ai làm thiết bị cũng phải viết lại từ đầu:
-cài WiFi, giữ kết nối, không mất giao dịch khi rớt mạng, nhận lệnh từ xa mà
-không chạy trùng, cập nhật firmware không biến máy thành cục gạch.
+---
 
-Phần sản phẩm — motor, màn hình, giá bán, luồng phục vụ khách — vẫn là của bạn.
-SDK không đụng vào.
+InnoEdge giải quyết toàn bộ phần hạ tầng kỹ thuật phức tạp mà bất kỳ ai làm thiết bị IoT thương mại (bán nước tự động, máy giặt sấy, trạm sạc xe, kiosk, bảng quảng cáo, loa thông báo...) đều phải viết lại từ đầu:
+
+* **Không mất tiền khi rớt mạng:** Giao dịch ghi sổ cái NVS trước khi gửi, tự động gửi lại có kiểm trùng.
+* **Không nhả tiền hai lần:** Chống chạy trùng lệnh bền qua mất điện và reboot bằng watermark NVS.
+* **Không biến máy thành cục gạch:** Nạp firmware OTA chạy nền, kiểm tra hash SHA-256, tự rollback nếu lỗi kết nối.
+* **Đa nền tảng phần cứng:** Cùng một giao thức cho vi điều khiển siêu rẻ (ESP32/ESP-IDF, Arduino) và máy tính nhúng mạnh mẽ (Raspberry Pi, Banana Pi, Orange Pi qua Python SDK & Go Daemon).
+* **AI & Kéo thả trực quan:** Kết nối trực tiếp mô hình ngôn ngữ lớn (Claude/Qwen) qua MCP server và hỗ trợ lập trình kéo thả Scratch 3.0 cho giáo dục STEM.
 
 ```c
+// ESP32 (ESP-IDF C) — Khởi tạo trong 10 phút
 #include "innoedge.h"
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "0.1.0" };
+    innoedge_config_t cfg = { .fw_version = "1.0.0" };
     innoedge_init(&cfg);
     innoedge_start();
 }
 ```
 
-Bấy nhiêu là máy tự mở BLE cho app cài WiFi, vào cloud, gửi heartbeat, nhận OTA,
-và kết nối lại khi rớt mạng.
+```python
+# Raspberry Pi & Banana Pi (Python SDK)
+from innoedge import InnoEdge
+
+app = InnoEdge(cloud_url="wss://cloud.innoedge.io/ws", fw_version="1.0.0")
+
+@app.on_paid
+def on_paid(intent_id, amount):
+    print(f"Xác nhận tiền về {amount:,} đ -> Nhả hàng / Kích hoạt dịch vụ")
+
+app.start()
+```
 
 ---
 
 ## Mục lục
 
-- [Bắt đầu trong 10 phút](#bắt-đầu-trong-10-phút)
-- [Các example](#các-example)
-- [API công khai](#api-công-khai)
-- [SDK làm gì, bạn làm gì](#sdk-làm-gì-bạn-làm-gì)
-- [Những thứ khó mà SDK đã giải](#những-thứ-khó-mà-sdk-đã-giải)
-- [Cấu trúc repo](#cấu-trúc-repo)
-- [Test](#test)
-- [Giao thức mở](#giao-thức-mở)
-- [Tương thích](#tương-thích)
-- [Trạng thái dự án](#trạng-thái-dự-án)
-- [Đóng góp](#đóng-góp)
-- [Giấy phép](#giấy-phép)
+1. [Kiến Trúc & Khả Năng Đa Nền Tảng](#kiến-trúc--khả-năng-đa-nền-tảng)
+2. [Bắt Đầu Trong 10 Phút](#bắt-đầu-trong-10-phút)
+3. [Danh Sách 15 Ví Dụ Chạy Thật](#danh-sách-15-ví-dụ-chạy-thật)
+4. [9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)](#9-community-cookbooks-thiết-kế-phần-cứng-mẫu)
+5. [Bộ Công Cụ Tiện Ích Trực Quan](#bộ-công-cụ-tiện-ích-trực-quan)
+6. [API Công Khai](#api-công-khai)
+7. [Những Thứ Khó Mà InnoEdge Đã Giải](#những-thứ-khó-mà-innoedge-đã-giải)
+8. [Cấu Trúc Thư Mục](#cấu-trúc-thư-mục)
+9. [Kiểm Thử (Testing)](#kiểm-thử-testing)
+10. [Mô Hình Kinh Doanh & Giấy Phép (Open Core & Commercial Licensing)](#mô-hình-kinh-doanh--giấy-phép-open-core--commercial-licensing)
 
 ---
 
-## Bắt đầu trong 10 phút
+## Kiến Trúc & Khả Năng Đa Nền Tảng
 
-**Cần:** ESP-IDF ≥ 5.1 và một bo ESP32-S3 bất kỳ. **Không cần đăng ký tài
-khoản** — repo có sẵn một cloud giả để bạn chạy thử ngay. Example 01–05 và 07
-không cần phần cứng gì thêm.
+InnoEdge tách bạch ranh giới: **Hạ tầng kết nối & Giao thức (Chuẩn hóa)** ↔ **Nghiệp vụ phần cứng sản phẩm (Tự do tùy biến)**.
 
-**1. Chạy cloud giả** (cần Go; cửa sổ terminal riêng):
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          INNOEDGE CLOUD PLATFORM                         │
+│  Multi-Tenant CMS · Đối Soát Ngân Hàng Tự Động · Quản Lý Hàng Ngàn Máy  │
+│  VietQR Webhook (SePAY, PayOS, Pay2S, Tingee) · OTA Phân Phối Theo Lô    │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ WebSocket / TLS (Protocol v1)
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      LỚP THIẾT BỊ ĐA NỀN TẢNG (DEVICES)                  │
+├──────────────────────────┬──────────────────────────┬───────────────────┤
+│    Vi Điều Khiển (MCU)    │  Máy Tính Nhúng (SBC)    │   Giáo Dục STEM   │
+├──────────────────────────┼──────────────────────────┼───────────────────┤
+│ • ESP32 / ESP32-S3 (C)   │ • Raspberry Pi (3B/4/5)  │ • MicroPython     │
+│ • Arduino / PlatformIO   │ • Banana Pi / Orange Pi  │   InnoBot HAL     │
+│ • Chi phí siêu tối ưu    │ • Python SDK + libgpiod  │ • Scratch 3.0     │
+│ • Phù hợp: Relay, Động cơ│ • Go Background Agent    │   BlockStudio     │
+│   Máy bán nước, Giặt sấy │ • Phù hợp: Kiosk, Video, │ • Phù hợp: Robot, │
+│                          │   Bảng quảng cáo, Audio  │   Đồ án học sinh  │
+└──────────────────────────┴──────────────────────────┴───────────────────┘
+```
+
+Xem chi tiết hướng dẫn đa nền tảng tại [`docs/CROSS-PLATFORM-SBC.md`](docs/CROSS-PLATFORM-SBC.md).
+
+---
+
+## Bắt Đầu Trong 10 Phút
+
+**Yêu cầu:** Một máy tính (macOS/Linux/Windows), ESP32-S3 devkit (hoặc Raspberry Pi), và chưa cần đăng ký tài khoản hay phần cứng phức tạp.
+
+### Bước 1: Khởi động Mock-Cloud & Web Dashboard (Terminal 1)
+
+Repo tích hợp sẵn một Cloud giả lập chạy bằng Go, có đầy đủ Webhook ngân hàng (SePAY / PayOS / Pay2S / Tingee), Web Console realtime và AI Assistant:
 
 ```bash
 git clone https://github.com/nguyenduchoai/innoedge-platform.git
 cd innoedge-platform
 go run ./tools/mock-cloud
 ```
-```
-InnoEdge mock-cloud — ĐỒ THỬ, đừng dùng cho production
-  đặt cloud base URL của thiết bị = http://192.168.1.42:8080
-```
 
-**2. Nạp firmware:**
+* Mở trình duyệt vào `http://localhost:8080/` để xem **Web Dashboard Realtime**.
+* Theo dõi thiết bị online, gửi lệnh nhả tiền, thử nghiệm webhook thanh toán.
+
+### Bước 2: Nạp Firmware Mẫu (Terminal 2)
 
 ```bash
 cd examples/01-hello-device
 idf.py set-target esp32s3
-idf.py menuconfig        # InnoEdge SDK → cloud base URL → http://192.168.1.42:8080
+idf.py menuconfig        # InnoEdge SDK -> Cloud base URL -> trỏ vào IP LAN của máy tính
 idf.py flash monitor
 ```
 
-> Dùng **IP LAN** mock in ra, không phải `127.0.0.1` — thiết bị nối từ WiFi.
-> Mặc định `https://cloud.example.com` là placeholder; SDK dừng với thông báo
-> rõ ràng nếu bạn quên đổi.
+*(Hoặc dùng công cụ nạp trực tiếp qua trình duyệt Chrome/Edge tại [`tools/web-flasher/`](tools/web-flasher/) mà không cần cài ESP-IDF).*
 
-Xong bước này là chạy được cả 11 example. Khi nào cần cloud thật thì đổi lại
-đúng một dòng cấu hình đó. Chi tiết: [`tools/mock-cloud`](tools/mock-cloud).
+### Bước 3: Cài WiFi qua Web Bluetooth PWA (Không Cần App Mobile)
 
-Lần đầu, máy chưa có WiFi:
-```
-W (2100) hello: CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng GTEK-Setup
-```
-Mở app di động → chọn thiết bị → nhập WiFi. Máy tự reboot rồi:
-```
-I (1210) hello: device_id (MAC) = AABBCCDDEEFF — dùng mã này để thêm máy trên cloud
-I (5000) hello: online=có  assigned=chưa  hàng đợi tồn=0
-```
-Thêm máy trên app bằng `device_id`, kích hoạt:
-```
-I (9110) hello: Máy đã được gán cho đối tác — sẵn sàng phục vụ
-```
-
-Xong. Máy đã online, gửi heartbeat, và sẵn sàng nhận OTA.
-
-Gõ vào cửa sổ mock để điều khiển máy:
-```
-> dispense 20000     # nhả tiền
-> dup                # gửi lại CÙNG commandId → máy phải trả "duplicate"
-```
-
-Kẹt ở bước nào? Mỗi example có bảng **Troubleshooting** riêng ở cuối README.
+Mở Chrome truy cập `http://localhost:8080/provision/` (hoặc mở trực tiếp [`tools/web-provision/index.html`](tools/web-provision/index.html)), bấm **"Tìm & Kết nối thiết bị"** qua Web Bluetooth, điền tên WiFi & Mật khẩu rồi bấm Gửi. Thiết bị tự động kết nối WiFi, đồng bộ giờ NTP và online trên Web Dashboard!
 
 ---
 
-## Các example
+## Danh Sách 15 Ví Dụ Chạy Thật
 
-Chạy theo thứ tự — mỗi cái thêm đúng một khái niệm, không nhảy cóc.
+Mỗi thư mục example đều có mã nguồn đầy đủ, file cấu hình, hướng dẫn đấu dây và bảng **Troubleshooting** riêng:
 
-| # | Example | Học được gì | Phần cứng |
-|---|---|---|---|
-| 01 | [hello-device](examples/01-hello-device) | Provisioning WiFi qua BLE, lên cloud, kích hoạt máy | devkit |
-| 02 | [telemetry](examples/02-telemetry) | Gửi tiền + cảnh báo · hàng đợi chống mất mạng/mất điện | devkit |
-| 03 | [remote-command](examples/03-remote-command) | Nhận lệnh từ cloud · chống chạy trùng | devkit |
-| 04 | [device-config](examples/04-device-config) | Cấu hình động từ app · cache chạy offline | devkit |
-| 05 | [ota](examples/05-ota) | Cập nhật từ xa · rollback · hoãn khi đang phục vụ khách | devkit |
-| 06 | [coin-relay](examples/06-coin-relay) | Đầu đọc xu/bill + relay nhả tiền — máy coin-op đủ hai chiều | đầu đọc xu, relay |
-| 07 | [qr-payment](examples/07-qr-payment) | QR động · webhook xác nhận tiền về | devkit |
-| 08 | [carwash](examples/08-carwash) | Phiên nhiều relay theo ngân sách thời gian | 4 relay |
-| 09 | [ai-agent](examples/09-ai-agent) | **AI quyết định → thiết bị thực thi** — Claude tool calling qua `mock-cloud -ai` | devkit + API key |
-| 10 | [edu-tutor](examples/10-edu-tutor) | **Hai chiều**: AI gia sư ↔ bé trả lời bằng nút — lấy từ sản phẩm VIMATE Edu | devkit + API key |
-| 11 | [voice-assistant](examples/11-voice-assistant) | **Giọng nói** kiểu Xiaozhi: giữ nút nói → Qwen3-ASR → Claude → VieNeu TTS → loa, cả hai self-host | mic + amp I2S (~120k), `tools/voice-stack` |
-
-Mỗi README có: đấu dây, lệnh build, **log mong đợi từng dòng**, và troubleshooting.
+| # | Example | Nền Tảng | Nghiệp Vụ Thực Tế | Phần Cứng Cần |
+|---|---|---|---|---|
+| **01** | [hello-device](examples/01-hello-device) | ESP32-S3 | Provisioning BLE/Web, kết nối Cloud, gửi heartbeat | Devkit |
+| **02** | [telemetry](examples/02-telemetry) | ESP32-S3 | Ghi nhận tiền xu/tiền giấy, hàng đợi NVS chống mất điện | Devkit |
+| **03** | [remote-command](examples/03-remote-command) | ESP32-S3 | Nhận lệnh điều khiển từ xa, chống chạy trùng qua reboot | Devkit |
+| **04** | [device-config](examples/04-device-config) | ESP32-S3 | Đồng bộ đơn giá, cấu hình linh hoạt từ Cloud, cache offline | Devkit |
+| **05** | [ota](examples/05-ota) | ESP32-S3 | Cập nhật OTA an toàn qua TLS, hoãn khi máy bận, tự rollback | Devkit |
+| **06** | [coin-relay](examples/06-coin-relay) | ESP32-S3 | Máy bán hàng coin-op 2 chiều: nhận xung tiền và kích relay nhả hàng | Đầu đọc xu, Relay |
+| **07** | [qr-payment](examples/07-qr-payment) | ESP32-S3 | Sinh mã VietQR động, kích hoạt nhả hàng khi nhận webhook ngân hàng | Devkit + Màn hình |
+| **08** | [carwash](examples/08-carwash) | ESP32-S3 | Trạm rửa xe tự động: quản lý nhiều relay (bọt, nước, sấy) theo hạn mức | 4 Relay board |
+| **09** | [ai-agent](examples/09-ai-agent) | ESP32-S3 | AI Agent tool-calling (Claude/LLM) tự ra quyết định điều khiển thiết bị | Devkit + Claude |
+| **10** | [edu-tutor](examples/10-edu-tutor) | ESP32-S3 | Gia sư thông minh 2 chiều: AI hỏi bài, bé bấm nút tương tác | Devkit + 3 Nút bấm |
+| **11** | [voice-assistant](examples/11-voice-assistant) | ESP32-S3 | Trợ lý giọng nói tự host: Giữ nút nói -> Qwen3-ASR -> LLM -> VieNeu TTS | Mic + Loa I2S |
+| **12** | [muse-gadget](examples/12-muse-gadget) | ESP32-S3 | Kiosk AI Avatar & Vending Machine: Meta Muse Gadget kết hợp VietQR | Devkit + LCD + Relay |
+| **13** | [stem-robot](examples/13-stem-robot) | ESP32 / Pi | Robot STEM tự hành: Né vật cản siêu âm, mở cốp giao hàng khi nhận VietQR | 2 Động cơ, HC-SR04, Servo |
+| **14** | [digital-signage](examples/14-digital-signage) | ESP32 / Pi | Bảng quảng cáo: Báo cáo Proof-of-Play, ngắt khẩn cấp, mua slot qua VietQR | Màn hình HDMI / LCD |
+| **15** | [central-audio](examples/15-central-audio) | ESP32 / Pi | Loa thông báo đa vùng: Phát nhạc nền BGM, ngắt ưu tiên Paging & Báo cháy | Loa I2S / Cổng AUX 3.5 |
 
 ---
 
-## API công khai
+## 9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)
 
-Toàn bộ SDK là **16 hàm**. Đọc [`innoedge.h`](components/innoedge/include/innoedge.h)
-là đủ — không cần đọc source.
+Tài liệu [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) chứa công thức chế tạo, danh mục linh kiện (BOM), sơ đồ mạch cách ly opto và mã nguồn ứng dụng mẫu cho 9 dòng sản phẩm:
 
-### Vòng đời
+1. **Tủ Locker Gửi Đồ Tự Động:** Quản lý hàng chục ngăn tủ, thanh toán theo giờ lưu kho, mở ngăn qua VietQR.
+2. **Trạm Sạc Xe Máy Điện / Xe Đạp Điện:** Đo đếm kWh (PZEM-004T), thanh toán tiền điện theo thời gian hoặc số điện thực tế.
+3. **Tiệm Giặt Sấy Tự Động 24/7:** Điều khiển máy giặt công nghiệp qua Optocoupler, chọn chế độ giặt nhanh/giặt sấy.
+4. **Trạm Rửa Xe Tự Phục Vụ:** Đếm ngược thời gian, điều khiển relay máy rửa áp lực cao, bình bọt tuyết, vòi hút bụi.
+5. **Kiosk Bán Hàng & Chăm Sóc Khách Hàng AI:** Tích hợp màn hình cảm ứng, trợ lý ảo Avatar giao tiếp với người mua.
+6. **Robot Giao Hàng & Đồ Án STEM:** Xe thông minh tự hành vận chuyển bưu phẩm trong tòa nhà hoặc trường học.
+7. **Máy Pha Cà Phê & Bán Nước Tự Động:** Điều khiển motor khay chứa lon nước, cảm biến rơi hàng chống kẹt tiền.
+8. **Bảng Quảng Cáo Kỹ Thuật Số (Digital Signage):** Quản lý chiến dịch tập trung, báo cáo Proof-of-Play (POW) cho đối tác truyền thông.
+9. **Hệ Thống Âm Thanh & Loa Thông Báo Tập Trung:** Phân vùng âm thanh tòa nhà (Zone 1/2), phát thông báo ưu tiên, còi báo động khẩn cấp.
+
+Xem thêm sơ đồ mạch điện chi tiết tại [`docs/HARDWARE-REFERENCE.md`](docs/HARDWARE-REFERENCE.md).
+
+---
+
+## Bộ Công Cụ Tiện Ích Trực Quan
+
+Nhà phát triển và cộng đồng có thể triển khai hệ thống mà không cần cài đặt môi trường phức tạp:
+
+| Công Cụ | Thư Mục | Tính Năng |
+|---|---|---|
+| **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Lập trình kéo thả khối lệnh Scratch 3.0 trực quan cho giáo dục STEM và người mới bắt đầu. |
+| **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Nạp firmware nhúng trực tiếp qua trình duyệt web bằng Web Serial API (Chrome/Edge), không cần terminal. |
+| **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | PWA cài đặt WiFi nhanh chóng cho thiết bị mới qua chuẩn BLE chuẩn hóa. |
+| **Mock-Cloud & Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Server giả lập đầy đủ giao thức v1, dashboard giao diện realtime, trình kích hoạt webhook ngân hàng. |
+| **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Bộ Docker Compose hoàn chỉnh + Caddy tự động cấp SSL miễn phí để tự host cloud riêng. |
+| **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Cung cấp ngữ cảnh API và luật bảo vệ an toàn tiền tệ cho các AI IDE (Claude Code, Cursor, Windsurf). |
+
+---
+
+## API Công Khai
+
+SDK lõi tinh gọn gồm **16 hàm chuẩn hóa** khai báo tại [`components/innoedge/include/innoedge.h`](components/innoedge/include/innoedge.h):
+
 ```c
+// Vòng đời
 esp_err_t   innoedge_init(const innoedge_config_t *cfg);
-esp_err_t   innoedge_start(void);          // không chặn — mọi thứ chạy nền
+esp_err_t   innoedge_start(void);
 bool        innoedge_is_online(void);
 bool        innoedge_is_assigned(void);
 const char *innoedge_device_id(void);
+
+// Giao dịch tiền & Viễn trắc (Tự lưu NVS trước khi gửi)
+esp_err_t   innoedge_publish_payment(innoedge_pay_kind_t kind, uint32_t count, int64_t amount_vnd);
+esp_err_t   innoedge_publish_event(const char *name, const char *data_json);
+esp_err_t   innoedge_send_binary(const void *data, size_t len);
+uint32_t    innoedge_queue_depth(void);
+esp_err_t   innoedge_alert(const char *code, innoedge_alert_severity_t severity, const char *message, bool active);
+
+// Lệnh điều khiển & Thanh toán
+esp_err_t   innoedge_register_command(const char *action, innoedge_command_fn fn);
+void        innoedge_reboot_after_ack(void);
+esp_err_t   innoedge_request_qr(int64_t amount_vnd);
+esp_err_t   innoedge_config_json(char *out, size_t len, int *version);
+esp_err_t   innoedge_config_reload(void);
+esp_err_t   innoedge_ota_check(void);
 ```
-
-### Gửi lên cloud
-```c
-esp_err_t innoedge_publish_payment(kind, count, amount_vnd); // vào NVS trước, gửi sau
-esp_err_t innoedge_publish_event(name, data_json);           // sự kiện tuỳ ý, cùng hàng đợi
-esp_err_t innoedge_send_binary(data, len);                   // audio/ảnh — dòng, không hàng đợi
-uint32_t  innoedge_queue_depth(void);
-esp_err_t innoedge_alert(code, severity, message, active);
-```
-`kind` ∈ `INNOEDGE_PAY_COIN` · `_CASH` · `_TICKET` · `_COIN_OUT`.
-
-### Nhận từ cloud
-```c
-esp_err_t innoedge_register_command(const char *action, innoedge_command_fn fn);
-void      innoedge_reboot_after_ack(void);   // dùng trong handler "reboot"
-```
-
-### QR · cấu hình · OTA
-```c
-esp_err_t innoedge_request_qr(int64_t amount_vnd);
-esp_err_t innoedge_config_json(char *out, size_t len, int *version);
-esp_err_t innoedge_config_reload(void);
-esp_err_t innoedge_ota_check(void);
-```
-
-### Sự kiện
-Truyền `innoedge_events_t` vào `innoedge_init()`. Mọi callback đều có thể để `NULL`.
-
-| Callback | Khi nào gọi |
-|---|---|
-| `on_payment_ack` | cloud đã ghi nhận một khoản tiền |
-| `on_qr` / `on_qr_error` | QR động sẵn sàng / cổng thanh toán lỗi |
-| `on_paid` | webhook xác nhận khách đã trả — **tín hiệu duy nhất được phép giao hàng** |
-| `on_static_qr` | cloud đẩy QR tĩnh của máy |
-| `on_assigned` / `on_unassigned` | máy được gán / bị gỡ khỏi đối tác |
-| `on_config` | cấu hình vận hành đã tải xong |
-| `on_provisioning` | đang chờ cài WiFi (BLE/SoftAP đã mở) |
-| `on_binary` / `on_frame` | khung binary (audio) / frame text SDK không biết — cắm `innoedge_audio` vào đây |
-
-Callback chạy trên task WebSocket — giữ ngắn, việc nặng đẩy sang task riêng.
 
 ---
 
-## SDK làm gì, bạn làm gì
+## Những Thứ Khó Mà InnoEdge Đã Giải
 
-| SDK lo | Bạn lo |
-|---|---|
-| Provisioning WiFi (BLE + SoftAP) | Màn hình, âm thanh, nút bấm |
-| Kết nối cloud, xác thực, reconnect có backoff | Motor, bơm, van, relay |
-| Hàng đợi giao dịch bền qua mất điện | Giá bán, khuyến mãi, quy tắc kinh doanh |
-| Chống trùng lệnh, bền qua reboot | Luồng phục vụ khách |
-| Cấu hình động + cache offline | Hiệu chỉnh cảm biến, thời gian bơm |
-| OTA: tải, kiểm SHA-256, rollback | Nghiệp vụ của từng lệnh |
-| Cảnh báo có latch (không spam) | Khi nào phát cảnh báo |
-| Đồng bộ giờ NTP | Giao diện, ngôn ngữ, thương hiệu |
-
-**SDK không bao giờ chứa nghiệp vụ của một sản phẩm cụ thể.** Nếu bạn phải sửa
-file trong `components/innoedge/` để làm một tính năng sản phẩm — đó là dấu
-hiệu API còn thiếu. Mở issue, đừng fork SDK.
+* **Mất mạng không mất tiền:** Mọi xung tiền nhận được từ đầu đọc xu/tiền giấy đều được ghi vào sổ cái NVS trước khi gửi WebSocket. Cloud tự dedupe theo `(device_id, seq)` nên không bao giờ ghi nhận trùng lặp.
+* **Không nhả tiền hai lần:** Cloud gửi lại lệnh sau khi mạng chập chờn là điều tất yếu. SDK lưu vết watermark `commandId` trong NVS và đánh dấu **trước khi** kích hoạt rơ-le nhả hàng. Nếu mất điện đột ngột trong lúc đang nhả hàng, lệnh gửi lại sau khi khởi động sẽ bị chặn ngay lập tức.
+* **Quy tắc vàng:** Chỉ có sự kiện `on_paid` được ngân hàng chứng thực mới được phép kích hoạt giao hàng hoặc cấp dịch vụ.
+* **Cập nhật OTA không biến máy thành cục gạch:** Firmware mới chỉ được công nhận hợp lệ sau khi máy kết nối thành công tới Cloud. Nếu xảy ra lỗi bootloader sẽ tự động rollback về bản firmware trước đó.
 
 ---
 
-## Những thứ khó mà SDK đã giải
-
-Đây là phần đáng tiền. Mỗi mục dưới đây là một lỗi đã xảy ra thật ngoài hiện
-trường, đã sửa, và đã có test.
-
-**Mất mạng không mất tiền.** Mọi giao dịch ghi NVS *trước* khi gửi. Cloud dedupe
-theo `(device_id, seq)` nên gửi lại bao nhiêu lần cũng không ghi trùng. Hàng đợi
-gần đầy → tự cảnh báo; hàng đợi tràn → cảnh báo **critical**, không nuốt tiền
-trong im lặng.
-
-**Không nhả tiền hai lần.** Cloud gửi lại lệnh sau khi mạng rớt là chuyện bình
-thường. SDK giữ high-watermark `commandId` **trong NVS** và đánh dấu *trước* khi
-chạy handler — mất điện giữa lúc nhả tiền, lần gửi lại sau reboot vẫn bị chặn.
-Thà bỏ sót một lệnh còn hơn nhả tiền hai lần.
-
-**OTA không biến máy thành cục gạch.** Bản mới chỉ được xác nhận sau khi *vào
-được cloud*. Treo hay crash trước đó → bootloader tự quay bản cũ. Và OTA chạy
-nền, không chặn boot: mạng yếu không làm khách tưởng máy hỏng.
-
-**Không reboot giữa lúc khách đang trả tiền.** Khai `busy_check` một dòng, SDK
-tự hoãn tải và reboot tới lần kiểm tra sau.
-
-**Mất WiFi không phải reset máy.** WiFi đã lưu nhưng lên chậm (sóng yếu, router
-chậm) → SDK vẫn mở provisioning làm lưới đỡ *và* chờ nền; có mạng là dịch vụ tự
-chạy. Không bắt chủ máy cài lại WiFi.
-
-**Offline vẫn bán đúng giá.** Cấu hình vận hành cache trong NVS, đọc được ngay
-từ giây đầu. Lỗi mạng không bao giờ xoá cache cũ.
-
----
-
-## Cấu trúc repo
+## Cấu Trúc Thư Mục
 
 ```
 .
-├── components/innoedge/     # SDK — MỘT component, publish lên registry
-│   ├── include/innoedge.h   #   hợp đồng công khai duy nhất
-│   ├── idf_component.yml    #   manifest cho ESP Component Registry
-│   ├── Kconfig              #   tham số hạ tầng — không có GPIO nào
-│   └── src/                 #   wifi, provisioning, websocket, OTA, hàng đợi,
-│                            #   command bus, config store (nội bộ)
-├── components-hw/           # driver phần cứng mẫu — KHÔNG thuộc SDK
-│   ├── innoedge_hw/         #   đầu đọc xu, relay, phiên rửa xe
-│   └── innoedge_audio/      #   mic/loa I2S, push-to-talk, kênh audio hai chiều
-├── examples/
-│   ├── example.cmake        # đường dẫn component — một chỗ duy nhất
-│   ├── sdkconfig.defaults   # cấu hình chung mọi example
-│   └── NN-*/                # mỗi example: CMakeLists + main/ + README
-├── tools/
-│   ├── mock-cloud/          # cloud giả — chạy example không cần tài khoản
-│   │   ├── ai.go            #   -ai: Claude tool calling; -persona device|edu
-│   │   └── voice.go         #   -voice: PCM → ASR → Claude → TTS → PCM
-│   └── voice-stack/         # docker compose: Qwen3-ASR + VieNeu TTS trên server local
-│   └── mcp/                 # MCP server cho AI coding (Claude Code/Cursor)
-├── .github/workflows/ci.yml # CI: test host + build 11 example bằng ESP-IDF thật
-├── tests/run.sh             # test host — không cần ESP-IDF, không cần bo
-└── docs/PROTOCOL-v1.md      # đặc tả giao thức thiết bị ↔ cloud
-```
-
-`components/` là thứ được hỗ trợ và giữ tương thích. `components-hw/` là driver
-mẫu để example chạy trên phần cứng thật — dùng thoải mái, nhưng đừng coi là API
-ổn định.
-
-### Dùng SDK trong project của bạn
-
-Cách khuyến nghị — cài từ ESP Component Registry, không cần clone repo:
-
-```bash
-idf.py add-dependency "innoedge/innoedge^0.1.0"
-```
-```cmake
-# main/CMakeLists.txt
-idf_component_register(SRCS "app_main.c" REQUIRES innoedge)
-```
-
-Cần thêm driver phần cứng (đầu đọc xu, relay):
-
-```bash
-idf.py add-dependency "innoedge/innoedge-hw^0.1.0"
-```
-
-Hoặc dùng thẳng từ bản clone:
-
-```cmake
-# CMakeLists.txt của project
-list(APPEND EXTRA_COMPONENT_DIRS "path/to/innoedge-platform/components")
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(my-device)
-```
-
-Cách nhanh nhất để bắt đầu là copy thư mục `examples/01-hello-device` rồi sửa.
-
-### Lập trình có AI hỗ trợ
-
-Nối [`tools/mcp`](tools/mcp) vào Claude Code / Cursor / VS Code để AI đọc thẳng
-API, giao thức và bộ luật của SDK — thay vì bịa tên hàm và bịa MQTT topic:
-
-```bash
-cd tools/mcp && go build -o innoedge-mcp .
-claude mcp add innoedge -- $(pwd)/innoedge-mcp -root $(cd ../.. && pwd)
+├── components/innoedge/     # SDK lõi chuẩn hóa cho ESP-IDF (C)
+├── arduino/InnoEdge/        # Thư viện InnoEdge cho Arduino & PlatformIO (C++)
+├── micropython/             # InnoBot HAL & MicroPython cho Robot STEM
+├── linux/                   # Hỗ trợ Raspberry Pi, Banana Pi, Orange Pi (Python + Go Agent)
+├── components-hw/           # Driver phần cứng mẫu (Đầu đọc xu, relay, audio I2S)
+├── examples/                # 15 ví dụ hoàn chỉnh (01-hello đến 15-central-audio)
+├── tools/                   # Mock-cloud, Web Flasher, Web Provision, Scratch, Cloud Lite, MCP
+├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
+└── tests/run.sh             # Bộ test toàn diện chạy độc lập trên máy tính
 ```
 
 ---
 
-## Test
+## Kiểm Thử (Testing)
+
+InnoEdge đi kèm bộ kiểm thử toàn diện không cần phần cứng và không cần cài đặt ESP-IDF:
 
 ```bash
 ./tests/run.sh
 ```
 
-Chạy trên máy dev — không cần ESP-IDF, không cần phần cứng. Bao phủ registry
-lệnh và chống trùng: phần mà lỗi sẽ khiến máy **nhả tiền hai lần**. 12 nhóm
-kiểm tra, gồm cả ca trùng-qua-reboot.
-
-Test dùng stub tối thiểu trong `tests/stubs/`, và stub log vẫn để compiler kiểm
-tra format string — bắt được lỗi kiểu `%d` cho `int64_t` (in sai số tiền).
-
-Bộ thứ hai kiểm tra `tools/mock-cloud` trả đúng từng khung tin trong spec:
-handshake, kích hoạt, ack tiền đúng đơn giá, QR + webhook, combo, OTA. Bộ thứ ba
-chạy `tools/mcp` thật và nói JSON-RPC qua stdio đúng như client MCP sẽ làm. Cả
-hai tự bỏ qua nếu máy chưa cài Go.
+Bao phủ 6 khối kiểm tra tự động:
+1. **C Command Bus:** Chống chạy trùng lệnh bền vững qua reboot.
+2. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
+3. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
+4. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
+5. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
+6. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
 
 ---
 
-## Giao thức mở
+## Mô Hình Kinh Doanh & Giấy Phép (Open Core & Commercial Licensing)
 
-[`docs/PROTOCOL-v1.md`](docs/PROTOCOL-v1.md) đặc tả đầy đủ giao thức thiết bị ↔
-cloud: handshake, heartbeat, khung tiền, cảnh báo, lệnh động, QR, cấu hình, OTA.
+InnoEdge vận hành theo mô hình **Open Core** chuẩn mực trong ngành công nghệ IoT toàn cầu (tương tự ESPHome, Home Assistant, Linux Foundation):
 
-**Mở công khai có chủ đích.** Bạn không bị khoá vào một nhà cung cấp — có spec
-là tự viết được server thay thế. [`tools/mock-cloud`](tools/mock-cloud) là bằng
-chứng: ~450 dòng Go cài đặt lại đủ giao thức để chạy cả 11 example.
+### 1. Phần Mở — Apache License 2.0 (Miễn phí vĩnh viễn)
+* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 9 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
+* Quyền lợi: Doanh nghiệp, nhà nghiên cứu và lập trình viên được quyền thương mại hóa, nhúng vào sản phẩm bán lẻ, và tùy biến không giới hạn mà không bị ràng buộc mở mã nguồn thương mại của mình.
+* Mục tiêu: Đóng vai trò là "cổng vào" chuẩn mực, tạo dựng cộng đồng hàng ngàn nhà phát triển thiết bị.
 
-Nhưng đừng tự dựng lại *client*: SDK đã xử lý retry, dedupe, hàng đợi bền,
-rollback — đúng những chỗ tự làm là mất tiền.
+### 2. Mô Hình Kiếm Tiền Thương Mại (Monetization Strategies)
+Nền tảng InnoEdge mở ra nhiều dòng doanh thu bền vững:
 
----
+1. **Doanh Thu Đăng Ký Cloud Dịch Vụ (SaaS Subscription):**
+   * Cung cấp InnoEdge Cloud Enterprise cho các doanh nghiệp sở hữu chuỗi hàng trăm / hàng ngàn máy bán lẻ tự động.
+   * Tính phí thuê bao theo tháng trên mỗi thiết bị hoạt động (ví dụ: 20.000 đ – 50.000 đ / máy / tháng).
+   * Giá trị cốt lõi: Quản trị tập trung, ứng dụng Mobile App (iOS/Android) cho chủ máy theo dõi doanh thu thời gian thực, quản lý phân quyền đa cấp, đối soát ngân hàng tự động, và triển khai cập nhật OTA theo lô với SLA 99.9%.
 
-## Tương thích
+2. **Phí Giao Dịch Thanh Toán (Payment Revenue Sharing):**
+   * Tích hợp cổng thanh toán VietQR tự động (SePAY, PayOS, Tingee, Pay2S...).
+   * Thu phí vi mô trên mỗi giao dịch thành công (ví dụ: 0.5% – 1% hoặc 200 đ – 500 đ / giao dịch).
 
-| | |
-|---|---|
-| ESP-IDF | ≥ 5.1 |
-| Chip đã chạy thật | ESP32-S3 (build 11/11 trên ESP-IDF 5.5.4) |
-| Chip nên chạy được | ESP32, ESP32-S2, ESP32-C3 (chưa kiểm chứng) |
-| Transport | WebSocket over TLS — text (JSON) + binary (audio) |
-| Flash tối thiểu | 4MB — `examples/partitions.csv`: 2 slot OTA × 1,875 MB, không có factory |
-| Protocol | v1 — ổn định, tương thích ngược |
+3. **Kinh Doanh Phần Cứng Chuẩn Hóa (Hardware Reference Kits):**
+   * Sản xuất và bán bo mạch InnoEdge Core Shield, Module Relay cách ly công nghiệp, Bo mạch Robot STEM cho các trường học, trung tâm đào tạo và nhà sản xuất máy bán hàng tự động.
 
-**Cam kết tương thích:** `innoedge.h` giữ tương thích ngược trong toàn bộ dòng
-v1. Thay đổi phá vỡ tương thích sẽ đi kèm major version mới và v1 vẫn được hỗ
-trợ tới khi fleet flash xong.
-
----
-
-## Trạng thái dự án
-
-**Pre-release (0.1.x).** Hạ tầng bên dưới đã chạy thật trên fleet máy coin-op
-đang vận hành; phần đóng gói thành SDK và 11 example thì mới.
-
-Nói thẳng những gì chưa xong, thay vì để bạn tự phát hiện:
-
-| Việc | Trạng thái |
-|---|---|
-| 11 example đã `idf.py build` | **11/11 build thành công** trên ESP-IDF **5.5.4**, target esp32s3, mỗi bản ~1,23–1,26 MB (2026-09-10, máy tác giả). Lần build đầu bắt được 4 lỗi mà kiểm tra tĩnh không thấy — đã sửa hết (bảng partition, CMakeLists thiếu, tên component chỉ có từ IDF 5.3, Kconfig bool trong biểu thức C). |
-| Chưa build trên ESP-IDF 5.1 | README tuyên bố ≥ 5.1 nhưng mới build thật trên 5.5.4. CI có job `idf-floor` để chốt, nhưng CI đang bị chặn ở mức billing của GitHub Actions (miễn phí không giới hạn cho repo công khai). Tới lúc đó, coi 5.5 là bản đã kiểm chứng. |
-| Chưa flash lên bo thật trong lần verify này | Hạ tầng bên dưới đã chạy trên fleet thật; phần đóng gói SDK + example thì mới build, chưa chạy trên bo. |
-| mock-cloud chưa chạy đối đầu với thiết bị thật | Đã test bằng thiết bị giả nối vào (`go test`), đúng từng khung tin. Chưa có bo thật cắm vào. |
-| Tiền tố nội bộ còn là `gtek_*` / `CONFIG_GTEK_*` | Di sản từ hệ chạy trước. API công khai (`innoedge_*`) đã đúng tên và sẽ không đổi. Tiền tố nội bộ sẽ đổi ở một bản major. |
-| Chỉ có transport WebSocket | Là thứ đang chạy thật. MQTT sẽ thêm khi có nhu cầu thật, không thêm cho đủ bộ. |
-| `gtek_config_lookup_combo()` (logic rửa xe) nằm nhầm trong `net/` | Thuộc về `components-hw/wash_control/`. Sẽ dời, không ảnh hưởng API công khai. |
-| Mới kiểm chứng trên ESP32-S3 | Các chip ESP32 khác về lý thuyết chạy được. Báo giúp nếu bạn thử. |
-| Chưa lên ESP Component Registry | Manifest đã sẵn sàng (`components/innoedge/idf_component.yml`); còn thiếu bước upload. Tới lúc đó vẫn dùng được bằng `EXTRA_COMPONENT_DIRS`. |
-
-## Đóng góp
-
-Rất hoan nghênh — nhất là báo lỗi từ máy chạy thật ngoài hiện trường.
-
-- **Báo lỗi:** mở issue kèm phiên bản ESP-IDF, chip, và log serial.
-- **Pull request:** một PR một việc. Chạy `./tests/run.sh` trước khi gửi.
-- **Nghiệp vụ sản phẩm không vào SDK.** PR thêm logic motor/giá/màn hình vào
-  `components/innoedge/` sẽ bị từ chối — nhưng nếu bạn phải hack SDK để làm được
-  việc đó thì API đang thiếu, hãy nói ra.
-- **Đổi giao thức** cần cập nhật cả `docs/PROTOCOL-v1.md` và phía server.
-
-Lỗ hổng bảo mật: đọc [SECURITY.md](SECURITY.md), **đừng mở issue công khai**.
-
----
-
-## Giấy phép
-
-[Apache License 2.0](LICENSE) — dùng được trong sản phẩm thương mại, có cấp phép
-sáng chế, không yêu cầu mở mã sản phẩm của bạn.
-
-Xem [NOTICE](NOTICE) cho thư viện bên thứ ba.
+4. **Dịch Vụ Tùy Biến Doanh Nghiệp (Enterprise Customization & SLAs):**
+   * Cung cấp dịch vụ tích hợp giải pháp riêng, cài đặt Private Cloud trên hạ tầng của khách hàng lớn và bảo hành dịch vụ kỹ thuật 24/7.

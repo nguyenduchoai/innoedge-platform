@@ -119,10 +119,12 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 	devicesMu.Lock()
 	devices[deviceID] = d
 	devicesMu.Unlock()
+	trackConnect(deviceID)
 	defer func() {
 		devicesMu.Lock()
 		delete(devices, deviceID)
 		devicesMu.Unlock()
+		trackDisconnect(deviceID)
 		log.Printf("✗ %s ngắt kết nối", deviceID)
 	}()
 
@@ -201,6 +203,7 @@ func handleFrame(d *device, data []byte) {
 
 	case "heartbeat":
 		log.Printf("  ♥ fw=%s rssi=%d tồn=%d", env.FWVersion, env.RSSI, env.QueueDep)
+		trackHeartbeat(d.id, env.FWVersion, env.RSSI, env.QueueDep)
 
 	case "coin", "payment", "ticket":
 		// Cloud thật dedupe theo (device_id, seq) rồi mới ack. Mock ack thẳng.
@@ -218,6 +221,7 @@ func handleFrame(d *device, data []byte) {
 		} else {
 			log.Printf("  💰 %s: %d xu = %d đ", method, coins, amount)
 		}
+		trackPayment(d.id, method, coins, amount)
 		ack := map[string]any{
 			"type": "coin_ack", "status": "ok", "method": method,
 			"coins": coins, "rateVND": *rateVND, "amountVND": amount,
@@ -243,14 +247,17 @@ func handleFrame(d *device, data []byte) {
 
 	case "alert":
 		state := "BẬT"
+		active := env.Active != nil && *env.Active
 		if env.Active != nil && !*env.Active {
 			state = "hết"
 		}
 		log.Printf("  ⚠  cảnh báo %s [%s] %s — %s", state, env.Severity, env.Code, env.Message)
+		trackAlert(d.id, env.Code, env.Severity, env.Message, active)
 
 	case "qr_request":
 		id := nextIntentID()
 		ref := fmt.Sprintf("GTMOCKD%05d", id)
+		trackQR(d.id, ref, id, env.Amount)
 		d.send(map[string]any{
 			"type": "qr", "seq": env.Seq, "intentId": id, "refCode": ref,
 			"amount": env.Amount,
@@ -268,11 +275,13 @@ func handleFrame(d *device, data []byte) {
 					"type": "payment_paid", "intentId": id,
 					"amount": amount, "refCode": ref,
 				})
+				trackPaymentPaid(d.id, ref, id, amount)
 			}(env.Amount)
 		}
 
 	case "command_ack":
 		log.Printf("  ✓ lệnh %d → %s (%s)", env.CommandID, env.Status, env.Message)
+		trackCommandAck(d.id, env.CommandID, env.Status, env.Message)
 		deliverAck(env.CommandID, ackResult{Status: env.Status, Message: env.Message, Result: env.Result})
 
 	case "paid_ack":
@@ -455,6 +464,7 @@ func consoleLoop() {
 			"action": action, "params": params,
 		}
 		last = frame
+		lastSentFrame = frame
 		d.send(frame)
 	}
 }
@@ -467,6 +477,7 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("/api/device/config", handleConfig)
 	mux.HandleFunc("/ota/v1/", handleOTA)
 	mux.HandleFunc("/ota/v1", handleOTA)
+	registerDashboard(mux)
 	return mux
 }
 
@@ -478,6 +489,8 @@ func main() {
 	for _, ip := range localIPs() {
 		fmt.Printf("  đặt cloud base URL của thiết bị = http://%s%s\n", ip, *addr)
 	}
+	fmt.Printf("  mở web dashboard console     = http://localhost%s hoặc http://%s%s\n", *addr, localIPs()[0], *addr)
+	fmt.Printf("  mở web ble provisioning      = http://localhost%s/provision/\n", *addr)
 	fmt.Printf("  đơn giá: %d đ/xu · webhook giả sau %s\n", *rateVND, *paidAfter)
 
 	if *voiceMode && !*aiMode {

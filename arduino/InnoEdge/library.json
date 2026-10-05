@@ -1,0 +1,30 @@
+{
+  "name": "InnoEdge",
+  "version": "1.0.0",
+  "description": "IoT Device Infrastructure SDK for coin-op, vending, car-wash, and payment devices on ESP32",
+  "keywords": [
+    "iot",
+    "esp32",
+    "vending",
+    "payment",
+    "vietqr",
+    "coin-op",
+    "websocket",
+    "ota"
+  ],
+  "authors": [
+    {
+      "name": "InnoEdge Team",
+      "email": "support@innoedge.io",
+      "url": "https://github.com/nguyenduchoai/innoedge-platform"
+    }
+  ],
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/nguyenduchoai/innoedge-platform",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nguyenduchoai/innoedge-platform.git"
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

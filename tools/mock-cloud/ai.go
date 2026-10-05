@@ -36,7 +36,7 @@ var (
 	aiModel  = flag.String("model", "claude-opus-5", "model Claude cho chế độ -ai")
 	aiEffort = flag.String("effort", "medium", "effort cho chế độ -ai: low|medium|high")
 	ackWait  = flag.Duration("ack-wait", 15*time.Second, "chờ thiết bị ack một lệnh")
-	persona  = flag.String("persona", "device", "bộ tool + vai của AI: device (example 09) | edu (example 10)")
+	persona  = flag.String("persona", "device", "bộ tool + vai của AI: device (example 09) | edu (example 10) | muse (example 12)")
 )
 
 // ── Sự kiện từ thiết bị → hội thoại ─────────────────────────────────────────
@@ -148,12 +148,18 @@ func aiTools() []anthropic.ToolUnionParam {
 	if *persona == "edu" {
 		return eduTools()
 	}
+	if *persona == "muse" {
+		return museTools()
+	}
 	return deviceTools()
 }
 
 func aiSystemPrompt() string {
 	if *persona == "edu" {
 		return eduSystem
+	}
+	if *persona == "muse" {
+		return museSystem
 	}
 	return aiSystem
 }
@@ -202,6 +208,50 @@ Hết 3 từ: say tổng kết, show_reward(3).
 Sự kiện "wake" = bé gọi bạn: say chào và hỏi bé muốn học tiếp hay nghỉ.
 Người lớn gõ chữ trực tiếp là phụ huynh/giáo viên — trả lời họ bằng chữ thường, không qua "say".
 Không bịa kết quả tool. Tool lỗi thì nói với người lớn, không nói với bé.`
+
+// Persona "muse" — Meta Muse Gadget tích hợp InnoEdge (example 12).
+// Trợ lý AI bán hàng / Kiosk thông minh có Avatar và giọng nói.
+func museTools() []anthropic.ToolUnionParam {
+	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
+	return []anthropic.ToolUnionParam{
+		mkTool("request_payment", "Tạo mã VietQR động để khách quét thanh toán cho đơn hàng.",
+			map[string]any{
+				"amount_vnd": map[string]any{"type": "integer", "description": "Số tiền VNĐ cần thanh toán", "minimum": 1000},
+				"item_name":  str("Tên sản phẩm hoặc dịch vụ (VD: 'Cà phê đen đá', 'Nước ép cam')"),
+			}, "amount_vnd", "item_name"),
+		mkTool("dispense", "Kích hoạt cơ cấu nhả hàng hoặc bơm rót sau khi khách đã thanh toán.",
+			map[string]any{
+				"channel": map[string]any{"type": "integer", "description": "Kênh nhả hàng (1-4)", "minimum": 1, "maximum": 4},
+				"seconds": map[string]any{"type": "integer", "description": "Thời gian kích hoạt relay tính bằng giây (1-10s)", "minimum": 1, "maximum": 10},
+			}, "channel", "seconds"),
+		mkTool("show_avatar", "Đổi biểu cảm hoặc hiển thị trạng thái avatar Meta Muse trên màn hình.",
+			map[string]any{
+				"mood":    str("Biểu cảm avatar: idle | listening | thinking | happy | dispense"),
+				"caption": str("Dòng chữ phụ đề ngắn hiển thị dưới avatar"),
+			}, "mood"),
+		mkTool("status", "Kiểm tra nhiệt độ máy, trạng thái kết nối và tồn kho.",
+			map[string]any{}),
+	}
+}
+
+const museSystem = `Bạn là Meta Muse AI Kiosk — trợ lý ảo phục vụ bán hàng và pha chế đồ uống tự động tại kiosk thông minh chạy ESP32 kết hợp Meta Muse Gadget SDK và InnoEdge.
+Bạn nói tiếng Việt tự nhiên, thân thiện và lịch sự.
+Menu mẫu:
+- Cà phê đen đá: 20.000 đ (kênh 1)
+- Cà phê sữa đá: 25.000 đ (kênh 2)
+- Trà đào cam sả: 30.000 đ (kênh 3)
+- Nước suối đóng chai: 10.000 đ (kênh 4)
+
+Quy trình phục vụ:
+1. Khi khách hỏi mua hoặc muốn gọi món:
+   - Chào đón khách, xác nhận món và số tiền.
+   - Gọi tool request_payment(amount_vnd, item_name) và show_avatar("thinking", "Đang tạo mã QR...").
+   - Hướng dẫn khách quét mã VietQR vừa hiện trên màn hình qua app ngân hàng hoặc ví điện tử.
+2. Khi nhận sự kiện thanh toán thành công (paid):
+   - Chúc mừng khách và gọi tool dispense(channel, seconds) để kích relay nhả đồ.
+   - Gọi show_avatar("dispense", "Đang chuẩn bị đồ uống...") và thông báo cho khách.
+3. Khi khách hỏi thăm trạng thái máy: gọi tool status().
+Không tự ý kích dispense nếu chưa có sự kiện thanh toán thành công. An toàn giao dịch là ưu tiên số một.`
 
 // Persona "device" — điều khiển thiết bị chung (example 09).
 func deviceTools() []anthropic.ToolUnionParam {
@@ -331,6 +381,8 @@ func aiLoop(client anthropic.Client) {
 	fmt.Print(aiHelp)
 	if *persona == "edu" {
 		fmt.Println("Persona EDU: gõ \"bắt đầu bài học\" để Lily dạy; bé trả lời bằng nút trên máy.")
+	} else if *persona == "muse" {
+		fmt.Println("Persona MUSE: Kiosk AI Meta Muse; gõ yêu cầu món (VD: \"cho 1 ly cafe sua\") hoặc nói qua micro.")
 	}
 	var history []anthropic.MessageParam
 
