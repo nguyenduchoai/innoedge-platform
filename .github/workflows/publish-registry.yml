@@ -1,0 +1,36 @@
+name: Publish to ESP Component Registry
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install idf-component-manager
+        run: |
+          python -m pip install --upgrade pip
+          pip install idf-component-manager
+
+      - name: Verify component packaging
+        run: |
+          compote component pack --name innoedge --project-dir components/innoedge
+
+      - name: Upload to ESP Component Registry
+        env:
+          IDF_COMPONENT_API_TOKEN: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
+        run: |
+          compote component upload \
+            --namespace innoedge \
+            --name innoedge \
+            --project-dir components/innoedge
