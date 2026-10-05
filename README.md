@@ -1,6 +1,8 @@
 # InnoEdge Platform
 
-**Nền tảng thiết bị IoT & AI biên mã nguồn mở vận hành bằng tiền — từ ESP32, Arduino đến Raspberry Pi & Linux.**
+**Open-source Edge AI & IoT monetization platform — from ESP32 & Arduino to Raspberry Pi & Linux.**
+
+[English](README.md) | [Tiếng Việt](README_vi.md)
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%E2%89%A55.1-red.svg)](https://docs.espressif.com/projects/esp-idf/)
@@ -13,16 +15,16 @@
 
 ---
 
-InnoEdge giải quyết toàn bộ phần hạ tầng kỹ thuật phức tạp mà bất kỳ ai làm thiết bị IoT thương mại (bán nước tự động, máy giặt sấy, trạm sạc xe, kiosk, bảng quảng cáo, loa thông báo...) đều phải viết lại từ đầu:
+InnoEdge solves the heavy, mission-critical IoT infrastructure that every commercial hardware team has to reinvent from scratch:
 
-* **Không mất tiền khi rớt mạng:** Giao dịch ghi sổ cái NVS trước khi gửi, tự động gửi lại có kiểm trùng.
-* **Không nhả tiền hai lần:** Chống chạy trùng lệnh bền qua mất điện và reboot bằng watermark NVS.
-* **Không biến máy thành cục gạch:** Nạp firmware OTA chạy nền, kiểm tra hash SHA-256, tự rollback nếu lỗi kết nối.
-* **Đa nền tảng phần cứng:** Cùng một giao thức cho vi điều khiển siêu rẻ (ESP32/ESP-IDF, Arduino) và máy tính nhúng mạnh mẽ (Raspberry Pi, Banana Pi, Orange Pi qua Python SDK & Go Daemon).
-* **AI & Kéo thả trực quan:** Kết nối trực tiếp mô hình ngôn ngữ lớn (Claude/Qwen) qua MCP server và hỗ trợ lập trình kéo thả Scratch 3.0 cho giáo dục STEM.
+* **Zero lost revenue on network drops:** Every coin, bill, and transaction pulse is written to persistent NVS storage before cloud dispatch. Automatic de-duplication guarantees no dropped or double-counted money.
+* **Zero double-dispensing:** An idempotent command bus tracks high-watermark `commandId`s in NVS *before* firing relays. Survives sudden power cuts and reboots without repeat actuation.
+* **Brick-proof OTA updates:** Background firmware updates with SHA-256 verification and automatic rollback if the new app cannot reach the cloud. Postpones reboots while customers are paying.
+* **Universal cross-platform runtime:** Identical WebSocket protocol across ultra-low-cost microcontrollers ($2 ESP32 via ESP-IDF C & Arduino) and high-performance single-board computers (Raspberry Pi, Banana Pi, Orange Pi via Python SDK & Go Daemon).
+* **Native Edge AI & visual coding:** Built-in MCP server for AI coding agents (Claude Code, Cursor), local voice pipeline (Qwen3-ASR + VieNeu TTS), and Scratch 3.0 drag-and-drop extension for STEM education.
 
 ```c
-// ESP32 (ESP-IDF C) — Khởi tạo trong 10 phút
+// ESP32 (ESP-IDF C) — Ready in 10 minutes
 #include "innoedge.h"
 
 void app_main(void)
@@ -41,65 +43,65 @@ app = InnoEdge(cloud_url="wss://cloud.innoedge.io/ws", fw_version="1.0.0")
 
 @app.on_paid
 def on_paid(intent_id, amount):
-    print(f"Xác nhận tiền về {amount:,} đ -> Nhả hàng / Kích hoạt dịch vụ")
+    print(f"Payment confirmed: {amount:,} VND -> Dispense item / Start service")
 
 app.start()
 ```
 
 ---
 
-## Mục lục
+## Table of Contents
 
-1. [Kiến Trúc & Khả Năng Đa Nền Tảng](#kiến-trúc--khả-năng-đa-nền-tảng)
-2. [Bắt Đầu Trong 10 Phút](#bắt-đầu-trong-10-phút)
-3. [Danh Sách 15 Ví Dụ Chạy Thật](#danh-sách-15-ví-dụ-chạy-thật)
-4. [9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)](#9-community-cookbooks-thiết-kế-phần-cứng-mẫu)
-5. [Bộ Công Cụ Tiện Ích Trực Quan](#bộ-công-cụ-tiện-ích-trực-quan)
-6. [API Công Khai](#api-công-khai)
-7. [Những Thứ Khó Mà InnoEdge Đã Giải](#những-thứ-khó-mà-innoedge-đã-giải)
-8. [Cấu Trúc Thư Mục](#cấu-trúc-thư-mục)
-9. [Kiểm Thử (Testing)](#kiểm-thử-testing)
-10. [Mô Hình Kinh Doanh & Giấy Phép (Open Core & Commercial Licensing)](#mô-hình-kinh-doanh--giấy-phép-open-core--commercial-licensing)
+1. [Cross-Platform Architecture](#cross-platform-architecture)
+2. [Quick Start in 10 Minutes](#quick-start-in-10-minutes)
+3. [15 Production-Ready Examples](#15-production-ready-examples)
+4. [9 Hardware Reference Cookbooks](#9-hardware-reference-cookbooks)
+5. [Zero-Install Web Developer Tools](#zero-install-web-developer-tools)
+6. [Public C API](#public-c-api)
+7. [The Hard Engineering Problems InnoEdge Solves](#the-hard-engineering-problems-innoedge-solves)
+8. [Directory Layout](#directory-layout)
+9. [Automated Testing](#automated-testing)
+10. [Open Core Business Model & Licensing](#open-core-business-model--licensing)
 
 ---
 
-## Kiến Trúc & Khả Năng Đa Nền Tảng
+## Cross-Platform Architecture
 
-InnoEdge tách bạch ranh giới: **Hạ tầng kết nối & Giao thức (Chuẩn hóa)** ↔ **Nghiệp vụ phần cứng sản phẩm (Tự do tùy biến)**.
+InnoEdge maintains a strict separation of concerns: **Standardized Infrastructure & Transport** ↔ **Custom Business Logic & Actuators**.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          INNOEDGE CLOUD PLATFORM                         │
-│  Multi-Tenant CMS · Đối Soát Ngân Hàng Tự Động · Quản Lý Hàng Ngàn Máy  │
-│  VietQR Webhook (SePAY, PayOS, Pay2S, Tingee) · OTA Phân Phối Theo Lô    │
+│  Multi-Tenant CMS · Automated Bank Reconciliation · Fleet Management    │
+│  VietQR & Banking Webhooks (SePAY, PayOS, Tingee) · Staged OTA Rollout  │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │ WebSocket / TLS (Protocol v1)
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      LỚP THIẾT BỊ ĐA NỀN TẢNG (DEVICES)                  │
+│                    CROSS-PLATFORM DEVICE RUNTIME                        │
 ├──────────────────────────┬──────────────────────────┬───────────────────┤
-│    Vi Điều Khiển (MCU)    │  Máy Tính Nhúng (SBC)    │   Giáo Dục STEM   │
+│   Microcontrollers (MCU) │   Single Board (SBC)     │   STEM Education  │
 ├──────────────────────────┼──────────────────────────┼───────────────────┤
 │ • ESP32 / ESP32-S3 (C)   │ • Raspberry Pi (3B/4/5)  │ • MicroPython     │
 │ • Arduino / PlatformIO   │ • Banana Pi / Orange Pi  │   InnoBot HAL     │
-│ • Chi phí siêu tối ưu    │ • Python SDK + libgpiod  │ • Scratch 3.0     │
-│ • Phù hợp: Relay, Động cơ│ • Go Background Agent    │   BlockStudio     │
-│   Máy bán nước, Giặt sấy │ • Phù hợp: Kiosk, Video, │ • Phù hợp: Robot, │
-│                          │   Bảng quảng cáo, Audio  │   Đồ án học sinh  │
+│ • Cost-optimized ($2-5)  │ • Python SDK + libgpiod  │ • Scratch 3.0     │
+│ • Ideal for: Relays,     │ • Go Background Agent    │   BlockStudio     │
+│   Vending, EV, Laundromat│ • Ideal for: Kiosks,     │ • Ideal for:      │
+│                          │   Signage, Multi-Zone IP │   Classroom, DIY  │
 └──────────────────────────┴──────────────────────────┴───────────────────┘
 ```
 
-Xem chi tiết hướng dẫn đa nền tảng tại [`docs/CROSS-PLATFORM-SBC.md`](docs/CROSS-PLATFORM-SBC.md).
+For platform comparison and pinout details, see [`docs/CROSS-PLATFORM-SBC.md`](docs/CROSS-PLATFORM-SBC.md).
 
 ---
 
-## Bắt Đầu Trong 10 Phút
+## Quick Start in 10 Minutes
 
-**Yêu cầu:** Một máy tính (macOS/Linux/Windows), ESP32-S3 devkit (hoặc Raspberry Pi), và chưa cần đăng ký tài khoản hay phần cứng phức tạp.
+**Requirements:** A computer (macOS, Linux, or Windows), an ESP32-S3 devkit (or Raspberry Pi), and no account registration required.
 
-### Bước 1: Khởi động Mock-Cloud & Web Dashboard (Terminal 1)
+### Step 1: Start the Local Mock-Cloud & Web Dashboard (Terminal 1)
 
-Repo tích hợp sẵn một Cloud giả lập chạy bằng Go, có đầy đủ Webhook ngân hàng (SePAY / PayOS / Pay2S / Tingee), Web Console realtime và AI Assistant:
+The repo includes a self-contained Go mock-cloud with bank webhook simulators (SePAY, PayOS, Tingee, Pay2S), real-time Web Console, and AI Assistant:
 
 ```bash
 git clone https://github.com/nguyenduchoai/innoedge-platform.git
@@ -107,103 +109,103 @@ cd innoedge-platform
 go run ./tools/mock-cloud
 ```
 
-* Mở trình duyệt vào `http://localhost:8080/` để xem **Web Dashboard Realtime**.
-* Theo dõi thiết bị online, gửi lệnh nhả tiền, thử nghiệm webhook thanh toán.
+* Open your browser to `http://localhost:8080/` to access the **Real-Time Web Dashboard**.
+* Inspect connected devices, send remote dispense commands, and test payment webhooks.
 
-### Bước 2: Nạp Firmware Mẫu (Terminal 2)
+### Step 2: Flash Firmware (Terminal 2)
 
 ```bash
 cd examples/01-hello-device
 idf.py set-target esp32s3
-idf.py menuconfig        # InnoEdge SDK -> Cloud base URL -> trỏ vào IP LAN của máy tính
+idf.py menuconfig        # InnoEdge SDK -> Cloud base URL -> set to your computer's LAN IP
 idf.py flash monitor
 ```
 
-*(Hoặc dùng công cụ nạp trực tiếp qua trình duyệt Chrome/Edge tại [`tools/web-flasher/`](tools/web-flasher/) mà không cần cài ESP-IDF).*
+*(Alternatively, flash directly from Chrome/Edge with zero local tools using the [Web Serial Flasher](tools/web-flasher/)).*
 
-### Bước 3: Cài WiFi qua Web Bluetooth PWA (Không Cần App Mobile)
+### Step 3: Zero-App WiFi Provisioning via Web Bluetooth
 
-Mở Chrome truy cập `http://localhost:8080/provision/` (hoặc mở trực tiếp [`tools/web-provision/index.html`](tools/web-provision/index.html)), bấm **"Tìm & Kết nối thiết bị"** qua Web Bluetooth, điền tên WiFi & Mật khẩu rồi bấm Gửi. Thiết bị tự động kết nối WiFi, đồng bộ giờ NTP và online trên Web Dashboard!
+Open Chrome to `http://localhost:8080/provision/` (or open [`tools/web-provision/index.html`](tools/web-provision/index.html) directly), click **"Scan & Connect"**, enter your WiFi SSID and password, and click Send. The device connects to WiFi, syncs NTP time, and immediately appears online on your Web Dashboard!
 
 ---
 
-## Danh Sách 15 Ví Dụ Chạy Thật
+## 15 Production-Ready Examples
 
-Mỗi thư mục example đều có mã nguồn đầy đủ, file cấu hình, hướng dẫn đấu dây và bảng **Troubleshooting** riêng:
+Every example includes complete source code, wiring diagrams, expected serial output, and a dedicated **Troubleshooting** guide:
 
-| # | Example | Nền Tảng | Nghiệp Vụ Thực Tế | Phần Cứng Cần |
+| # | Example | Platform | Real-World Use Case | Required Hardware |
 |---|---|---|---|---|
-| **01** | [hello-device](examples/01-hello-device) | ESP32-S3 | Provisioning BLE/Web, kết nối Cloud, gửi heartbeat | Devkit |
-| **02** | [telemetry](examples/02-telemetry) | ESP32-S3 | Ghi nhận tiền xu/tiền giấy, hàng đợi NVS chống mất điện | Devkit |
-| **03** | [remote-command](examples/03-remote-command) | ESP32-S3 | Nhận lệnh điều khiển từ xa, chống chạy trùng qua reboot | Devkit |
-| **04** | [device-config](examples/04-device-config) | ESP32-S3 | Đồng bộ đơn giá, cấu hình linh hoạt từ Cloud, cache offline | Devkit |
-| **05** | [ota](examples/05-ota) | ESP32-S3 | Cập nhật OTA an toàn qua TLS, hoãn khi máy bận, tự rollback | Devkit |
-| **06** | [coin-relay](examples/06-coin-relay) | ESP32-S3 | Máy bán hàng coin-op 2 chiều: nhận xung tiền và kích relay nhả hàng | Đầu đọc xu, Relay |
-| **07** | [qr-payment](examples/07-qr-payment) | ESP32-S3 | Sinh mã VietQR động, kích hoạt nhả hàng khi nhận webhook ngân hàng | Devkit + Màn hình |
-| **08** | [carwash](examples/08-carwash) | ESP32-S3 | Trạm rửa xe tự động: quản lý nhiều relay (bọt, nước, sấy) theo hạn mức | 4 Relay board |
-| **09** | [ai-agent](examples/09-ai-agent) | ESP32-S3 | AI Agent tool-calling (Claude/LLM) tự ra quyết định điều khiển thiết bị | Devkit + Claude |
-| **10** | [edu-tutor](examples/10-edu-tutor) | ESP32-S3 | Gia sư thông minh 2 chiều: AI hỏi bài, bé bấm nút tương tác | Devkit + 3 Nút bấm |
-| **11** | [voice-assistant](examples/11-voice-assistant) | ESP32-S3 | Trợ lý giọng nói tự host: Giữ nút nói -> Qwen3-ASR -> LLM -> VieNeu TTS | Mic + Loa I2S |
-| **12** | [muse-gadget](examples/12-muse-gadget) | ESP32-S3 | Kiosk AI Avatar & Vending Machine: Meta Muse Gadget kết hợp VietQR | Devkit + LCD + Relay |
-| **13** | [stem-robot](examples/13-stem-robot) | ESP32 / Pi | Robot STEM tự hành: Né vật cản siêu âm, mở cốp giao hàng khi nhận VietQR | 2 Động cơ, HC-SR04, Servo |
-| **14** | [digital-signage](examples/14-digital-signage) | ESP32 / Pi | Bảng quảng cáo: Báo cáo Proof-of-Play, ngắt khẩn cấp, mua slot qua VietQR | Màn hình HDMI / LCD |
-| **15** | [central-audio](examples/15-central-audio) | ESP32 / Pi | Loa thông báo đa vùng: Phát nhạc nền BGM, ngắt ưu tiên Paging & Báo cháy | Loa I2S / Cổng AUX 3.5 |
+| **01** | [hello-device](examples/01-hello-device) | ESP32-S3 | Web Bluetooth provisioning, cloud connection, heartbeat | Devkit |
+| **02** | [telemetry](examples/02-telemetry) | ESP32-S3 | Coin/cash counting ledger, crash-safe NVS queue | Devkit |
+| **03** | [remote-command](examples/03-remote-command) | ESP32-S3 | Remote actuator commands, reboot-safe de-duplication | Devkit |
+| **04** | [device-config](examples/04-device-config) | ESP32-S3 | Dynamic pricing & operational config, offline cache | Devkit |
+| **05** | [ota](examples/05-ota) | ESP32-S3 | Secure TLS OTA updates, busy-state delay, auto-rollback | Devkit |
+| **06** | [coin-relay](examples/06-coin-relay) | ESP32-S3 | 2-way coin-op machine: pulse reading & relay dispensing | Coin acceptor, Relay |
+| **07** | [qr-payment](examples/07-qr-payment) | ESP32-S3 | Dynamic VietQR generation, instant bank webhook dispense | Devkit + Display |
+| **08** | [carwash](examples/08-carwash) | ESP32-S3 | Multi-relay timed wash bays (foam, high-pressure, vacuum) | 4-Relay board |
+| **09** | [ai-agent](examples/09-ai-agent) | ESP32-S3 | LLM tool-calling (Claude) makes autonomous actuator decisions | Devkit + Claude |
+| **10** | [edu-tutor](examples/10-edu-tutor) | ESP32-S3 | Bidirectional AI tutor: spoken questions & interactive buttons | Devkit + 3 Buttons |
+| **11** | [voice-assistant](examples/11-voice-assistant) | ESP32-S3 | Self-hosted voice AI: Push-to-talk -> Qwen3-ASR -> LLM -> VieNeu TTS | I2S Mic + Amp |
+| **12** | [muse-gadget](examples/12-muse-gadget) | ESP32-S3 | Meta Muse AI Avatar Kiosk + QR-based automated vending | Devkit + LCD + Relay |
+| **13** | [stem-robot](examples/13-stem-robot) | ESP32 / Pi | Autonomous delivery robot: ultrasonic obstacle avoidance, QR hatch | 2 Motors, HC-SR04, Servo |
+| **14** | [digital-signage](examples/14-digital-signage) | ESP32 / Pi | Smart billboard: Proof-of-Play telemetry, emergency override, ad buy | HDMI / LCD Screen |
+| **15** | [central-audio](examples/15-central-audio) | ESP32 / Pi | Multi-zone IP audio: BGM stream, priority paging, fire alarm, jukebox | I2S Amp / 3.5mm AUX |
 
 ---
 
-## 9 Community Cookbooks (Thiết Kế Phần Cứng Mẫu)
+## 9 Hardware Reference Cookbooks
 
-Tài liệu [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) chứa công thức chế tạo, danh mục linh kiện (BOM), sơ đồ mạch cách ly opto và mã nguồn ứng dụng mẫu cho 9 dòng sản phẩm:
+The community hardware reference guide [`docs/COMMUNITY-COOKBOOKS.md`](docs/COMMUNITY-COOKBOOKS.md) provides complete schematics, opto-isolated bill of materials (BOM), and production firmware recipes for 9 industries:
 
-1. **Tủ Locker Gửi Đồ Tự Động:** Quản lý hàng chục ngăn tủ, thanh toán theo giờ lưu kho, mở ngăn qua VietQR.
-2. **Trạm Sạc Xe Máy Điện / Xe Đạp Điện:** Đo đếm kWh (PZEM-004T), thanh toán tiền điện theo thời gian hoặc số điện thực tế.
-3. **Tiệm Giặt Sấy Tự Động 24/7:** Điều khiển máy giặt công nghiệp qua Optocoupler, chọn chế độ giặt nhanh/giặt sấy.
-4. **Trạm Rửa Xe Tự Phục Vụ:** Đếm ngược thời gian, điều khiển relay máy rửa áp lực cao, bình bọt tuyết, vòi hút bụi.
-5. **Kiosk Bán Hàng & Chăm Sóc Khách Hàng AI:** Tích hợp màn hình cảm ứng, trợ lý ảo Avatar giao tiếp với người mua.
-6. **Robot Giao Hàng & Đồ Án STEM:** Xe thông minh tự hành vận chuyển bưu phẩm trong tòa nhà hoặc trường học.
-7. **Máy Pha Cà Phê & Bán Nước Tự Động:** Điều khiển motor khay chứa lon nước, cảm biến rơi hàng chống kẹt tiền.
-8. **Bảng Quảng Cáo Kỹ Thuật Số (Digital Signage):** Quản lý chiến dịch tập trung, báo cáo Proof-of-Play (POW) cho đối tác truyền thông.
-9. **Hệ Thống Âm Thanh & Loa Thông Báo Tập Trung:** Phân vùng âm thanh tòa nhà (Zone 1/2), phát thông báo ưu tiên, còi báo động khẩn cấp.
+1. **Smart Locker Systems:** Multi-compartment solenoid control, storage time pricing, QR unlocking.
+2. **EV & E-Bike Charging Stations:** High-power relay control, energy metering (PZEM-004T), pay-per-kWh.
+3. **24/7 Commercial Laundromat:** Opto-isolated industrial washer triggers, quick-wash / dry cycle selection.
+4. **Self-Service Carwash Stations:** Digital timer countdown, high-pressure pump, foam cannon, vacuum control.
+5. **AI Interactive Kiosks:** Touchscreen interface, conversational AI avatar customer service, contactless payments.
+6. **Autonomous STEM Delivery Robots:** Smart delivery rovers navigating indoor environments and unlocking storage on payment.
+7. **Coffee & Beverage Vending Machines:** Motorized spiral spirals, drop detection beam sensors to prevent coin traps.
+8. **Digital Signage & Smart Billboards:** Proof-of-play (POW) advertiser audit trails, emergency broadcast interruptions.
+9. **Centralized Multi-Zone IP Audio:** Facility-wide background music, priority paging announcements, 100% volume fire siren override.
 
-Xem thêm sơ đồ mạch điện chi tiết tại [`docs/HARDWARE-REFERENCE.md`](docs/HARDWARE-REFERENCE.md).
+See detailed schematic diagrams and isolation circuits at [`docs/HARDWARE-REFERENCE.md`](docs/HARDWARE-REFERENCE.md).
 
 ---
 
-## Bộ Công Cụ Tiện Ích Trực Quan
+## Zero-Install Web Developer Tools
 
-Nhà phát triển và cộng đồng có thể triển khai hệ thống mà không cần cài đặt môi trường phức tạp:
+Developers can configure, test, and program InnoEdge devices right from modern web browsers:
 
-| Công Cụ | Thư Mục | Tính Năng |
+| Tool | Directory | Capabilities |
 |---|---|---|
-| **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Lập trình kéo thả khối lệnh Scratch 3.0 trực quan cho giáo dục STEM và người mới bắt đầu. |
-| **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Nạp firmware nhúng trực tiếp qua trình duyệt web bằng Web Serial API (Chrome/Edge), không cần terminal. |
-| **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | PWA cài đặt WiFi nhanh chóng cho thiết bị mới qua chuẩn BLE chuẩn hóa. |
-| **Mock-Cloud & Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Server giả lập đầy đủ giao thức v1, dashboard giao diện realtime, trình kích hoạt webhook ngân hàng. |
-| **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Bộ Docker Compose hoàn chỉnh + Caddy tự động cấp SSL miễn phí để tự host cloud riêng. |
-| **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Cung cấp ngữ cảnh API và luật bảo vệ an toàn tiền tệ cho các AI IDE (Claude Code, Cursor, Windsurf). |
+| **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Visual Scratch 3.0 drag-and-drop extension for STEM education and beginners. |
+| **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Flash embedded firmware directly from Chrome or Edge via Web Serial API. |
+| **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | Install-free PWA to configure device WiFi via Bluetooth Low Energy (BLE). |
+| **Mock-Cloud & Web Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Full protocol v1 emulator, live WebSocket monitor, and automated bank webhook triggers. |
+| **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Complete Docker Compose bundle with Caddy auto-SSL for self-hosting. |
+| **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Model Context Protocol server giving AI IDEs (Claude Code, Cursor) full SDK context. |
 
 ---
 
-## API Công Khai
+## Public C API
 
-SDK lõi tinh gọn gồm **16 hàm chuẩn hóa** khai báo tại [`components/innoedge/include/innoedge.h`](components/innoedge/include/innoedge.h):
+The core SDK provides **16 concise, standardized functions** declared in [`components/innoedge/include/innoedge.h`](components/innoedge/include/innoedge.h):
 
 ```c
-// Vòng đời
+// Lifecycle
 esp_err_t   innoedge_init(const innoedge_config_t *cfg);
 esp_err_t   innoedge_start(void);
 bool        innoedge_is_online(void);
 bool        innoedge_is_assigned(void);
 const char *innoedge_device_id(void);
 
-// Giao dịch tiền & Viễn trắc (Tự lưu NVS trước khi gửi)
+// Transactions & Telemetry (Crash-safe NVS queue)
 esp_err_t   innoedge_publish_payment(innoedge_pay_kind_t kind, uint32_t count, int64_t amount_vnd);
 esp_err_t   innoedge_publish_event(const char *name, const char *data_json);
 esp_err_t   innoedge_send_binary(const void *data, size_t len);
 uint32_t    innoedge_queue_depth(void);
 esp_err_t   innoedge_alert(const char *code, innoedge_alert_severity_t severity, const char *message, bool active);
 
-// Lệnh điều khiển & Thanh toán
+// Actuator Commands & Payments
 esp_err_t   innoedge_register_command(const char *action, innoedge_command_fn fn);
 void        innoedge_reboot_after_ack(void);
 esp_err_t   innoedge_request_qr(int64_t amount_vnd);
@@ -214,73 +216,78 @@ esp_err_t   innoedge_ota_check(void);
 
 ---
 
-## Những Thứ Khó Mà InnoEdge Đã Giải
+## The Hard Engineering Problems InnoEdge Solves
 
-* **Mất mạng không mất tiền:** Mọi xung tiền nhận được từ đầu đọc xu/tiền giấy đều được ghi vào sổ cái NVS trước khi gửi WebSocket. Cloud tự dedupe theo `(device_id, seq)` nên không bao giờ ghi nhận trùng lặp.
-* **Không nhả tiền hai lần:** Cloud gửi lại lệnh sau khi mạng chập chờn là điều tất yếu. SDK lưu vết watermark `commandId` trong NVS và đánh dấu **trước khi** kích hoạt rơ-le nhả hàng. Nếu mất điện đột ngột trong lúc đang nhả hàng, lệnh gửi lại sau khi khởi động sẽ bị chặn ngay lập tức.
-* **Quy tắc vàng:** Chỉ có sự kiện `on_paid` được ngân hàng chứng thực mới được phép kích hoạt giao hàng hoặc cấp dịch vụ.
-* **Cập nhật OTA không biến máy thành cục gạch:** Firmware mới chỉ được công nhận hợp lệ sau khi máy kết nối thành công tới Cloud. Nếu xảy ra lỗi bootloader sẽ tự động rollback về bản firmware trước đó.
+* **Money is Never Dropped:** Coin/bill pulses are written to NVS *before* attempting WebSocket dispatch. The cloud deduplicates on `(device_id, seq)` so retries never create duplicate ledger records.
+* **Actuators Never Fire Twice:** The cloud frequently retries commands over shaky cellular networks. InnoEdge records high-watermark `commandId`s in NVS *before* executing the hardware handler. A sudden reboot during a dispense operation will safely drop the duplicate retry.
+* **The Golden Safety Rule:** Only the cryptographic `on_paid` event (certified by bank webhooks) is permitted to dispense inventory or activate high-power relays.
+* **Brick-Proof OTA Upgrades:** New firmware is only validated after the device successfully authenticates with the cloud. Any panic or boot failure triggers automatic bootloader rollback to the previous partition.
 
 ---
 
-## Cấu Trúc Thư Mục
+## Directory Layout
 
 ```
 .
-├── components/innoedge/     # SDK lõi chuẩn hóa cho ESP-IDF (C)
-├── arduino/InnoEdge/        # Thư viện InnoEdge cho Arduino & PlatformIO (C++)
-├── micropython/             # InnoBot HAL & MicroPython cho Robot STEM
-├── linux/                   # Hỗ trợ Raspberry Pi, Banana Pi, Orange Pi (Python + Go Agent)
-├── components-hw/           # Driver phần cứng mẫu (Đầu đọc xu, relay, audio I2S)
-├── examples/                # 15 ví dụ hoàn chỉnh (01-hello đến 15-central-audio)
-├── tools/                   # Mock-cloud, Web Flasher, Web Provision, Scratch, Cloud Lite, MCP
+├── components/innoedge/     # Core ESP-IDF C SDK
+├── arduino/InnoEdge/        # Arduino & PlatformIO C++ library wrapper
+├── micropython/             # InnoBot HAL & MicroPython for STEM robotics
+├── linux/                   # Raspberry Pi & Banana Pi (Python SDK + Go Daemon)
+├── components-hw/           # Hardware sample drivers (coin acceptor, relays, I2S)
+├── examples/                # 15 runnable examples (01-hello to 15-central-audio)
+├── tools/                   # Mock-cloud, Web Flasher, Web Provision, Scratch, MCP
 ├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
-└── tests/run.sh             # Bộ test toàn diện chạy độc lập trên máy tính
+└── tests/run.sh             # Host test runner (runs without ESP-IDF or hardware)
 ```
 
 ---
 
-## Kiểm Thử (Testing)
+## Automated Testing
 
-InnoEdge đi kèm bộ kiểm thử toàn diện không cần phần cứng và không cần cài đặt ESP-IDF:
+InnoEdge includes an automated test runner that validates the entire stack locally without requiring hardware:
 
 ```bash
 ./tests/run.sh
 ```
 
-Bao phủ 6 khối kiểm tra tự động:
-1. **C Command Bus:** Chống chạy trùng lệnh bền vững qua reboot.
-2. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
-3. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
-4. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
-5. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
-6. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
+Runs 6 test suites across multiple languages:
+1. **C Command Bus:** Registry validation and reboot-safe de-duplication.
+2. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
+3. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
+4. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
+5. **Linux SBC Agent (Go):** Background daemon compilation check.
+6. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
 
 ---
 
-## Mô Hình Kinh Doanh & Giấy Phép (Open Core & Commercial Licensing)
+## Open Core Business Model & Licensing
 
-InnoEdge vận hành theo mô hình **Open Core** chuẩn mực trong ngành công nghệ IoT toàn cầu (tương tự ESPHome, Home Assistant, Linux Foundation):
+InnoEdge adopts the proven **Open Core** business model used by industry-leading infrastructure platforms (e.g., ESPHome, Docker, MongoDB, Linux Foundation):
 
-### 1. Phần Mở — Apache License 2.0 (Miễn phí vĩnh viễn)
-* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 9 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
-* Quyền lợi: Doanh nghiệp, nhà nghiên cứu và lập trình viên được quyền thương mại hóa, nhúng vào sản phẩm bán lẻ, và tùy biến không giới hạn mà không bị ràng buộc mở mã nguồn thương mại của mình.
-* Mục tiêu: Đóng vai trò là "cổng vào" chuẩn mực, tạo dựng cộng đồng hàng ngàn nhà phát triển thiết bị.
+### 1. Open Source Foundation — Apache License 2.0 (Free Forever)
+* Applies to: Core SDK (`components/innoedge`), Arduino library, MicroPython InnoBot, Linux Python SDK, 15 Examples, 9 Cookbooks, Mock-Cloud, and Protocol specifications.
+* Commercial Rights: OEM manufacturers, system integrators, and independent developers can freely build commercial devices and embed the firmware without paying royalties or open-sourcing their proprietary product logic.
 
-### 2. Mô Hình Kiếm Tiền Thương Mại (Monetization Strategies)
-Nền tảng InnoEdge mở ra nhiều dòng doanh thu bền vững:
+### 2. Commercial Monetization Strategies
+The InnoEdge ecosystem enables 4 highly scalable revenue streams:
 
-1. **Doanh Thu Đăng Ký Cloud Dịch Vụ (SaaS Subscription):**
-   * Cung cấp InnoEdge Cloud Enterprise cho các doanh nghiệp sở hữu chuỗi hàng trăm / hàng ngàn máy bán lẻ tự động.
-   * Tính phí thuê bao theo tháng trên mỗi thiết bị hoạt động (ví dụ: 20.000 đ – 50.000 đ / máy / tháng).
-   * Giá trị cốt lõi: Quản trị tập trung, ứng dụng Mobile App (iOS/Android) cho chủ máy theo dõi doanh thu thời gian thực, quản lý phân quyền đa cấp, đối soát ngân hàng tự động, và triển khai cập nhật OTA theo lô với SLA 99.9%.
+1. **Enterprise Cloud SaaS Subscription:**
+   * Provide the commercial InnoEdge Cloud Enterprise for operators managing fleets of 100 to 10,000+ vending machines, laundromats, or charging stations.
+   * Subscription pricing: **$1 – $3 / device / month**.
+   * Key enterprise features: Multi-tenant tenant isolation, real-time revenue analytics, mobile owner app (iOS/Android), automated bank reconciliation, staged fleet OTA rollout, and 99.9% uptime SLA.
+2. **Payment Revenue Sharing:**
+   * Integrated payment gateways (VietQR, instant banking, mobile wallets).
+   * Micro-fee per successful transaction (e.g., **0.5% – 1%** or fixed transaction fees).
+3. **Standardized Hardware Reference Kits:**
+   * Commercial production of certified InnoEdge Core Shields (isolated power, industrial optocouplers, 4G LTE/WiFi, terminal blocks) and STEM educational kits for schools.
+4. **Enterprise Custom Solutions & Dedicated SLAs:**
+   * On-premise private cloud deployments and 24/7 dedicated engineering support for large corporations.
 
-2. **Phí Giao Dịch Thanh Toán (Payment Revenue Sharing):**
-   * Tích hợp cổng thanh toán VietQR tự động (SePAY, PayOS, Tingee, Pay2S...).
-   * Thu phí vi mô trên mỗi giao dịch thành công (ví dụ: 0.5% – 1% hoặc 200 đ – 500 đ / giao dịch).
+---
 
-3. **Kinh Doanh Phần Cứng Chuẩn Hóa (Hardware Reference Kits):**
-   * Sản xuất và bán bo mạch InnoEdge Core Shield, Module Relay cách ly công nghiệp, Bo mạch Robot STEM cho các trường học, trung tâm đào tạo và nhà sản xuất máy bán hàng tự động.
+## Contributing & Community
 
-4. **Dịch Vụ Tùy Biến Doanh Nghiệp (Enterprise Customization & SLAs):**
-   * Cung cấp dịch vụ tích hợp giải pháp riêng, cài đặt Private Cloud trên hạ tầng của khách hàng lớn và bảo hành dịch vụ kỹ thuật 24/7.
+Contributions are welcome! Please report field bugs or submit pull requests:
+* **Bug Reports:** Open an issue with your chip target, ESP-IDF version, and serial monitor log.
+* **Pull Requests:** Keep PRs focused. Always verify that `./tests/run.sh` passes before submitting.
+* **Security:** Review [SECURITY.md](SECURITY.md) for vulnerability disclosure.
