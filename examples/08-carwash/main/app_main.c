@@ -12,8 +12,8 @@
 #include "innoedge.h"
 
 #include "gtek_config_client.h"
-#include "gtek_relay_control.h"
-#include "gtek_wash_control.h"
+#include "innoedge_relay_control.h"
+#include "innoedge_wash_control.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -29,7 +29,7 @@ static const char *TAG = "carwash";
 static esp_err_t cmd_start_wash(cJSON *params, char *result, size_t result_len,
                                 char *msg, size_t msg_len)
 {
-    int budgets[GTEK_WASH_DEVICE_COUNT] = {0};
+    int budgets[INNOEDGE_WASH_DEVICE_COUNT] = {0};
     const char *combo_id = "";
 
     cJSON *combo = params ? cJSON_GetObjectItem(params, "combo") : NULL;
@@ -61,7 +61,7 @@ static esp_err_t cmd_start_wash(cJSON *params, char *result, size_t result_len,
     }
 
     int total = 0;
-    for (int i = 0; i < GTEK_WASH_DEVICE_COUNT; i++) {
+    for (int i = 0; i < INNOEDGE_WASH_DEVICE_COUNT; i++) {
         total += budgets[i];
     }
     if (total <= 0) {
@@ -70,14 +70,14 @@ static esp_err_t cmd_start_wash(cJSON *params, char *result, size_t result_len,
     }
 
     cJSON *max_sec = params ? cJSON_GetObjectItem(params, "maxSec") : NULL;
-    esp_err_t err = gtek_wash_start(budgets, cJSON_IsNumber(max_sec) ? max_sec->valueint : 0);
+    esp_err_t err = innoedge_wash_start(budgets, cJSON_IsNumber(max_sec) ? max_sec->valueint : 0);
     if (err != ESP_OK) {
         return err;
     }
 
     ESP_LOGI(TAG, "mở phiên: nước=%ds bọt=%ds khí=%ds hút=%ds",
-             budgets[GTEK_WASH_WATER], budgets[GTEK_WASH_FOAM],
-             budgets[GTEK_WASH_AIR], budgets[GTEK_WASH_VACUUM]);
+             budgets[INNOEDGE_WASH_WATER], budgets[INNOEDGE_WASH_FOAM],
+             budgets[INNOEDGE_WASH_AIR], budgets[INNOEDGE_WASH_VACUUM]);
     snprintf(result, result_len, "{\"started\":true,\"combo\":\"%s\",\"totalSec\":%d}",
              combo_id, total);
     snprintf(msg, msg_len, "da mo phien rua");
@@ -89,16 +89,16 @@ static esp_err_t cmd_stop_wash(cJSON *params, char *result, size_t result_len,
                                char *msg, size_t msg_len)
 {
     (void)params; (void)result; (void)result_len;
-    gtek_wash_end();
+    innoedge_wash_end();
     snprintf(msg, msg_len, "da dung phien");
     return ESP_OK;
 }
 
 // Khách bấm nút chức năng trên máy → gọi hàm này. Máy thật thì nối vào 4 nút
 // vật lý hoặc màn cảm ứng.
-static esp_err_t customer_pressed(gtek_wash_device_t device)
+static esp_err_t customer_pressed(innoedge_wash_device_t device)
 {
-    return gtek_wash_activate(device); // controller tự lo độc quyền relay + trừ giờ
+    return innoedge_wash_activate(device);
 }
 
 // Theo dõi phiên: log thời gian còn lại, và báo cảnh báo khi phiên kết thúc.
@@ -107,12 +107,12 @@ static void session_monitor_task(void *arg)
     (void)arg;
     bool was_active = false;
     while (true) {
-        gtek_wash_status_t st = {0};
-        bool active = gtek_wash_status(&st);
+        innoedge_wash_status_t st = {0};
+        bool active = innoedge_wash_status(&st);
         if (active) {
             ESP_LOGI(TAG, "còn: nước=%ds bọt=%ds khí=%ds hút=%ds · phiên=%ds",
-                     st.remaining_sec[GTEK_WASH_WATER], st.remaining_sec[GTEK_WASH_FOAM],
-                     st.remaining_sec[GTEK_WASH_AIR], st.remaining_sec[GTEK_WASH_VACUUM],
+                     st.remaining_sec[INNOEDGE_WASH_WATER], st.remaining_sec[INNOEDGE_WASH_FOAM],
+                     st.remaining_sec[INNOEDGE_WASH_AIR], st.remaining_sec[INNOEDGE_WASH_VACUUM],
                      st.session_remaining_sec);
         } else if (was_active) {
             ESP_LOGI(TAG, "phiên kết thúc — mọi relay đã tắt");
@@ -124,23 +124,21 @@ static void session_monitor_task(void *arg)
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "0.1.0" };
+    innoedge_config_t cfg = { .fw_version = "0.1.3" };
     ESP_ERROR_CHECK(innoedge_init(&cfg));
 
-    ESP_ERROR_CHECK(gtek_relay_control_init()); // mọi relay OFF khi boot
-    ESP_ERROR_CHECK(gtek_wash_control_init());  // tick 1Hz đếm ngược ngân sách
+    ESP_ERROR_CHECK(innoedge_relay_control_init());
+    ESP_ERROR_CHECK(innoedge_wash_control_init());
     ESP_ERROR_CHECK(innoedge_register_command("start_wash", cmd_start_wash));
     ESP_ERROR_CHECK(innoedge_register_command("stop_wash", cmd_stop_wash));
 
     ESP_ERROR_CHECK(innoedge_start());
     xTaskCreate(session_monitor_task, "wash_mon", 3072, NULL, 3, NULL);
 
-    // Demo: 20s sau khi boot, giả lập khách bấm nút "xịt nước".
-    // Máy thật: nối 4 nút vật lý → customer_pressed(GTEK_WASH_WATER/FOAM/AIR/VACUUM).
     vTaskDelay(pdMS_TO_TICKS(20000));
-    if (gtek_wash_status(NULL)) {
+    if (innoedge_wash_status(NULL)) {
         ESP_LOGI(TAG, "demo: khách bấm XỊT NƯỚC → %s",
-                 esp_err_to_name(customer_pressed(GTEK_WASH_WATER)));
+                 esp_err_to_name(customer_pressed(INNOEDGE_WASH_WATER)));
     } else {
         ESP_LOGW(TAG, "chưa có phiên — gửi lệnh start_wash từ cloud trước");
     }

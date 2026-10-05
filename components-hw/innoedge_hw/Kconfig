@@ -6,86 +6,86 @@ menu "InnoEdge HW drivers (mẫu)"
 
 comment "Đầu đọc xu / bill (pulse_input)"
 
-config GTEK_COIN_PULSE_GPIO
+config INNOEDGE_COIN_PULSE_GPIO
     int "Coin acceptor pulse GPIO (-1 = tắt)"
     default -1
 
-config GTEK_BILL_PULSE_GPIO
+config INNOEDGE_BILL_PULSE_GPIO
     int "Bill acceptor pulse GPIO (-1 = tắt)"
     default -1
 
-config GTEK_COIN_PULSE_PCA9554_P0
+config INNOEDGE_COIN_PULSE_PCA9554_P0
     bool "Đọc xung xu qua IO-expander PCA9554 P0 thay vì GPIO"
     default n
 
-config GTEK_COIN_VND_PER_PULSE
+config INNOEDGE_COIN_VND_PER_PULSE
     int "VND mỗi xung xu (0 = gửi SỐ XU, cloud tự quy đổi)"
     default 0
 
-config GTEK_BILL_VND_PER_PULSE
+config INNOEDGE_BILL_VND_PER_PULSE
     int "VND mỗi xung bill"
     default 10000
 
-config GTEK_PULSE_MIN_MS
+config INNOEDGE_PULSE_MIN_MS
     int "Chống dội: độ rộng xung tối thiểu (ms)"
     default 35
 
-config GTEK_PULSE_GAP_MS
+config INNOEDGE_PULSE_GAP_MS
     int "Khoảng lặng kết thúc một chuỗi xung (ms)"
     default 300
 
 comment "Relay nhả tiền (relay_control)"
 
-config GTEK_RELAY_GPIO
+config INNOEDGE_RELAY_GPIO
     int "Relay nhả tiền/credit GPIO (-1 = tắt)"
     default -1
 
-config GTEK_RELAY_PULSE_MS
+config INNOEDGE_RELAY_PULSE_MS
     int "Độ rộng xung relay (ms)"
     default 80
 
-config GTEK_RELAY_PULSE_GAP_MS
+config INNOEDGE_RELAY_PULSE_GAP_MS
     int "Khoảng cách giữa hai xung relay (ms)"
     default 120
 
-config GTEK_DISPENSE_VND_PER_PULSE
+config INNOEDGE_DISPENSE_VND_PER_PULSE
     int "VND mỗi xung khi nhả tiền (0 = dùng bill rate)"
     default 0
 
-config GTEK_DISPENSE_MAX_PULSES
+config INNOEDGE_DISPENSE_MAX_PULSES
     int "Trần an toàn: số xung tối đa mỗi lệnh dispense"
     default 200
 
 comment "Rửa xe (wash_control) — 4 relay, -1 = tắt"
 
-config GTEK_WASH_GPIO_WATER
+config INNOEDGE_WASH_GPIO_WATER
     int "WATER (xịt nước) relay GPIO"
     default -1
 
-config GTEK_WASH_GPIO_FOAM
+config INNOEDGE_WASH_GPIO_FOAM
     int "FOAM (phun bọt) relay GPIO"
     default -1
 
-config GTEK_WASH_GPIO_AIR
+config INNOEDGE_WASH_GPIO_AIR
     int "AIR (nén khí) relay GPIO"
     default -1
 
-config GTEK_WASH_GPIO_VACUUM
+config INNOEDGE_WASH_GPIO_VACUUM
     int "VACUUM (hút bụi) relay GPIO"
     default -1
 
-config GTEK_WASH_WATER_SENSOR_GPIO
+config INNOEDGE_WASH_WATER_SENSOR_GPIO
     int "Cảm biến có nước (active-low; -1 = không lắp)"
     default -1
     help
       Bơm chạy khô là hỏng bơm. Có cảm biến thì wash_control tự chặn và báo
       cảnh báo no_water lên cloud.
 
-config GTEK_WASH_MAX_ACTIVATION_SEC
+config INNOEDGE_WASH_MAX_ACTIVATION_SEC
     int "Watchdog: một lần bật relay tối đa (giây)"
     default 600
 
-config GTEK_WASH_MASTER_MARGIN_SEC
+config INNOEDGE_WASH_MASTER_MARGIN_SEC
     int "Thời gian phiên dư ra ngoài tổng ngân sách (giây)"
     default 120
 

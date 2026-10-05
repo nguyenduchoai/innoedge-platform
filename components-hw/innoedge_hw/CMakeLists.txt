@@ -5,9 +5,9 @@
 # mìn xung đột.
 idf_component_register(
     SRCS
-        "src/gtek_pulse_input.c"
-        "src/gtek_relay_control.c"
-        "src/gtek_wash_control.c"
+        "src/innoedge_pulse_input.c"
+        "src/innoedge_relay_control.c"
+        "src/innoedge_wash_control.c"
         "src/innoedge_mdb.c"
         "src/innoedge_modbus.c"
     INCLUDE_DIRS "src"
