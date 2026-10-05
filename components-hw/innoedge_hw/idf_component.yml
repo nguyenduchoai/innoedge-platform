@@ -1,19 +1,40 @@
 version: "0.1.0"
 description: >-
-  Driver phần cứng mẫu cho InnoEdge SDK: đếm xung đầu đọc xu/bill (có chống dội),
-  relay đa kênh + xung nhả tiền, và bộ điều khiển phiên rửa xe theo ngân sách
-  thời gian. Đây là code THAM KHẢO đi kèm example, không phải API ổn định.
+  Sample hardware peripheral drivers for InnoEdge SDK: coin/bill pulse input with debouncing,
+  multi-channel relay control, timed carwash session controller, MDB cashless vending, and Modbus RTU.
 url: https://github.com/nguyenduchoai/innoedge-platform
 repository: https://github.com/nguyenduchoai/innoedge-platform.git
 documentation: https://github.com/nguyenduchoai/innoedge-platform#readme
 issues: https://github.com/nguyenduchoai/innoedge-platform/issues
 license: "Apache-2.0"
 
-tags: [iot, relay, coin-acceptor, pulse, carwash]
-targets: [esp32, esp32s2, esp32s3, esp32c3]
+tags:
+  - iot
+  - relay
+  - coin-acceptor
+  - pulse
+  - carwash
+  - mdb
+  - modbus
+
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32c3
 
 dependencies:
   idf:
     version: ">=5.1"
-  innoedge/innoedge:
-    version: "^0.1.0"
+  nguyenduchoai/innoedge:
+    version: "^0.1.2"
+
+files:
+  exclude:
+    - "**/*.log"
+    - "**/build/**/*"
+    - "**/build_*/**/*"
+    - "**/managed_components/**/*"
+    - "**/dependencies.lock"
+    - "**/sdkconfig"
+    - "**/sdkconfig.old"

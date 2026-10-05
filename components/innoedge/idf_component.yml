@@ -1,4 +1,4 @@
-version: "0.1.2"
+version: "0.1.3"
 description: >-
   InnoEdge SDK — IoT device infrastructure for ESP32 monetization:
   WiFi BLE/SoftAP provisioning, persistent NVS transaction queue,
@@ -47,5 +47,13 @@ examples:
   - path: ../../examples/03-remote-command
   - path: ../../examples/04-device-config
   - path: ../../examples/05-ota
+  - path: ../../examples/06-coin-relay
   - path: ../../examples/07-qr-payment
-
+  - path: ../../examples/08-carwash
+  - path: ../../examples/09-ai-agent
+  - path: ../../examples/10-edu-tutor
+  - path: ../../examples/11-voice-assistant
+  - path: ../../examples/12-muse-gadget
+  - path: ../../examples/13-stem-robot
+  - path: ../../examples/14-digital-signage
+  - path: ../../examples/15-central-audio

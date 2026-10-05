@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 set(IE_WANT_HW ON)
-include(${CMAKE_CURRENT_LIST_DIR}/../example.cmake)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../example.cmake")
+    include(${CMAKE_CURRENT_LIST_DIR}/../example.cmake)
+endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(ie-voice-assistant)
