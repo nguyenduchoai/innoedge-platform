@@ -24,6 +24,10 @@ InnoEdge giải quyết toàn bộ phần hạ tầng kỹ thuật phức tạp 
 * **Đa nền tảng phần cứng:** Cùng một giao thức cho vi điều khiển siêu rẻ (ESP32/ESP-IDF, Arduino) và máy tính nhúng mạnh mẽ (Raspberry Pi, Banana Pi, Orange Pi qua Python SDK).
 * **AI & Kéo thả trực quan:** Kết nối trực tiếp mô hình ngôn ngữ lớn (Claude/Qwen) qua MCP server và hỗ trợ lập trình kéo thả Scratch 3.0 cho giáo dục STEM.
 
+> **Hiện trạng:** cloud InnoEdge (bản hosted) chưa mở. Phát triển với
+> [`tools/mock-cloud`](tools/mock-cloud/) (`go run ./tools/mock-cloud`), nói đúng
+> [PROTOCOL-v1](docs/PROTOCOL-v1.md); khi có server riêng thì trỏ thiết bị sang đó.
+
 ```c
 // ESP32 (ESP-IDF C) — Khởi tạo trong 10 phút
 #include "innoedge.h"
@@ -40,7 +44,7 @@ void app_main(void)
 # Raspberry Pi & Banana Pi (Python SDK)
 from innoedge import InnoEdge
 
-app = InnoEdge(cloud_url="wss://cloud.innoedge.io/ws", fw_version="1.0.0")
+app = InnoEdge(cloud_url="ws://127.0.0.1:8080/ws/", fw_version="1.0.0")  # mock-cloud cục bộ
 
 @app.on_paid
 def on_paid(intent_id, amount):
@@ -72,7 +76,7 @@ InnoEdge tách bạch ranh giới: **Hạ tầng kết nối & Giao thức (Chu�
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          INNOEDGE CLOUD PLATFORM                         │
+│              INNOEDGE CLOUD PLATFORM (chưa mở, dùng mock-cloud)         │
 │  Multi-Tenant CMS · Đối Soát Ngân Hàng Tự Động · Quản Lý Hàng Ngàn Máy  │
 │  VietQR Webhook (SePAY, PayOS, Pay2S, Tingee) · OTA Phân Phối Theo Lô    │
 └────────────────────────────────────┬────────────────────────────────────┘

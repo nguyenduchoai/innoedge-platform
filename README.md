@@ -24,6 +24,10 @@ InnoEdge solves the heavy, mission-critical IoT infrastructure that every commer
 * **Universal cross-platform runtime:** Identical WebSocket protocol across ultra-low-cost microcontrollers ($2 ESP32 via ESP-IDF C & Arduino) and high-performance single-board computers (Raspberry Pi, Banana Pi, Orange Pi via Python SDK).
 * **Native Edge AI & visual coding:** Built-in MCP server for AI coding agents (Claude Code, Cursor), local voice pipeline (Qwen3-ASR + VieNeu TTS), and Scratch 3.0 drag-and-drop extension for STEM education.
 
+> **Status:** the hosted InnoEdge Cloud is not open yet. Develop against the local
+> [`tools/mock-cloud`](tools/mock-cloud/) (`go run ./tools/mock-cloud`), which speaks the same
+> [PROTOCOL-v1](docs/PROTOCOL-v1.md); point devices at your own server when you run one.
+
 ```c
 // ESP32 (ESP-IDF C) — Ready in 10 minutes
 #include "innoedge.h"
@@ -40,7 +44,7 @@ void app_main(void)
 # Raspberry Pi & Banana Pi (Python SDK)
 from innoedge import InnoEdge
 
-app = InnoEdge(cloud_url="wss://cloud.innoedge.io/ws", fw_version="1.0.0")
+app = InnoEdge(cloud_url="ws://127.0.0.1:8080/ws/", fw_version="1.0.0")  # local mock-cloud
 
 @app.on_paid
 def on_paid(intent_id, amount):
@@ -72,7 +76,7 @@ InnoEdge maintains a strict separation of concerns: **Standardized Infrastructur
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          INNOEDGE CLOUD PLATFORM                         │
+│               INNOEDGE CLOUD PLATFORM (not open yet)                    │
 │  Multi-Tenant CMS · Automated Bank Reconciliation · Fleet Management    │
 │  VietQR & Banking Webhooks (SePAY, PayOS, Tingee) · Staged OTA Rollout  │
 └────────────────────────────────────┬────────────────────────────────────┘
