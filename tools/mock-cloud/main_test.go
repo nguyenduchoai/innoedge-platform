@@ -9,9 +9,13 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -258,5 +262,37 @@ func TestOTAMacDinhKhongCoBanMoi(t *testing.T) {
 	}
 	if body.Data.Assignment.Status != "assigned" {
 		t.Errorf("assignment.status = %q, mong assigned", body.Data.Assignment.Status)
+	}
+}
+
+// Manifest có bản mới phải kèm sha256 + size: thiết bị từ chối cài khi thiếu.
+func TestOTAManifestCarriesDigest(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "fw.bin")
+	if err := os.WriteFile(f, []byte("firmware-bytes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := loadFirmwareDigest(f); err != nil {
+		t.Fatal(err)
+	}
+	*fwVersion, *fwURL = "0.1.1", "https://example.test/fw.bin"
+	defer func() { *fwVersion, *fwURL, fwSHA256, fwSize = "", "", "", 0 }()
+
+	rec := httptest.NewRecorder()
+	handleOTA(rec, httptest.NewRequest(http.MethodPost, "/ota/v1/", nil))
+	var body struct {
+		Data struct {
+			Firmware map[string]any `json:"firmware"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	fw := body.Data.Firmware
+	sum := sha256.Sum256([]byte("firmware-bytes"))
+	if fw["sha256"] != hex.EncodeToString(sum[:]) {
+		t.Errorf("sha256 = %v", fw["sha256"])
+	}
+	if fw["size"] != float64(len("firmware-bytes")) {
+		t.Errorf("size = %v, mong %d", fw["size"], len("firmware-bytes"))
 	}
 }

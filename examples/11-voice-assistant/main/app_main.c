@@ -43,7 +43,7 @@ void app_main(void)
         .on_frame = innoedge_audio_on_frame,
         .on_binary = innoedge_audio_on_binary,
     };
-    innoedge_config_t cfg = { .fw_version = "0.1.0", .events = &events };
+    innoedge_config_t cfg = { .events = &events };
     ESP_ERROR_CHECK(innoedge_init(&cfg));
 
     static const innoedge_audio_events_t audio_events = { .on_stt = on_stt, .on_tts = on_tts };

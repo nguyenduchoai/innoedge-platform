@@ -2,6 +2,11 @@
 
 Thư viện MicroPython chính thức dành cho học sinh, sinh viên, giáo viên và Maker phát triển **Robot STEM**, máy bán hàng tự động và thiết bị IoT thương mại bằng ngôn ngữ Python.
 
+> ⚠️ **Hiện trạng:** thư viện này là HAL robot STEM (động cơ, siêu âm, servo) cộng
+> chỗ đăng ký callback. Nó **CHƯA kết nối cloud**: `on_paid` chỉ chạy khi
+> bạn gọi `simulate_payment()`, không có giao dịch thật nào tới. Cần thanh toán / lệnh từ
+> xa thật trên ESP32 thì dùng SDK ESP-IDF (`components/innoedge`) hoặc thư viện Arduino.
+
 ---
 
 ## 🚀 Tính Năng
@@ -9,8 +14,8 @@ Thư viện MicroPython chính thức dành cho học sinh, sinh viên, giáo vi
 * **Điều Khiển Động Cơ 2 Bánh:** Hỗ trợ mạch cầu H L298N, TB6612FNG (`forward`, `backward`, `turn_left`, `turn_right`, `stop`).
 * **Đo Khoảng Cách Siêu Âm:** Cảm biến HC-SR04 tự động tính toán thời gian xung và khoảng cách (cm).
 * **Điều Khiển Góc Servo:** Đóng/mở nắp thùng hàng, gắp vật thể (`set_servo(channel, angle)`).
-* **Sự Kiện Thanh Toán VietQR:** Bắt sự kiện `@bot.on_paid` khi khách chuyển tiền ngân hàng thành công.
-* **Lệnh Từ Xa Cloud:** Đăng ký các hàm xử lý từ xa bằng decorator `@bot.command("bot_move")`.
+* **Đăng ký sự kiện thanh toán:** `@bot.on_paid` (chưa nối cloud — xem Hiện trạng).
+* **Đăng ký lệnh:** decorator `@bot.command("bot_move")` (chưa nối cloud — xem Hiện trạng).
 
 ---
 

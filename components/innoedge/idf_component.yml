@@ -1,9 +1,9 @@
-version: "0.1.4"
+version: "0.2.0"
 description: >-
   InnoEdge SDK — IoT device infrastructure for ESP32 monetization:
   WiFi BLE/SoftAP provisioning, persistent NVS transaction queue,
-  idempotent command bus with deduplication, dynamic config caching,
-  brick-proof TLS OTA with rollback, and multi-WAN failover.
+  command bus with a durable per-command journal, dynamic config caching,
+  verified TLS OTA with rollback, and duplicate-safe QR payment delivery.
 url: https://github.com/nguyenduchoai/innoedge-platform
 repository: https://github.com/nguyenduchoai/innoedge-platform.git
 documentation: https://github.com/nguyenduchoai/innoedge-platform#readme

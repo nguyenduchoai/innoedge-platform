@@ -38,7 +38,6 @@ void app_main(void)
         .on_unassigned = on_unassigned,
     };
     innoedge_config_t cfg = {
-        .fw_version = "0.1.0",
         .events = &events,
     };
 

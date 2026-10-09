@@ -4,37 +4,50 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      yank_versions:
+        description: "Tuỳ chọn: version cần yank (cách nhau dấu phẩy), vd 0.1.0,0.1.1"
+        required: false
+        default: ""
+      yank_reason:
+        description: "Lý do yank (hiện cho người dùng trên registry)"
+        required: false
+        default: "Does not compile; use >=0.2.0"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      IDF_COMPONENT_API_TOKEN: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
+      NAMESPACE: nguyenduchoai
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+      - run: pip install idf-component-manager
 
-      - name: Install idf-component-manager
-        run: |
-          python -m pip install --upgrade pip
-          pip install idf-component-manager
-
-      - name: Verify component packaging
+      # Đóng gói thử trước — thấy đúng file sẽ đi ra ngoài.
+      - name: Pack
         run: |
           compote component pack --name innoedge --project-dir components/innoedge
+          compote component pack --name innoedge_hw --project-dir components-hw/innoedge_hw
 
-      - name: Upload to ESP Component Registry
-        env:
-          IDF_COMPONENT_API_TOKEN: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
+      # Registry từ chối version đã có → bước này an toàn khi chạy lại.
+      - name: Upload
         run: |
-          compote component upload \
-            --namespace innoedge \
-            --name innoedge \
-            --project-dir components/innoedge || \
-          compote component upload \
-            --namespace nguyenduchoai \
-            --name innoedge \
-            --project-dir components/innoedge
+          compote component upload --namespace "$NAMESPACE" --name innoedge \
+            --project-dir components/innoedge --allow-existing
+          compote component upload --namespace "$NAMESPACE" --name innoedge_hw \
+            --project-dir components-hw/innoedge_hw --allow-existing
+
+      - name: Yank broken versions
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.yank_versions != '' }}
+        env:
+          YANK: ${{ inputs.yank_versions }}
+          REASON: ${{ inputs.yank_reason }}
+        run: |
+          for v in $(echo "$YANK" | tr ',' ' '); do
+            compote component yank --namespace "$NAMESPACE" --name innoedge \
+              --version "$v" --message "$REASON"
+          done

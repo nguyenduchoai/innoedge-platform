@@ -6,7 +6,7 @@
 ## Chuẩn bị một lần
 
 1. Đăng nhập https://components.espressif.com bằng tài khoản GitHub.
-2. Tạo namespace `innoedge` (Settings → Namespaces).
+2. Namespace đang dùng: `nguyenduchoai`.
 3. Tạo API token (Settings → Tokens), rồi:
 
 ```bash
@@ -31,13 +31,14 @@ pip install -U idf-component-manager
 # 3. Đóng gói thử, KHÔNG upload — xem đúng những file nào sẽ đi
 compote component pack --name innoedge --project-dir components/innoedge
 
-# 4. Upload
-compote component upload --namespace innoedge --name innoedge \
+# 4. Upload — cách khuyên dùng: GitHub Actions "Publish to ESP Component Registry"
+#    (workflow_dispatch hoặc tạo Release). Token nằm ở secret IDF_COMPONENT_API_TOKEN,
+#    workflow phát hành cả innoedge lẫn innoedge_hw và yank được version hỏng.
+#    Tay, nếu có token:
+compote component upload --namespace nguyenduchoai --name innoedge \
     --project-dir components/innoedge
-
-# 5. Driver phần cứng (tuỳ chọn, phát hành riêng)
-compote component upload --namespace innoedge --name innoedge-hw \
-    --project-dir components-hw
+compote component upload --namespace nguyenduchoai --name innoedge_hw \
+    --project-dir components-hw/innoedge_hw
 ```
 
 ## Luật
@@ -54,7 +55,7 @@ sẽ đi ra ngoài. Đây là chốt chặn cuối trước khi lỡ phát hành
 ## Người dùng cài như thế nào
 
 ```bash
-idf.py add-dependency "innoedge/innoedge^0.1.0"
+idf.py add-dependency "nguyenduchoai/innoedge^0.2.0"
 ```
 
 Component manager tự kéo cả `espressif/esp_websocket_client`. Người dùng chỉ cần

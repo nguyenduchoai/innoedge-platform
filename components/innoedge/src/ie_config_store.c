@@ -74,7 +74,7 @@ static void set_defaults(ie_device_config_t *config)
     memset(config, 0, sizeof(*config));
     mac_to_device_id(config->device_id);
     make_uuid(config->client_id);
-    copy_str(config->device_name, sizeof(config->device_name), "G-TEK Terminal");
+    copy_str(config->device_name, sizeof(config->device_name), "InnoEdge Device");
     copy_str(config->server_base_url, sizeof(config->server_base_url), CONFIG_INNOEDGE_SERVER_BASE_URL);
     copy_str(config->device_token, sizeof(config->device_token), CONFIG_INNOEDGE_FACTORY_TOKEN);
     copy_str(config->wifi_ssid, sizeof(config->wifi_ssid), CONFIG_INNOEDGE_WIFI_SSID);
@@ -241,33 +241,6 @@ esp_err_t ie_config_store_next_seq(uint64_t *seq)
     return err;
 }
 
-esp_err_t ie_config_store_save_last_paid_intent(int64_t intent_id)
-{
-    nvs_handle_t nvs;
-    esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
-    if (err != ESP_OK) {
-        return err;
-    }
-    err = nvs_set_i64(nvs, "last_paid", intent_id);
-    if (err == ESP_OK) {
-        err = nvs_commit(nvs);
-    }
-    nvs_close(nvs);
-    return err;
-}
-
-int64_t ie_config_store_last_paid_intent(void)
-{
-    nvs_handle_t nvs;
-    if (nvs_open(NVS_NS, NVS_READONLY, &nvs) != ESP_OK) {
-        return -1;
-    }
-    int64_t v = -1;
-    nvs_get_i64(nvs, "last_paid", &v);
-    nvs_close(nvs);
-    return v;
-}
-
 esp_err_t ie_config_store_save_last_command_id(int64_t command_id)
 {
     nvs_handle_t nvs;
@@ -293,6 +266,42 @@ int64_t ie_config_store_last_command_id(void)
     nvs_get_i64(nvs, "last_cmd", &v);
     nvs_close(nvs);
     return v;
+}
+
+esp_err_t ie_config_store_load_blob(const char *key, void *data, size_t len)
+{
+    nvs_handle_t nvs;
+    esp_err_t err = nvs_open(NVS_NS, NVS_READONLY, &nvs);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_ERR_NOT_FOUND; // namespace chưa từng ghi = máy mới
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    size_t stored_len = len;
+    err = nvs_get_blob(nvs, key, data, &stored_len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        err = ESP_ERR_NOT_FOUND;
+    } else if (err == ESP_OK && stored_len != len) {
+        err = ESP_ERR_INVALID_SIZE;
+    }
+    nvs_close(nvs);
+    return err;
+}
+
+esp_err_t ie_config_store_save_blob(const char *key, const void *data, size_t len)
+{
+    nvs_handle_t nvs;
+    esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_blob(nvs, key, data, len);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs);
+    }
+    nvs_close(nvs);
+    return err;
 }
 
 // Cấu hình vận hành lưu dạng blob (có thể lớn hơn giới hạn chuỗi NVS).

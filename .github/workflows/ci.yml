@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  # Nhanh, không cần ESP-IDF: test command bus (C) + mock-cloud và MCP (Go).
+  # Nhanh, không cần ESP-IDF: test C (command bus, paid guard, OTA policy), Linux SDK, mock-cloud, MCP.
   host-tests:
     runs-on: ubuntu-latest
     steps:
@@ -14,6 +14,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # websocket-client: để test SDK Linux nói chuyện với mock-cloud thật.
+      - run: pip install websocket-client
       - run: ./tests/run.sh
 
   # Build THẬT bằng ESP-IDF. Đây là thứ chứng minh 11 example còn chạy được —

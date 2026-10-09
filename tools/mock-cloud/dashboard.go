@@ -353,7 +353,7 @@ func handleAPISimulatePaid(w http.ResponseWriter, r *http.Request) {
 			req.RefCode = st.LastRefCode
 		} else {
 			req.IntentID = nextIntentID()
-			req.RefCode = fmt.Sprintf("GTMOCKD%05d", req.IntentID)
+			req.RefCode = fmt.Sprintf("IEMOCKD%05d", req.IntentID)
 		}
 		statsMu.RUnlock()
 	}
@@ -384,7 +384,7 @@ func handleAPISimulatePaid(w http.ResponseWriter, r *http.Request) {
 //
 //	{
 //	  "id": 12345, "gateway": "Vietcombank", "transactionDate": "...",
-//	  "accountNumber": "...", "content": "Thanh toan GTMOCKD00001",
+//	  "accountNumber": "...", "content": "Thanh toan IEMOCKD00001",
 //	  "transferType": "in", "transferAmount": 20000, "referenceCode": "MBVCB.123"
 //	}
 func handleSepayWebhook(w http.ResponseWriter, r *http.Request) {
@@ -560,7 +560,7 @@ func handlePay2SWebhook(w http.ResponseWriter, r *http.Request) {
 //
 //	{
 //	  "orderId": "...", "amount": 20000, "paidAmount": 20000,
-//	  "description": "Thanh toan GTMOCKD00001", "orderInfo": "...",
+//	  "description": "Thanh toan IEMOCKD00001", "orderInfo": "...",
 //	  "status": "success", "statusCode": "00"
 //	}
 func handleTingeeWebhook(w http.ResponseWriter, r *http.Request) {
@@ -633,14 +633,14 @@ func handleTingeeWebhook(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-var refRegex = regexp.MustCompile(`(GTMOCK[A-Z0-9]+|INNO[A-Z0-9]+)`)
+var refRegex = regexp.MustCompile(`(IEMOCK[A-Z0-9]+|INNO[A-Z0-9]+)`)
 
 func extractRefCode(content string) string {
 	matches := refRegex.FindStringSubmatch(content)
 	if len(matches) > 1 {
 		return matches[1]
 	}
-	return "GTMOCKD00001"
+	return "IEMOCKD00001"
 }
 
 func parseIntentID(refCode string) int64 {
@@ -1153,7 +1153,7 @@ const dashboardHTML = `<!DOCTYPE html>
           gateway: "Vietcombank",
           transactionDate: new Date().toISOString(),
           accountNumber: "0123456789",
-          content: "Thanh toan GTMOCKD00001",
+          content: "Thanh toan IEMOCKD00001",
           transferType: "in",
           transferAmount: amount,
           referenceCode: "MBVCB." + Math.floor(Math.random() * 90000000 + 10000000)
@@ -1182,7 +1182,7 @@ const dashboardHTML = `<!DOCTYPE html>
           data: {
             orderCode: Math.floor(Math.random() * 90000 + 10000),
             amount: amount,
-            description: "Thanh toan don GTMOCKD00001",
+            description: "Thanh toan don IEMOCKD00001",
             reference: "PAYOS" + Math.floor(Math.random() * 900000)
           }
         };
@@ -1210,7 +1210,7 @@ const dashboardHTML = `<!DOCTYPE html>
               id: Math.floor(Math.random() * 90000 + 10000),
               gateway: "ACB",
               transactionDate: new Date().toISOString(),
-              content: "Thanh toan GTMOCKD00001",
+              content: "Thanh toan IEMOCKD00001",
               transferAmount: amount,
               transferType: "IN"
             }
@@ -1239,8 +1239,8 @@ const dashboardHTML = `<!DOCTYPE html>
           orderId: "SDK-" + Math.floor(Math.random() * 900000),
           amount: amount,
           paidAmount: amount,
-          description: "Thanh toan GTMOCKD00001",
-          orderInfo: "GTMOCKD00001",
+          description: "Thanh toan IEMOCKD00001",
+          orderInfo: "IEMOCKD00001",
           status: "success",
           statusCode: "00",
           billId: "TIN" + Math.floor(Math.random() * 900000),

@@ -19,9 +19,9 @@
 InnoEdge solves the heavy, mission-critical IoT infrastructure that every commercial hardware team has to reinvent from scratch:
 
 * **Zero lost revenue on network drops:** Every coin, bill, and transaction pulse is written to persistent NVS storage before cloud dispatch. Automatic de-duplication guarantees no dropped or double-counted money.
-* **Zero double-dispensing:** An idempotent command bus tracks high-watermark `commandId`s in NVS *before* firing relays. Survives sudden power cuts and reboots without repeat actuation.
-* **Brick-proof OTA updates:** Background firmware updates with SHA-256 verification and automatic rollback if the new app cannot reach the cloud. Postpones reboots while customers are paying.
-* **Universal cross-platform runtime:** Identical WebSocket protocol across ultra-low-cost microcontrollers ($2 ESP32 via ESP-IDF C & Arduino) and high-performance single-board computers (Raspberry Pi, Banana Pi, Orange Pi via Python SDK & Go Daemon).
+* **Zero double-dispensing:** A durable per-`commandId` journal is written *before* any relay fires and again before the ack, so a retried command never runs twice, an out-of-order one is never dropped, and one cut off by a power loss is flagged for reconciliation instead of being replayed or acked as done. QR `on_paid` never reaches your code twice for the same `intentId`.
+* **Brick-proof OTA updates:** Background updates that check size, SHA-256 and the version embedded in the image before booting it, with automatic rollback if the new app cannot reach the cloud. Postpones while customers are paying.
+* **Universal cross-platform runtime:** Identical WebSocket protocol across ultra-low-cost microcontrollers ($2 ESP32 via ESP-IDF C & Arduino) and high-performance single-board computers (Raspberry Pi, Banana Pi, Orange Pi via Python SDK).
 * **Native Edge AI & visual coding:** Built-in MCP server for AI coding agents (Claude Code, Cursor), local voice pipeline (Qwen3-ASR + VieNeu TTS), and Scratch 3.0 drag-and-drop extension for STEM education.
 
 ```c
@@ -30,7 +30,7 @@ InnoEdge solves the heavy, mission-critical IoT infrastructure that every commer
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "1.0.0" };
+    innoedge_config_t cfg = {0};   // phiên bản lấy từ PROJECT_VER
     innoedge_init(&cfg);
     innoedge_start();
 }
@@ -86,7 +86,7 @@ InnoEdge maintains a strict separation of concerns: **Standardized Infrastructur
 │ • ESP32 / ESP32-S3 (C)   │ • Raspberry Pi (3B/4/5)  │ • MicroPython     │
 │ • Arduino / PlatformIO   │ • Banana Pi / Orange Pi  │   InnoBot HAL     │
 │ • Cost-optimized ($2-5)  │ • Python SDK + libgpiod  │ • Scratch 3.0     │
-│ • Ideal for: Relays,     │ • Go Background Agent    │   BlockStudio     │
+│ • Ideal for: Relays,     │ • Rockchip / Jetson robot│   BlockStudio     │
 │   Vending, EV, Laundromat│ • Ideal for: Kiosks,     │ • Ideal for:      │
 │                          │   Signage, Multi-Zone IP │   Classroom, DIY  │
 └──────────────────────────┴──────────────────────────┴───────────────────┘
@@ -151,6 +151,7 @@ Every example includes complete source code, wiring diagrams, expected serial ou
 | **13** | [stem-robot](examples/13-stem-robot) | ESP32 / Pi | Autonomous delivery robot: ultrasonic obstacle avoidance, QR hatch | 2 Motors, HC-SR04, Servo |
 | **14** | [digital-signage](examples/14-digital-signage) | ESP32 / Pi | Smart billboard: Proof-of-Play telemetry, emergency override, ad buy | HDMI / LCD Screen |
 | **15** | [central-audio](examples/15-central-audio) | ESP32 / Pi | Multi-zone IP audio: BGM stream, priority paging, fire alarm, jukebox | I2S Amp / 3.5mm AUX |
+| **16** | [jumper-robot](linux/python/examples/jumper) | Linux (RK3576) | Fleet ops for the Jumper crab robot: telemetry, alerts, verified `.app` bundle install + rollback | [Jumper](https://github.com/KingKongRobotics/jumper) |
 
 ---
 
@@ -185,9 +186,7 @@ Developers can configure, test, and program InnoEdge devices right from modern w
 | **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Visual Scratch 3.0 drag-and-drop extension for STEM education and beginners. |
 | **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Flash embedded firmware directly from Chrome or Edge via Web Serial API. |
 | **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | Install-free PWA to configure device WiFi via Bluetooth Low Energy (BLE). |
-| **Global Gateways Connector** | [`tools/connectors/global-gateways/`](tools/connectors/global-gateways/) | Unified microservice for Stripe, PayPal, PromptPay Thailand QR, and VietQR. |
 | **Mock-Cloud & Web Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Full protocol v1 emulator, live WebSocket monitor, and automated bank webhook triggers. |
-| **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Complete Docker Compose bundle with Caddy auto-SSL for self-hosting. |
 | **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Model Context Protocol server giving AI IDEs (Claude Code, Cursor) full SDK context. |
 
 ---
@@ -197,27 +196,22 @@ Developers can configure, test, and program InnoEdge devices right from modern w
 The core SDK provides **16 concise, standardized functions** declared in [`components/innoedge/include/innoedge.h`](components/innoedge/include/innoedge.h):
 
 ```c
-// Lifecycle
-esp_err_t   innoedge_init(const innoedge_config_t *cfg);
-esp_err_t   innoedge_start(void);
-bool        innoedge_is_online(void);
-bool        innoedge_is_assigned(void);
+esp_err_t innoedge_init(const innoedge_config_t *cfg);
+esp_err_t innoedge_start(void);
+bool innoedge_is_online(void);
+bool innoedge_is_assigned(void);
 const char *innoedge_device_id(void);
-
-// Transactions & Telemetry (Crash-safe NVS queue)
-esp_err_t   innoedge_publish_payment(innoedge_pay_kind_t kind, uint32_t count, int64_t amount_vnd);
-esp_err_t   innoedge_publish_event(const char *name, const char *data_json);
-esp_err_t   innoedge_send_binary(const void *data, size_t len);
-uint32_t    innoedge_queue_depth(void);
-esp_err_t   innoedge_alert(const char *code, innoedge_alert_severity_t severity, const char *message, bool active);
-
-// Actuator Commands & Payments
-esp_err_t   innoedge_register_command(const char *action, innoedge_command_fn fn);
-void        innoedge_reboot_after_ack(void);
-esp_err_t   innoedge_request_qr(int64_t amount_vnd);
-esp_err_t   innoedge_config_json(char *out, size_t len, int *version);
-esp_err_t   innoedge_config_reload(void);
-esp_err_t   innoedge_ota_check(void);
+esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count, int64_t amount_vnd);
+esp_err_t innoedge_publish_event(const char *name, const char *data_json);
+esp_err_t innoedge_send_binary(const uint8_t *data, size_t len);
+uint32_t innoedge_queue_depth(void);
+esp_err_t innoedge_alert(const char *code, const char *severity, const char *message, bool active);
+esp_err_t innoedge_register_command(const char *action, innoedge_command_fn fn);
+void innoedge_reboot_after_ack(void);
+esp_err_t innoedge_request_qr(int64_t amount_vnd);
+esp_err_t innoedge_config_json(char *out, size_t out_len, int *version);
+esp_err_t innoedge_config_reload(void);
+esp_err_t innoedge_ota_check(void);
 ```
 
 ---
@@ -225,16 +219,10 @@ esp_err_t   innoedge_ota_check(void);
 ## The Hard Engineering Problems InnoEdge Solves
 
 * **Money is Never Dropped:** Coin/bill pulses are written to NVS *before* attempting WebSocket dispatch. The cloud deduplicates on `(device_id, seq)` so retries never create duplicate ledger records.
-* **Actuators Never Fire Twice:** The cloud frequently retries commands over shaky cellular networks. InnoEdge records high-watermark `commandId`s in NVS *before* executing the hardware handler. A sudden reboot during a dispense operation will safely drop the duplicate retry.
+* **Actuators Never Fire Twice:** The cloud retries commands over shaky networks. Each `commandId` is journaled in NVS as *running* before the handler and *done/failed* before the ack. A retry of a finished command is only re-acked; a command interrupted by a power cut is reported as uncertain (alert `command_interrupted`) and never replayed.
 * **The Golden Safety Rule:** Only the cryptographic `on_paid` event (certified by bank webhooks) is permitted to dispense inventory or activate high-power relays.
 * **Brick-Proof OTA Upgrades:** New firmware is only validated after the device successfully authenticates with the cloud. Any panic or boot failure triggers automatic bootloader rollback to the previous partition.
 * **Industrial Vending Bus (NAMA MDB & Modbus RTU):** Built-in opto-isolated 9-bit MDB Cashless peripheral state machine and industrial Modbus RTU RS485 master/slave engine for direct legacy vending machine and industrial PLC retrofitting.
-* **Global Payment Agnostic:** Built-in connector microservice supporting international gateways (Stripe, PayPal, PromptPay Thailand QR) and local instant bank transfers (VietQR).
-* **Blackbox Flight Recorder & Remote Diagnostics:** Automatic breadcrumb logging and crash diagnostic snapshots sent to Cloud upon recovery from brownout, panic, or watchdog reset.
-* **Deterministic Zero-Fragmentation Memory:** Pre-allocated static block pools and lockless power-of-two circular ring buffers eliminate heap fragmentation for 24/7/365 uninterrupted uptime.
-* **Multi-WAN Failover (WiFi ↔ 4G LTE):** Automatic connection health tracking and seamless switchover to secondary cellular uplink upon network degradation.
-* **Fleet Clustering (Master-Worker Mesh):** Bridge up to 32 worker subnodes (washers, EV bays) via ESP-NOW/RS485 through a single master gateway.
-* **Cryptographic Transaction Signing (TAC):** Tamper-proof HMAC-SHA256 Transaction Authentication Codes prevent NVS flash tampering.
 
 ---
 
@@ -245,10 +233,10 @@ esp_err_t   innoedge_ota_check(void);
 ├── components/innoedge/     # Core ESP-IDF C SDK (Resilience, Bus, Queue, Config, OTA)
 ├── arduino/InnoEdge/        # Arduino & PlatformIO C++ library wrapper
 ├── micropython/             # InnoBot HAL & MicroPython for STEM robotics
-├── linux/                   # Raspberry Pi & Banana Pi (Python SDK + Go Daemon)
+├── linux/                   # Raspberry Pi & Banana Pi (Python SDK)
 ├── components-hw/           # Hardware sample drivers (MDB vending, Modbus RTU, coin acceptor, relays, I2S)
 ├── examples/                # 15 runnable examples (01-hello to 15-central-audio)
-├── tools/                   # Web Portal, Mock-cloud, Global Gateways, Web Flasher, Web Provision, Scratch, MCP
+├── tools/                   # Web Portal, Mock-cloud, Web Flasher, Web Provision, Scratch, MCP
 ├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
 └── tests/run.sh             # Host test runner (runs without ESP-IDF or hardware)
 ```
@@ -263,15 +251,16 @@ InnoEdge includes an automated test runner that validates the entire stack local
 ./tests/run.sh
 ```
 
-Runs 8 test suites across multiple languages:
-1. **C Command Bus:** Registry validation and reboot-safe de-duplication.
-2. **Industrial Protocols:** MDB Cashless peripheral state machine & Modbus RTU CRC16 packet builder.
-3. **Core Resilience:** Blackbox flight recorder, deterministic memory pool, multi-WAN failover, fleet clustering, and cryptographic TAC signing.
-4. **Arduino C++ Wrapper:** Syntax checking and API compatibility.
-5. **MicroPython InnoBot:** STEM robotics logic and sensor calculations.
-6. **Linux SBC Python SDK:** Client state machine and idempotent command verification.
-7. **Linux SBC Agent (Go):** Background daemon compilation check.
-8. **Mock-Cloud & MCP Server:** Protocol v1 frame validation.
+Runs these suites:
+1. **C Command Bus:** per-id journal — duplicates, out-of-order ids, power loss mid-handler, upgrade from watermark, corrupted journal.
+2. **QR paid guard:** `on_paid` never twice per intent, across reboots and out-of-order payments.
+3. **OTA policy:** digest parsing, strict semver, anti-downgrade.
+4. **Industrial Protocols:** MDB Cashless peripheral state machine & Modbus RTU CRC16.
+5. **Arduino C++ Wrapper:** syntax and API compatibility.
+6. **MicroPython InnoBot:** STEM robotics logic.
+7. **Linux SDK:** durable queue, command journal, QR paid guard, verified release install + rollback, Jumper example.
+8. **Mock-Cloud & MCP Server:** protocol v1 frames.
+9. **Linux SDK ↔ mock-cloud:** a real WebSocket session (needs Go + `websocket-client`).
 
 ---
 
@@ -280,7 +269,7 @@ Runs 8 test suites across multiple languages:
 InnoEdge adopts the proven **Open Core** business model used by industry-leading infrastructure platforms (e.g., ESPHome, Docker, MongoDB, Linux Foundation):
 
 ### 1. Open Source Foundation — Apache License 2.0 (Free Forever)
-* Applies to: Core SDK (`components/innoedge`), Industrial Protocols (MDB & Modbus RTU), Global Gateways, Arduino library, MicroPython InnoBot, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, and Protocol specifications.
+* Applies to: Core SDK (`components/innoedge`), Industrial Protocols (MDB & Modbus RTU), Arduino library, MicroPython InnoBot, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, and Protocol specifications.
 * Commercial Rights: OEM manufacturers, system integrators, and independent developers can freely build commercial devices and embed the firmware without paying royalties or open-sourcing their proprietary product logic.
 
 ### 2. Commercial Monetization Strategies

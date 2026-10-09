@@ -87,7 +87,7 @@ static esp_err_t cmd_config_updated(cJSON *params, char *result, size_t result_l
 void app_main(void)
 {
     static const innoedge_events_t events = { .on_config = on_config };
-    innoedge_config_t cfg = { .fw_version = "0.1.0", .events = &events };
+    innoedge_config_t cfg = { .events = &events };
 
     ESP_ERROR_CHECK(innoedge_init(&cfg));
     ESP_ERROR_CHECK(innoedge_register_command("config_updated", cmd_config_updated));

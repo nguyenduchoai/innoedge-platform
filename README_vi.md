@@ -19,9 +19,9 @@
 InnoEdge giải quyết toàn bộ phần hạ tầng kỹ thuật phức tạp mà bất kỳ ai làm thiết bị IoT thương mại (bán nước tự động, máy giặt sấy, trạm sạc xe, kiosk, bảng quảng cáo, loa thông báo...) đều phải viết lại từ đầu:
 
 * **Không mất tiền khi rớt mạng:** Giao dịch ghi sổ cái NVS trước khi gửi, tự động gửi lại có kiểm trùng.
-* **Không nhả tiền hai lần:** Chống chạy trùng lệnh bền qua mất điện và reboot bằng watermark NVS.
-* **Không biến máy thành cục gạch:** Nạp firmware OTA chạy nền, kiểm tra hash SHA-256, tự rollback nếu lỗi kết nối.
-* **Đa nền tảng phần cứng:** Cùng một giao thức cho vi điều khiển siêu rẻ (ESP32/ESP-IDF, Arduino) và máy tính nhúng mạnh mẽ (Raspberry Pi, Banana Pi, Orange Pi qua Python SDK & Go Daemon).
+* **Không nhả tiền hai lần:** Nhật ký từng `commandId` ghi trước khi kích relay và trước khi ack: gửi lại không chạy lần hai, lệnh lệch thứ tự không bị bỏ, mất điện giữa chừng thì báo đối soát. QR `on_paid` không bao giờ tới code của bạn hai lần cho cùng một `intentId`.
+* **Không biến máy thành cục gạch:** OTA chạy nền, kiểm size + SHA-256 + version ghi trong image trước khi boot, tự rollback nếu bản mới không vào được cloud.
+* **Đa nền tảng phần cứng:** Cùng một giao thức cho vi điều khiển siêu rẻ (ESP32/ESP-IDF, Arduino) và máy tính nhúng mạnh mẽ (Raspberry Pi, Banana Pi, Orange Pi qua Python SDK).
 * **AI & Kéo thả trực quan:** Kết nối trực tiếp mô hình ngôn ngữ lớn (Claude/Qwen) qua MCP server và hỗ trợ lập trình kéo thả Scratch 3.0 cho giáo dục STEM.
 
 ```c
@@ -30,7 +30,7 @@ InnoEdge giải quyết toàn bộ phần hạ tầng kỹ thuật phức tạp 
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "1.0.0" };
+    innoedge_config_t cfg = {0};   // phiên bản lấy từ PROJECT_VER
     innoedge_init(&cfg);
     innoedge_start();
 }
@@ -86,7 +86,7 @@ InnoEdge tách bạch ranh giới: **Hạ tầng kết nối & Giao thức (Chu�
 │ • ESP32 / ESP32-S3 (C)   │ • Raspberry Pi (3B/4/5)  │ • MicroPython     │
 │ • Arduino / PlatformIO   │ • Banana Pi / Orange Pi  │   InnoBot HAL     │
 │ • Chi phí siêu tối ưu    │ • Python SDK + libgpiod  │ • Scratch 3.0     │
-│ • Phù hợp: Relay, Động cơ│ • Go Background Agent    │   BlockStudio     │
+│ • Phù hợp: Relay, Động cơ│ • Rockchip / Jetson robot│   BlockStudio     │
 │   Máy bán nước, Giặt sấy │ • Phù hợp: Kiosk, Video, │ • Phù hợp: Robot, │
 │                          │   Bảng quảng cáo, Audio  │   Đồ án học sinh  │
 └──────────────────────────┴──────────────────────────┴───────────────────┘
@@ -151,6 +151,7 @@ Mỗi thư mục example đều có mã nguồn đầy đủ, file cấu hình, 
 | **13** | [stem-robot](examples/13-stem-robot) | ESP32 / Pi | Robot STEM tự hành: Né vật cản siêu âm, mở cốp giao hàng khi nhận VietQR | 2 Động cơ, HC-SR04, Servo |
 | **14** | [digital-signage](examples/14-digital-signage) | ESP32 / Pi | Bảng quảng cáo: Báo cáo Proof-of-Play, ngắt khẩn cấp, mua slot qua VietQR | Màn hình HDMI / LCD |
 | **15** | [central-audio](examples/15-central-audio) | ESP32 / Pi | Loa thông báo đa vùng: Phát nhạc nền BGM, ngắt ưu tiên Paging & Báo cháy | Loa I2S / Cổng AUX 3.5 |
+| **16** | [jumper-robot](linux/python/examples/jumper) | Linux (RK3576) | Vận hành đội robot cua Jumper: telemetry, cảnh báo, cài bundle `.app` có kiểm + rollback | [Jumper](https://github.com/KingKongRobotics/jumper) |
 
 ---
 
@@ -185,9 +186,7 @@ Nhà phát triển và cộng đồng có thể triển khai hệ thống mà kh
 | **InnoEdge BlockStudio** | [`tools/scratch/`](tools/scratch/) | Lập trình kéo thả khối lệnh Scratch 3.0 trực quan cho giáo dục STEM và người mới bắt đầu. |
 | **Web 1-Click Flasher** | [`tools/web-flasher/`](tools/web-flasher/) | Nạp firmware nhúng trực tiếp qua trình duyệt web bằng Web Serial API (Chrome/Edge), không cần terminal. |
 | **Web Bluetooth Provisioning** | [`tools/web-provision/`](tools/web-provision/) | PWA cài đặt WiFi nhanh chóng cho thiết bị mới qua chuẩn BLE chuẩn hóa. |
-| **Global Gateways Connector** | [`tools/connectors/global-gateways/`](tools/connectors/global-gateways/) | Microservice kết nối đa cổng thanh toán quốc tế (Stripe, PayPal, PromptPay Thái Lan QR) và VietQR. |
 | **Mock-Cloud & Console** | [`tools/mock-cloud/`](tools/mock-cloud/) | Server giả lập đầy đủ giao thức v1, dashboard giao diện realtime, trình kích hoạt webhook ngân hàng. |
-| **InnoEdge Cloud Lite** | [`tools/cloud-lite/`](tools/cloud-lite/) | Bộ Docker Compose hoàn chỉnh + Caddy tự động cấp SSL miễn phí để tự host cloud riêng. |
 | **MCP Server for AI Coding** | [`tools/mcp/`](tools/mcp/) | Cung cấp ngữ cảnh API và luật bảo vệ an toàn tiền tệ cho các AI IDE (Claude Code, Cursor, Windsurf). |
 
 ---
@@ -225,16 +224,10 @@ esp_err_t   innoedge_ota_check(void);
 ## Những Thứ Khó Mà InnoEdge Đã Giải
 
 * **Mất mạng không mất tiền:** Mọi xung tiền nhận được từ đầu đọc xu/tiền giấy đều được ghi vào sổ cái NVS trước khi gửi WebSocket. Cloud tự dedupe theo `(device_id, seq)` nên không bao giờ ghi nhận trùng lặp.
-* **Không nhả tiền hai lần:** Cloud gửi lại lệnh sau khi mạng chập chờn là điều tất yếu. SDK lưu vết watermark `commandId` trong NVS và đánh dấu **trước khi** kích hoạt rơ-le nhả hàng. Nếu mất điện đột ngột trong lúc đang nhả hàng, lệnh gửi lại sau khi khởi động sẽ bị chặn ngay lập tức.
+* **Không nhả tiền hai lần:** Cloud gửi lại lệnh khi mạng chập chờn là chuyện thường. Mỗi `commandId` được ghi *đang chạy* vào NVS trước handler và *xong/lỗi* trước khi ack. Lệnh đã xong gửi lại chỉ được ack lại; lệnh bị mất điện cắt ngang được báo không chắc chắn (alert `command_interrupted`), không bao giờ tự chạy lại.
 * **Quy tắc vàng:** Chỉ có sự kiện `on_paid` được ngân hàng chứng thực mới được phép kích hoạt giao hàng hoặc cấp dịch vụ.
 * **Cập nhật OTA không biến máy thành cục gạch:** Firmware mới chỉ được công nhận hợp lệ sau khi máy kết nối thành công tới Cloud. Nếu xảy ra lỗi bootloader sẽ tự động rollback về bản firmware trước đó.
 * **Hỗ trợ Giao thức Công nghiệp Vending (MDB & Modbus RTU):** Máy trạng thái 9-bit MDB Cashless peripheral chuẩn NAMA và module Modbus RTU RS485 công nghiệp cách ly quang học, gắn trực tiếp vào bo mạch máy bán hàng tự động và PLC.
-* **Đa dạng Cổng Thanh toán Toàn cầu:** Microservice cổng thanh toán tích hợp sẵn Stripe, PayPal, PromptPay Thái Lan QR và VietQR với đối soát webhook tức thì.
-* **Hộp Đen Chẩn Đoán & Ghi Vết Sự Cố (Blackbox Crash Recorder):** Tự động lưu vết breadcrumb và gửi báo cáo chẩn đoán sự cố (panic, watchdog timeout, sụt áp brownout) lên Cloud sau khi phục hồi.
-* **Bộ Nhớ Xác Định Chống Phân Mảnh RAM (Deterministic Memory):** Static block memory pools và ring buffer luân chuyển lũy thừa 2 loại trừ rủi ro phân mảnh heap, đảm bảo vận hành 24/7/365 không bao giờ cạn kiệt RAM.
-* **Đa Kênh Mạng Dự Phòng Tự Chuyển Mạch (Multi-WAN Failover):** Tự động giám sát độ trễ và chuyển hướng kết nối sang mạng 4G LTE khi WiFi bị rớt cáp, tự phục hồi về WiFi khi đường truyền ổn định.
-* **Gom Cụm Thiết Bị Nội Bộ (Fleet Master-Worker Mesh):** Cho phép kết nối cụm lên tới 32 máy con (máy giặt, trạm sạc xe) qua ESP-NOW / RS485 về 1 máy Master duy nhất có mạng.
-* **Chữ Ký Mật Mã Giao Dịch Chống Sửa Đổi (TAC HMAC-SHA256):** Bảo vệ tính toàn vẹn của từng giao dịch trong NVS, chống can thiệp vật lý vào chip flash.
 
 ---
 
@@ -248,7 +241,7 @@ esp_err_t   innoedge_ota_check(void);
 ├── linux/                   # Hỗ trợ Raspberry Pi, Banana Pi, Orange Pi (Python + Go Agent)
 ├── components-hw/           # Driver phần cứng mẫu (MDB vending, Modbus RTU, đầu đọc xu, relay, audio I2S)
 ├── examples/                # 15 ví dụ hoàn chỉnh (01-hello đến 15-central-audio)
-├── tools/                   # Web Portal, Mock-cloud, Global Gateways, Web Flasher, Web Provision, Scratch, Cloud Lite, MCP
+├── tools/                   # Web Portal, Mock-cloud, Web Flasher, Web Provision, Scratch, MCP
 ├── docs/                    # PROTOCOL-v1, HARDWARE-REFERENCE, COMMUNITY-COOKBOOKS
 └── tests/run.sh             # Bộ test toàn diện chạy độc lập trên máy tính
 ```
@@ -263,15 +256,16 @@ InnoEdge đi kèm bộ kiểm thử toàn diện không cần phần cứng và 
 ./tests/run.sh
 ```
 
-Bao phủ 8 khối kiểm tra tự động:
-1. **C Command Bus:** Chống chạy trùng lệnh bền vững qua reboot.
-2. **Giao thức Công nghiệp:** Máy trạng thái MDB Cashless & bộ sinh khung tin Modbus RTU CRC16.
-3. **CORE Tăng Cường (Resilience):** Hộp đen chẩn đoán sự cố, static memory pool, chuyển mạch mạng Multi-WAN, mesh Master-Worker, và chữ ký mật mã TAC HMAC-SHA256.
-4. **Arduino C++ Wrapper:** Kiểm tra cú pháp và tính tương thích API.
-5. **MicroPython InnoBot:** Kiểm tra máy học STEM và logic xe tự hành.
-6. **Linux SBC Python SDK:** Kiểm tra client, chống trùng lệnh và event flow trên Raspberry Pi.
-7. **Linux SBC Agent (Go):** Biên dịch daemon nền của máy tính nhúng.
-8. **Mock-Cloud & MCP Server:** Kiểm tra tính toàn vẹn của khung tin giao thức v1.
+Các bộ kiểm tra:
+1. **C Command Bus:** nhật ký từng id — trùng, lệch thứ tự, mất điện giữa handler, nâng cấp từ watermark, journal hỏng.
+2. **Chống giao QR hai lần:** `on_paid` không bao giờ hai lần cho một intent, qua reboot và trả lệch thứ tự.
+3. **Luật OTA:** digest, semver nghiêm ngặt, chống hạ cấp.
+4. **Giao thức công nghiệp:** MDB Cashless & Modbus RTU CRC16.
+5. **Arduino C++ Wrapper:** cú pháp và tương thích API.
+6. **MicroPython InnoBot:** logic robot STEM.
+7. **Linux SDK:** hàng đợi bền, nhật ký lệnh, chống giao QR hai lần, cài bản phát hành có kiểm + rollback, example Jumper.
+8. **Mock-Cloud & MCP Server:** khung tin giao thức v1.
+9. **Linux SDK ↔ mock-cloud:** một phiên WebSocket thật (cần Go + `websocket-client`).
 
 ---
 
@@ -280,7 +274,7 @@ Bao phủ 8 khối kiểm tra tự động:
 InnoEdge vận hành theo mô hình **Open Core** chuẩn mực trong ngành công nghệ IoT toàn cầu (tương tự ESPHome, Home Assistant, Linux Foundation):
 
 ### 1. Phần Mở — Apache License 2.0 (Miễn phí vĩnh viễn)
-* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Giao thức công nghiệp (MDB & Modbus RTU), Global Gateways, Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
+* Áp dụng cho: Toàn bộ SDK (`components/innoedge`), Giao thức công nghiệp (MDB & Modbus RTU), Thư viện Arduino, MicroPython, Linux Python SDK, 15 Examples, 10 Cookbooks, Mock-Cloud, và Tài liệu giao thức.
 * Quyền lợi: Doanh nghiệp, nhà nghiên cứu và lập trình viên được quyền thương mại hóa, nhúng vào sản phẩm bán lẻ, và tùy biến không giới hạn mà không bị ràng buộc mở mã nguồn thương mại của mình.
 * Mục tiêu: Đóng vai trò là "cổng vào" chuẩn mực, tạo dựng cộng đồng hàng ngàn nhà phát triển thiết bị.
 

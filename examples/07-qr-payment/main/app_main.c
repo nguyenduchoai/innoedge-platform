@@ -63,7 +63,7 @@ void app_main(void)
         .on_paid = on_paid,
         .on_static_qr = on_static_qr,
     };
-    innoedge_config_t cfg = { .fw_version = "0.1.0", .events = &events };
+    innoedge_config_t cfg = { .events = &events };
 
     ESP_ERROR_CHECK(innoedge_init(&cfg));
     ESP_ERROR_CHECK(innoedge_start());

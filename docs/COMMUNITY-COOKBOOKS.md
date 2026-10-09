@@ -186,7 +186,7 @@ Khách hàng trò chuyện tự nhiên với máy qua mic (sử dụng Meta Muse
 ### Điểm mấu chốt kỹ thuật:
 1. **Lớp AI (Meta Muse):** Chịu trách nhiệm thấu hiểu ngôn ngữ tự nhiên, hiển thị Avatar đồ họa sống động, và phát âm thanh phản hồi thân thiện.
 2. **Lớp Tiền & Phần cứng (InnoEdge):** Chịu trách nhiệm sinh mã VietQR, bảo vệ chống trùng lệnh (`commandId`), ghi sổ cái NVS bền vững chống mất điện, và giới hạn trần thời gian relay (`RELAY_MAX_SECONDS`).
-3. **Mã nguồn mẫu đầy đủ:** Xem tại [examples/12-muse-gadget](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/examples/12-muse-gadget).
+3. **Mã nguồn mẫu đầy đủ:** Xem tại [examples/12-muse-gadget](../examples/12-muse-gadget).
 
 ---
 
@@ -205,13 +205,13 @@ Chế tạo xe Robot STEM 2 bánh tự hành phục vụ giao đồ ăn / thức
 * **Nguồn điện:** 2 cell 18650 (7.4V) qua mạch hạ áp LM2596 xuống 5V.
 
 ### Lập trình kéo thả với Scratch & Blockly:
-Giáo viên và học sinh có thể mở ngay [InnoEdge BlockStudio](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/tools/scratch/index.html) để lập trình kéo thả trực quan các khối lệnh:
+Giáo viên và học sinh có thể mở ngay [InnoEdge BlockStudio](../tools/scratch/index.html) để lập trình kéo thả trực quan các khối lệnh:
 * Khối `Khi nhận thanh toán VietQR [10.000 đ]`
 * Khối `Robot tiến lên tốc độ [80%] trong [2] giây`
 * Khối `Quay Servo góc [90] độ`
 * Xem mã nguồn C++ và MicroPython tự động sinh ra thời gian thực bên cạnh!
 
-Mã nguồn C/C++ chuẩn ESP-IDF đầy đủ xem tại [examples/13-stem-robot](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/examples/13-stem-robot).
+Mã nguồn C/C++ chuẩn ESP-IDF đầy đủ xem tại [examples/13-stem-robot](../examples/13-stem-robot).
 
 ---
 
@@ -222,14 +222,14 @@ Chế tạo Kiosk bán hàng tự động chuyên nghiệp có màn hình cảm 
 
 ### Kiến trúc triển khai trên Linux SBC:
 * **Hệ điều hành:** Raspberry Pi OS (Debian 12 Bookworm) hoặc Armbian (Banana Pi BPI-M2/M5).
-* **Ứng dụng Kiosk:** Sử dụng [InnoEdge Linux Python SDK](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/linux/python) hoặc chạy daemon [innoedge-agent](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/linux/agent) dưới dạng systemd service.
+* **Ứng dụng Kiosk:** Sử dụng [InnoEdge Linux Python SDK](../linux/python) dưới dạng systemd service.
 * **Đấu nối phần cứng (40-Pin Header):**
   * Relay 1 (Món 1): GPIO 17 (Chân vật lý 11).
   * Relay 2 (Món 2): GPIO 27 (Chân vật lý 13).
   * Máy in hóa đơn nhiệt / Máy quét QR: Cổng USB tiêu chuẩn.
 
 ### Mã nguồn mẫu Kiosk Python:
-Xem mã nguồn chi tiết tại [linux/python/examples/pi_vending_kiosk.py](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/linux/python/examples/pi_vending_kiosk.py):
+Xem mã nguồn chi tiết tại [linux/python/examples/pi_vending_kiosk.py](../linux/python/examples/pi_vending_kiosk.py):
 ```python
 from innoedge import InnoEdge, PinRelay
 
@@ -251,8 +251,8 @@ def handle_payment(intent_id, amount_vnd):
 Quản lý chuỗi màn hình quảng cáo tập trung tại thang máy, siêu thị, cây xăng. Cloud đẩy playlist quảng cáo từ xa; màn hình phát luân phiên và gửi sự kiện **Proof of Play (POW)** lên Cloud để đối soát doanh thu hiển thị thực tế. Người xem đứng trước bảng LED có thể quét VietQR (50.000 đ) để mua slot chiếu lời chúc hoặc quảng cáo cá nhân trong 5 phút. Khi có báo động khẩn cấp (hỏa hoạn), Cloud lập tức ngắt toàn bộ quảng cáo để phát thông điệp cứu nạn.
 
 * **Phần cứng:** ESP32-S3 (LED Matrix Hub75 / ST7789) hoặc Raspberry Pi / Banana Pi (Màn hình HDMI 32–65").
-* **Mã nguồn mẫu C/C++ (ESP-IDF):** [examples/14-digital-signage](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/examples/14-digital-signage).
-* **Mã nguồn mẫu Python (Raspberry Pi & Banana Pi):** [linux/python/examples/pi_digital_signage.py](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/linux/python/examples/pi_digital_signage.py).
+* **Mã nguồn mẫu C/C++ (ESP-IDF):** [examples/14-digital-signage](../examples/14-digital-signage).
+* **Mã nguồn mẫu Python (Raspberry Pi & Banana Pi):** [linux/python/examples/pi_digital_signage.py](../linux/python/examples/pi_digital_signage.py).
 
 ---
 
@@ -267,8 +267,8 @@ Hệ thống loa thông báo công cộng (Public Address - PA) và phát nhạc
 * **Dịch vụ Jukebox:** Khách quét mã VietQR (10.000 đ) để order bài hát yêu thích phát lên hệ thống loa.
 
 * **Phần cứng:** ESP32-S3 + Mạch khuếch đại I2S (MAX98357A / ES8311) hoặc Raspberry Pi / Banana Pi (Cổng 3.5mm AUX / USB Audio).
-* **Mã nguồn mẫu C/C++ (ESP-IDF):** [examples/15-central-audio](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/examples/15-central-audio).
-* **Mã nguồn mẫu Python (Raspberry Pi & Banana Pi):** [linux/python/examples/pi_central_audio.py](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/linux/python/examples/pi_central_audio.py).
+* **Mã nguồn mẫu C/C++ (ESP-IDF):** [examples/15-central-audio](../examples/15-central-audio).
+* **Mã nguồn mẫu Python (Raspberry Pi & Banana Pi):** [linux/python/examples/pi_central_audio.py](../linux/python/examples/pi_central_audio.py).
 
 ---
 
@@ -287,8 +287,8 @@ Cắm một hộp điều khiển InnoEdge ESP32 trực tiếp vào giắc cắm
 4. **Xác nhận hàng rơi:** Cảm biến quang học của máy bán nước phát hiện lon nước đã rơi vào hộc nhận và gửi lệnh `0x13 0x02 VEND SUCCESS` về InnoEdge để ghi nhận vào sổ cái NVS và báo cáo doanh thu lên Cloud.
 
 * **Phần cứng:** ESP32-S3 + Mạch chuyển mức MDB Optocoupler (9-bit UART) + Nguồn hạ áp cách ly từ 24V/34V DC của bus MDB.
-* **Mã nguồn Driver MDB chuẩn hóa:** [components-hw/innoedge_hw/src/innoedge_mdb.h](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/components-hw/innoedge_hw/src/innoedge_mdb.h) và [innoedge_mdb.c](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/components-hw/innoedge_hw/src/innoedge_mdb.c).
-* **Kiểm thử tự động:** Bộ test MDB hoàn chỉnh trong [tests/test_industrial_protocols.c](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/tests/test_industrial_protocols.c).
+* **Mã nguồn Driver MDB chuẩn hóa:** [components-hw/innoedge_hw/src/innoedge_mdb.h](../components-hw/innoedge_hw/src/innoedge_mdb.h) và [innoedge_mdb.c](../components-hw/innoedge_hw/src/innoedge_mdb.c).
+* **Kiểm thử tự động:** Bộ test MDB hoàn chỉnh trong [tests/test_industrial_protocols.c](../tests/test_industrial_protocols.c).
 
 ---
 
@@ -298,8 +298,8 @@ InnoEdge là nền tảng mở. Chúng tôi khuyến khích mọi đóng góp t�
 
 1. **Báo cáo lỗi (Bug Reports):** Mở Issue trên GitHub kèm log serial, phiên bản ESP-IDF, và các bước tái hiện.
 2. **Đề xuất tính năng mới (RFC - Request for Comments):**
-   * Nếu bạn muốn mở rộng giao thức [PROTOCOL-v1.md](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/docs/PROTOCOL-v1.md) (ví dụ: thêm loại thanh toán mới hoặc transport MQTT/4G), hãy mở một RFC Discussion để toàn bộ cộng đồng cùng phản biện trước khi viết code.
+   * Nếu bạn muốn mở rộng giao thức [PROTOCOL-v1.md](../docs/PROTOCOL-v1.md) (ví dụ: thêm loại thanh toán mới hoặc transport MQTT/4G), hãy mở một RFC Discussion để toàn bộ cộng đồng cùng phản biện trước khi viết code.
 3. **Quy tắc Code & Pull Request:**
    * Một PR cho một mục tiêu cụ thể.
    * Chạy `./tests/run.sh` — toàn bộ 3 bộ test (C Command Bus, Go Mock-Cloud, Go MCP) bắt buộc phải XANH hoàn toàn.
-   * Giữ tương thích ngược với [innoedge.h](file:///Volumes/data/DEV2/Inno.EDGE/innoedge-sdk-esp32/components/innoedge/include/innoedge.h).
+   * Giữ tương thích ngược với [innoedge.h](../components/innoedge/include/innoedge.h).

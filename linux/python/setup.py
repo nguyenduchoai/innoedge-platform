@@ -5,14 +5,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="innoedge",
-    version="1.0.0",
-    description="InnoEdge IoT & Commercial Device SDK for Linux SBCs (Raspberry Pi, Banana Pi, Orange Pi)",
+    version="0.2.0",
+    description="InnoEdge device SDK for Linux (Raspberry Pi, Rockchip, Jetson, x86) - PROTOCOL-v1",
     author="InnoEdge Platform",
     license="Apache-2.0",
     packages=find_packages(),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=[
-        # Thư viện thuần chuẩn; gpiod tùy chọn nếu chạy trên bo Pi thật
+        "websocket-client>=1.6",  # WebSocket tới cloud; gpiod tuỳ chọn cho GPIO
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

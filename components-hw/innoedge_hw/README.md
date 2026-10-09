@@ -27,7 +27,7 @@ Hoặc khai báo trực tiếp trong `main/idf_component.yml`:
 
 ```yaml
 dependencies:
-  nguyenduchoai/innoedge: "^0.1.4"
+  nguyenduchoai/innoedge: "^0.2.0"
   nguyenduchoai/innoedge_hw: "^0.1.2"
 ```
 
@@ -60,7 +60,7 @@ Or declare in `idf_component.yml`:
 
 ```yaml
 dependencies:
-  nguyenduchoai/innoedge: "^0.1.4"
+  nguyenduchoai/innoedge: "^0.2.0"
   nguyenduchoai/innoedge_hw: "^0.1.2"
 ```
 

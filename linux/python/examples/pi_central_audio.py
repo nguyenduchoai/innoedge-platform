@@ -13,7 +13,8 @@ from innoedge import InnoEdge
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-app = InnoEdge(cloud_url="ws://127.0.0.1:8080/ws", fw_version="1.0.0")
+app = InnoEdge(cloud_url=os.environ.get("INNOEDGE_WS", "ws://127.0.0.1:8080/ws/"),
+               fw_version="1.0.0")  # chạy kèm: go run ./tools/mock-cloud
 
 my_zone = 1 # Vùng 1: Tầng 1 / Quầy thu ngân
 current_mode = "BGM" # BGM | PAGING | EMERGENCY
@@ -68,12 +69,6 @@ if __name__ == "__main__":
 
     print(f"🎵 [LOA ĐANG PHÁT] Nhạc nền du dương (Âm lượng {current_volume}%)")
 
-    # Giả lập lệnh phát thông báo ưu tiên từ Cloud
-    print("\n--- Giả lập Cloud gửi lệnh phát thông báo khẩn cấp ---")
-    app.dispatch_message('{"type":"command","commandId":1,"action":"audio_announce","params":{"message":"Kính mời khách hàng số 102 tới quầy nhận nước","seconds":2,"zone":1}}')
-
-    # Giả lập khách quét VietQR nạp tiền order bài hát
-    app.dispatch_message('{"type":"paid","amount":10000,"intentId":555}')
-
-    time.sleep(1)
-    app.stop()
+    # Lệnh phát thông báo đến từ cloud (dashboard mock-cloud: action audio_announce,
+    # params {"message": "...", "seconds": 2, "zone": 1}).
+    app.run()

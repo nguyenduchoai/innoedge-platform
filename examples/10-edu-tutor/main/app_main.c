@@ -165,7 +165,7 @@ static void button_task(void *arg)
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "0.1.0" };
+    innoedge_config_t cfg = {0};
     ESP_ERROR_CHECK(innoedge_init(&cfg));
 
     // Năng lực thiết bị = 4 lệnh. Gia sư là ai (LLM nào, bài nào) không phải

@@ -241,7 +241,6 @@ void app_main(void)
         .on_paid = on_paid,
     };
     innoedge_config_t cfg = {
-        .fw_version = "1.0.0",
         .events = &events,
     };
 

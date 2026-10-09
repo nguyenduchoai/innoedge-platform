@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#define INNOEDGE_SDK_VERSION "1.0.0"
+#define INNOEDGE_SDK_VERSION "0.2.0"
 
 // ── Sự kiện thanh toán gửi lên cloud ────────────────────────────────────────
 typedef enum {
@@ -78,7 +78,11 @@ typedef struct {
 // ── Cấu hình khởi tạo ───────────────────────────────────────────────────────
 // Mọi trường đều có mặc định hợp lý; `{0}` là cấu hình chạy được.
 typedef struct {
-    const char *fw_version;         // NULL → CONFIG_INNOEDGE_FW_VERSION
+    // NULL (khuyên dùng) → version trong mô tả app = PROJECT_VER của project,
+    // dạng X.Y.Z. SDK đối chiếu version trong image OTA với manifest nên không
+    // bao giờ tải lại mãi một bản. Đặt chuỗi chỉ khi không đặt được PROJECT_VER
+    // (Arduino): khi đó phải tự tăng cùng bản build.
+    const char *fw_version;
     const innoedge_events_t *events;// NULL → không nhận callback nào
     uint32_t heartbeat_sec;         // 0 → 30
     bool disable_ota;               // true → không tự kiểm tra bản mới
@@ -166,8 +170,9 @@ esp_err_t innoedge_config_reload(void);
 // ── OTA ─────────────────────────────────────────────────────────────────────
 
 // Kiểm tra bản mới ngay (SDK tự chạy khi boot nếu không disable_ota).
-// Có bản mới → tải, xác thực SHA-256, ghi partition, reboot. busy_check bận →
-// hoãn tới lần sau. Bản mới lỗi → bootloader tự rollback bản cũ.
+// Có bản mới → tải, kiểm size + SHA-256 + version trong image, ghi partition,
+// reboot. busy_check bận → thử lại sau 10 phút. Bản mới lỗi → bootloader tự
+// rollback bản cũ. Khi OTA nền đang chạy, hàm chỉ đánh thức nó rồi trả về ngay.
 esp_err_t innoedge_ota_check(void);
 
 #ifdef __cplusplus

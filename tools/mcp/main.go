@@ -124,8 +124,9 @@ Mỗi luật dưới đây tương ứng một sự cố đã xảy ra thật tr
    gửi. Đừng tự viết hàng đợi.
 6. Gửi SỐ XU, để cloud quy đổi ra tiền. Mỗi đối tác một đơn giá, đổi được từ app.
    Nhân giá trong firmware = phải flash lại cả fleet khi đổi giá.
-7. KHÔNG tự viết chống trùng lệnh. SDK giữ high-watermark commandId trong NVS và
-   đánh dấu TRƯỚC khi chạy handler. Viết lại = nhả tiền hai lần khi mất điện.
+7. KHÔNG tự viết chống trùng lệnh. SDK giữ nhật ký từng commandId trong NVS:
+   ghi "đang chạy" TRƯỚC handler, "xong/lỗi" TRƯỚC ack. Lệnh bị mất điện cắt ngang
+   được báo đối soát, không tự chạy lại. Viết lại = nhả tiền hai lần hoặc bỏ lệnh.
 8. Lệnh nhả tiền phải có TRẦN an toàn (số xung tối đa). Một params sai không được
    biến thành lệnh xả sạch hopper.
 
@@ -152,6 +153,8 @@ Mỗi luật dưới đây tương ứng một sự cố đã xảy ra thật tr
     nối lần đầu. Gọi sớm = vô hiệu hoá rollback = máy chết ngoài hiện trường.
 18. Khai busy_check nếu máy có lúc đang phục vụ khách, để OTA không reboot giữa
     lúc khách trả tiền.
+18b. Phiên bản firmware = PROJECT_VER trong CMakeLists (X.Y.Z). KHÔNG đặt thêm
+    cfg.fw_version: hai nguồn lệch nhau là OTA tải lại mãi một bản.
 
 ## Bảo mật
 19. KHÔNG log device_token, access token, hay khoá riêng.

@@ -17,12 +17,8 @@
 InnoEdge SDK giải quyết toàn bộ phần hạ tầng kỹ thuật nhạy cảm và phức tạp mà các đội ngũ làm phần cứng IoT thương mại thường phải tự xây dựng lại từ đầu:
 
 * **Không mất doanh thu khi rớt mạng:** Mọi giao dịch tiền mặt, xung xu được ghi sổ cái vào bộ nhớ NVS bền vững trước khi gửi lên cloud. Thuật toán kiểm trùng tự động theo `(device_id, seq)` bảo đảm không bao giờ sót hoặc nhân đôi doanh thu dù mạng chập chờn.
-* **Relay không bao giờ kích hoạt 2 lần:** Command bus đơn luồng monotonic lưu `commandId` vào NVS *trước* khi đóng ngắt relay. Máy chịu được mất điện đột ngột hoặc reboot mà không bị lặp lệnh nhả hàng.
-* **Cập nhật OTA an toàn tuyệt đối (Brick-Proof):** Nạp firmware chạy nền với xác thực mã hash SHA-256 và tự động rollback nếu bản cập nhật không thể bắt tay với cloud. Luôn hoãn nạp lại khi khách đang thực hiện giao dịch.
-* **Bộ nhớ tiền định không phân mảnh:** Sử dụng pool khối tĩnh định trước và bộ đệm vòng (ring buffer) không khóa (lockless power-of-two), triệt tiêu hiện tượng phân mảnh heap, đảm bảo thiết bị chạy liên tục 24/7/365 năm này qua năm khác.
-* **Chuyển đổi dự phòng Multi-WAN (WiFi ↔ 4G LTE):** Tự động theo dõi chất lượng kết nối và chuyển tức thì sang modem 4G LTE phụ trợ khi mạng chính suy giảm.
-* **Mạng cụm Master-Worker:** Kết nối tối đa 32 khoang dịch vụ (ô rửa xe, trụ sạc, máy con) qua sóng ESP-NOW / RS485 gom về 1 máy Master duy nhất giao tiếp cloud.
-* **Chữ ký số giao dịch (TAC):** Ký số toàn vẹn từng bản ghi bằng HMAC-SHA256 ngăn chặn triệt để hành vi can thiệp phần cứng sửa đổi bộ nhớ flash NVS.
+* **Relay không bao giờ kích hoạt 2 lần:** Nhật ký từng `commandId` ghi vào NVS *trước* khi đóng relay và *trước* khi ack. Lệnh gửi lại không chạy lần hai, lệnh lệch thứ tự không bị bỏ, mất điện giữa chừng thì báo đối soát thay vì tự chạy lại. `on_paid` của QR không bao giờ tới code hai lần cho cùng một `intentId`.
+* **Cập nhật OTA an toàn (Brick-Proof):** Chạy nền, kiểm size + SHA-256 + version ghi trong image trước khi boot, tự rollback nếu bản mới không vào được cloud. Hoãn khi khách đang giao dịch, thử lại sau 10 phút.
 
 ---
 
@@ -31,14 +27,14 @@ InnoEdge SDK giải quyết toàn bộ phần hạ tầng kỹ thuật nhạy c�
 Thêm component vào dự án ESP-IDF bằng lệnh:
 
 ```bash
-idf.py add-dependency "nguyenduchoai/innoedge^0.1.4"
+idf.py add-dependency "nguyenduchoai/innoedge^0.2.0"
 ```
 
 Hoặc khai báo trực tiếp trong `main/idf_component.yml`:
 
 ```yaml
 dependencies:
-  nguyenduchoai/innoedge: "^0.1.4"
+  nguyenduchoai/innoedge: "^0.2.0"
 ```
 
 ---
@@ -65,7 +61,6 @@ void app_main(void)
 {
     // 1. Khởi tạo SDK
     innoedge_config_t cfg = {
-        .fw_version = "1.0.0",
         .heartbeat_sec = 30,
     };
     ESP_ERROR_CHECK(innoedge_init(&cfg));
@@ -135,16 +130,6 @@ esp_err_t   innoedge_config_reload(void);
 esp_err_t   innoedge_ota_check(void);
 ```
 
-### Độ tin cậy cấp doanh nghiệp & An toàn dữ liệu
-```c
-esp_err_t   innoedge_blackbox_record(const char *tag, const char *details);
-esp_err_t   innoedge_blackbox_get_report(char *out, size_t out_len);
-innoedge_net_interface_t innoedge_net_active_interface(void);
-esp_err_t   innoedge_net_report_link(innoedge_net_interface_t iface, bool is_up);
-esp_err_t   innoedge_cluster_init(innoedge_cluster_role_t role);
-esp_err_t   innoedge_crypto_sign_tx(uint32_t seq, int kind, int count, int64_t amount_vnd, char *tac_out, size_t out_len);
-bool        innoedge_crypto_verify_tx(uint32_t seq, int kind, int count, int64_t amount_vnd, const char *expected_tac);
-```
 
 ---
 
@@ -160,26 +145,22 @@ bool        innoedge_crypto_verify_tx(uint32_t seq, int kind, int count, int64_t
 InnoEdge SDK solves the mission-critical, heavy IoT infrastructure that commercial hardware teams have to reinvent from scratch:
 
 * **Zero Lost Revenue on Network Drops:** Coin and pulse transactions are written to persistent NVS storage before cloud dispatch. Automatic de-duplication on `(device_id, seq)` guarantees no dropped or double-counted money.
-* **Actuators Never Fire Twice:** An idempotent command bus tracks monotonic `commandId`s in NVS *before* firing relays. Survives sudden power cuts and reboots without repeat actuation.
-* **Brick-Proof OTA Updates:** Background firmware updates with SHA-256 verification and automatic rollback if the new app cannot reach the cloud. Postpones reboots while customers are paying.
-* **Deterministic Zero-Fragmentation Memory:** Pre-allocated static block pools and lockless power-of-two circular ring buffers eliminate heap fragmentation for 24/7/365 uninterrupted uptime.
-* **Multi-WAN Failover (WiFi ↔ 4G LTE):** Automatic connection health tracking and seamless switchover to secondary cellular uplink upon network degradation.
-* **Fleet Clustering (Master-Worker Mesh):** Bridge up to 32 worker subnodes (washers, EV bays) via ESP-NOW/RS485 through a single master gateway.
-* **Cryptographic Transaction Signing (TAC):** Tamper-proof HMAC-SHA256 Transaction Authentication Codes prevent NVS flash tampering.
+* **Actuators Never Fire Twice:** A per-`commandId` journal is written to NVS *before* relays fire and *before* the ack. Retries never run twice, out-of-order commands are never dropped, and a command cut off by a power loss is flagged for reconciliation instead of replayed. QR `on_paid` never reaches your code twice for the same `intentId`.
+* **Brick-Proof OTA Updates:** Background updates verified for size, SHA-256 and the version embedded in the image, with automatic rollback if the new app cannot reach the cloud. Postponed while customers are paying.
 
 ### Installation
 
 Add this component to your ESP-IDF project using the ESP Component Manager:
 
 ```bash
-idf.py add-dependency "nguyenduchoai/innoedge^0.1.4"
+idf.py add-dependency "nguyenduchoai/innoedge^0.2.0"
 ```
 
 Or add directly to your `main/idf_component.yml`:
 
 ```yaml
 dependencies:
-  nguyenduchoai/innoedge: "^0.1.4"
+  nguyenduchoai/innoedge: "^0.2.0"
 ```
 
 ### Quick Start (C)
@@ -204,7 +185,6 @@ void app_main(void)
 {
     // 1. Initialize SDK
     innoedge_config_t cfg = {
-        .fw_version = "1.0.0",
         .heartbeat_sec = 30,
     };
     ESP_ERROR_CHECK(innoedge_init(&cfg));

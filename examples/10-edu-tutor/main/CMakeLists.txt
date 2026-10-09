@@ -4,5 +4,6 @@ idf_component_register(
     REQUIRES
         innoedge
         driver
+        esp_timer
         json
 )

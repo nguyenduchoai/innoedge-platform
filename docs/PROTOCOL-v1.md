@@ -45,6 +45,10 @@ Mặc định mỗi 30 giây.
  "queue_depth":0,"reset_reason":1,"last_error":""}
 ```
 
+Thiết bị Linux gửi `"platform":"linux"` và có thể kèm `"telemetry":{...}` —
+object tuỳ ứng dụng (nhiệt độ, trạng thái dịch vụ…). Trường **thêm, tuỳ chọn**:
+cloud không biết thì bỏ qua.
+
 `reset_reason` theo `esp_reset_reason()`: `4`=panic, `5/6/7`=watchdog,
 `9`=brownout. Đây thường là manh mối đầu tiên khi máy ngoài hiện trường hay
 tự reboot.
@@ -116,13 +120,22 @@ JSON tuỳ nghiệp vụ.
 
 **Chống trùng — đọc kỹ nếu lệnh của bạn có tiền.**
 
-`commandId` là khoá tự tăng đơn điệu và cloud gửi lại theo thứ tự id tăng dần.
-Thiết bị giữ **high-watermark** trong NVS: mọi `commandId ≤ watermark` coi như đã
-xử lý → chỉ ack lại `{"status":"ok","message":"duplicate"}`, **không chạy handler
-lần hai**.
+Thiết bị giữ **nhật ký lệnh** bền trong NVS: trạng thái của từng `commandId` trong
+64 lệnh gần nhất. Lệnh đã gặp **không bao giờ chạy lại**; ack phụ thuộc trạng thái:
 
-Watermark được nâng **trước** khi handler chạy. Cố ý: thà bỏ sót một lệnh còn hơn
-nhả tiền hai lần khi mất điện giữa chừng.
+| Trạng thái đã ghi | Ack gửi lại | Nghĩa |
+|---|---|---|
+| chạy xong, thành công | `{"status":"ok","message":"duplicate"}` | đã làm, đừng gửi nữa |
+| chạy xong, handler lỗi | `{"status":"error","message":"previous execution failed; reconcile manually"}` | đã thử, thất bại |
+| bị ngắt giữa chừng (mất điện) hoặc quá cũ | `{"status":"error","message":"execution uncertain; reconcile manually, do not replay"}` | **không biết** đã nhả hay chưa |
+
+Thiết bị ghi "đang chạy" **trước** khi chạm phần cứng và ghi kết quả **trước** khi
+ack. Còn "đang chạy" sau reboot = không chắc → báo đối soát + alert
+`command_interrupted`, không tự chạy lại. Cloud **không** được tự gửi lại lệnh nhận
+ack `error` kiểu này — đẩy cho người vận hành đối soát.
+
+Lệnh tới lệch thứ tự (id 11 trước id 10) vẫn được chạy đủ — khác bản high-watermark
+cũ, vốn bỏ id 10 mà vẫn ack `ok`. `commandId` phải > 0; không có id = không chạy.
 
 **Lệnh nền tảng** (SDK tự xử lý, không qua registry):
 `activation_complete` · `reboot` · `ota_check` · `ble_provision` · `set_display`
@@ -152,6 +165,14 @@ nhả tiền hai lần khi mất điện giữa chừng.
 | `image_url` | URL ảnh QR (dự phòng) | tuỳ |
 
 **Thiết bị render `qrPayload` NGUYÊN VĂN.** Không parse, không dựng lại.
+
+**Một intent chỉ giao hàng một lần.** Cloud gửi lại `payment_paid` tới khi có
+`paid_ack`. Thiết bị nhớ từng `intentId` đã giao (bền qua reboot, chịu được hai
+khách trả lệch thứ tự): frame gửi lại chỉ được ack, không giao lần hai. Chưa ghi
+nhớ được (lỗi flash) thì thiết bị KHÔNG ack để cloud gửi lại sau.
+Intent từng bị ngắt giữa lúc giao (mất điện) hoặc tới muộn sau khi đã rơi khỏi
+cửa sổ nhớ: thiết bị ack nhưng KHÔNG giao, và gửi alert `paid_uncertain`
+(critical, kèm intentId) — khách có thể đã trả mà chưa nhận, cần đối soát.
 
 **Khi cổng lỗi:** cloud cố tình **không** phát QR local vô chủ — khách chuyển
 tiền mà không kênh nào xác nhận là mất tiền thật. Thiết bị hiện `message` +
@@ -183,11 +204,22 @@ Chủ máy đổi cấu hình → cloud gửi:
 ```
 POST /ota/v1/
      Device-Id: <MAC>
-→ manifest bản mới (nếu có), hoặc rỗng
+→ {"status":"ok","data":{"firmware":{
+     "version":"1.2.18",          // X.Y.Z nghiêm ngặt
+     "url":"https://.../innoedge-fw-1.2.18.bin",
+     "sha256":"<64 hex>",         // BẮT BUỘC
+     "size":1712384,              // BẮT BUỘC, byte
+     "allowDowngrade":false}}}    // tuỳ chọn; mặc định chỉ nâng
+   — không có bản mới thì bỏ "firmware".
 ```
 
-Thiết bị: so version → tải HTTPS → kiểm SHA-256 → ghi partition dự phòng →
-reboot → **vào được cloud rồi mới xác nhận** (huỷ rollback).
+Thiết bị: so version (chỉ nâng, trừ khi `allowDowngrade`) → tải HTTPS → kiểm
+đúng `size` byte + SHA-256 → kiểm mô tả app trong image (cùng project, version
+khớp manifest) → ghi partition dự phòng → reboot → **vào được cloud rồi mới xác
+nhận** (huỷ rollback). Thiếu `sha256`/`size` hoặc URL không phải https = từ chối.
+
+Thiết bị hỏi lúc boot, sau đó 6 giờ một lần; đang phục vụ khách thì 10 phút sau
+hỏi lại. Lệnh nền tảng `ota_check` đánh thức việc hỏi ngay.
 
 Bản mới treo/crash trước khi vào cloud → bootloader tự quay bản cũ ở lần reboot
 kế. Đây là lý do **không được** gọi `esp_ota_mark_app_valid_cancel_rollback()`

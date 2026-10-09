@@ -4,12 +4,6 @@ menu "InnoEdge SDK"
 # KHÔNG nằm ở đây — chúng thuộc lớp board/application, khai trong
 # main/Kconfig.projbuild của từng project.
 
-config INNOEDGE_FW_VERSION
-    string "Firmware version"
-    default "0.1.0"
-    help
-      Gửi lên cloud trong heartbeat và dùng để so sánh khi kiểm tra OTA.
-
 config INNOEDGE_SERVER_BASE_URL
     string "InnoEdge cloud base URL"
     default "https://cloud.example.com"

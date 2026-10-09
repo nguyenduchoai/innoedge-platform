@@ -32,7 +32,7 @@ static void on_payment_ack(const char *method, int coins, int64_t amount_vnd,
 void app_main(void)
 {
     static const innoedge_events_t events = { .on_payment_ack = on_payment_ack };
-    innoedge_config_t cfg = { .fw_version = "0.1.0", .events = &events };
+    innoedge_config_t cfg = { .events = &events };
 
     ESP_ERROR_CHECK(innoedge_init(&cfg));
     ESP_ERROR_CHECK(innoedge_start());

@@ -20,6 +20,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -43,6 +45,7 @@ var (
 		"sau khi phát QR bao lâu thì giả lập webhook báo ĐÃ TRẢ (0 = không bao giờ)")
 	fwVersion = flag.String("fw", "", "phiên bản firmware mới để chào OTA (rỗng = không có bản mới)")
 	fwURL     = flag.String("fw-url", "", "URL https tải firmware (OTA yêu cầu HTTPS)")
+	fwFile    = flag.String("fw-file", "", "bản sao cục bộ của đúng file ở -fw-url — mock tính sha256 + size cho manifest")
 )
 
 // ── Phiên thiết bị ──────────────────────────────────────────────────────────
@@ -196,7 +199,7 @@ func handleFrame(d *device, data []byte) {
 				"authToken": "mock-device-token-" + d.id,
 			})
 			d.send(map[string]any{
-				"type": "set_static_qr", "refCode": "GTMOCK" + d.id[len(d.id)-4:],
+				"type": "set_static_qr", "refCode": "IEMOCK" + d.id[len(d.id)-4:],
 				"payload": "INNOEDGE-MOCK-STATIC-QR",
 			})
 		}()
@@ -256,7 +259,7 @@ func handleFrame(d *device, data []byte) {
 
 	case "qr_request":
 		id := nextIntentID()
-		ref := fmt.Sprintf("GTMOCKD%05d", id)
+		ref := fmt.Sprintf("IEMOCK%05d", id)
 		trackQR(d.id, ref, id, env.Amount)
 		d.send(map[string]any{
 			"type": "qr", "seq": env.Seq, "intentId": id, "refCode": ref,
@@ -336,10 +339,31 @@ func handleOTA(w http.ResponseWriter, r *http.Request) {
 		"assignment": map[string]any{"status": "assigned"},
 	}
 	if *fwVersion != "" && *fwURL != "" {
-		data["firmware"] = map[string]any{"version": *fwVersion, "url": *fwURL}
+		fw := map[string]any{"version": *fwVersion, "url": *fwURL}
+		// Thiết bị TỪ CHỐI manifest thiếu sha256/size (chặn image bị thay trên đường).
+		if fwSHA256 != "" {
+			fw["sha256"], fw["size"] = fwSHA256, fwSize
+		}
+		data["firmware"] = fw
 		log.Printf("  ← chào bản mới %s", *fwVersion)
 	}
 	writeJSON(w, map[string]any{"status": "ok", "data": data})
+}
+
+// sha256 + size của image OTA, tính một lần lúc khởi động từ -fw-file.
+var (
+	fwSHA256 string
+	fwSize   int64
+)
+
+func loadFirmwareDigest(path string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	sum := sha256.Sum256(b)
+	fwSHA256, fwSize = hex.EncodeToString(sum[:]), int64(len(b))
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
@@ -493,6 +517,14 @@ func main() {
 	fmt.Printf("  mở web ble provisioning      = http://localhost%s/provision/\n", *addr)
 	fmt.Printf("  đơn giá: %d đ/xu · webhook giả sau %s\n", *rateVND, *paidAfter)
 
+	if *fwFile != "" {
+		if err := loadFirmwareDigest(*fwFile); err != nil {
+			log.Fatalf("-fw-file: %v", err)
+		}
+		fmt.Printf("  OTA: %s · %d byte · sha256 %s\n", *fwVersion, fwSize, fwSHA256)
+	} else if *fwVersion != "" {
+		fmt.Println("  CẢNH BÁO: có -fw mà thiếu -fw-file → manifest không có sha256, thiết bị sẽ từ chối cài")
+	}
 	if *voiceMode && !*aiMode {
 		log.Fatal("-voice cần -ai (ai trả lời câu nói?)")
 	}

@@ -6,15 +6,14 @@
 # Một component = một tên, một phiên bản, một lệnh cài.
 idf_component_register(
     SRCS
-        "src/ie_asset_client.c"
         "src/ie_command_bus.c"
         "src/ie_config_client.c"
         "src/ie_config_store.c"
         "src/ie_fault.c"
         "src/ie_ota_client.c"
+        "src/ie_paid_guard.c"
         "src/ie_payment_queue.c"
         "src/ie_provisioning.c"
-        "src/ie_voucher_client.c"
         "src/ie_wifi_manager.c"
         "src/ie_ws_client.c"
         "src/innoedge.c"
@@ -30,11 +29,12 @@ idf_component_register(
         nvs_flash
     PRIV_REQUIRES
         app_update
+        esp_app_format
+        mbedtls
         bt
         esp_hw_support
         esp_http_client
         esp_http_server
-        esp_https_ota
         esp_websocket_client
         freertos
 )

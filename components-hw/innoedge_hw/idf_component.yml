@@ -1,4 +1,4 @@
-version: "0.1.2"
+version: "0.2.0"
 description: >-
   Sample hardware peripheral drivers for InnoEdge SDK: coin/bill pulse input with debouncing,
   multi-channel relay control, timed carwash session controller, MDB cashless vending, and Modbus RTU.
@@ -27,7 +27,7 @@ dependencies:
   idf:
     version: ">=5.1"
   nguyenduchoai/innoedge:
-    version: "^0.1.4"
+    version: "^0.2.0"
 
 files:
   exclude:

@@ -134,7 +134,7 @@ func TestWebhooksSepayVaPayOS(t *testing.T) {
 		"gateway": "MBBank",
 		"transactionDate": "2026-10-04 18:00:00",
 		"accountNumber": "0987654321",
-		"content": "Thanh toan GTMOCKD00088",
+		"content": "Thanh toan IEMOCKD00088",
 		"transferType": "in",
 		"transferAmount": 20000,
 		"referenceCode": "MB.123456"
@@ -152,8 +152,8 @@ func TestWebhooksSepayVaPayOS(t *testing.T) {
 	if num(t, paidFrame, "amount") != 20000 {
 		t.Errorf("amount = %v, mong 20000", paidFrame["amount"])
 	}
-	if paidFrame["refCode"] != "GTMOCKD00088" {
-		t.Errorf("refCode = %v, mong GTMOCKD00088", paidFrame["refCode"])
+	if paidFrame["refCode"] != "IEMOCKD00088" {
+		t.Errorf("refCode = %v, mong IEMOCKD00088", paidFrame["refCode"])
 	}
 
 	// 2. Test Webhook PayOS
@@ -163,7 +163,7 @@ func TestWebhooksSepayVaPayOS(t *testing.T) {
 		"data": {
 			"orderCode": 777,
 			"amount": 50000,
-			"description": "GTMOCKD00077 thanh toan",
+			"description": "IEMOCKD00077 thanh toan",
 			"reference": "PAYOS_REF_01"
 		}
 	}`)
@@ -200,7 +200,7 @@ func TestWebhooksPay2SVaTingee(t *testing.T) {
 				"id": 8881,
 				"gateway": "Techcombank",
 				"transactionDate": "2026-10-04 19:00:00",
-				"content": "NAP GTMOCKD00055",
+				"content": "NAP IEMOCKD00055",
 				"transferAmount": 20000,
 				"transferType": "IN"
 			}
@@ -219,8 +219,8 @@ func TestWebhooksPay2SVaTingee(t *testing.T) {
 	if num(t, paidPay2s, "amount") != 20000 {
 		t.Errorf("pay2s amount = %v, mong 20000", paidPay2s["amount"])
 	}
-	if paidPay2s["refCode"] != "GTMOCKD00055" {
-		t.Errorf("pay2s refCode = %v, mong GTMOCKD00055", paidPay2s["refCode"])
+	if paidPay2s["refCode"] != "IEMOCKD00055" {
+		t.Errorf("pay2s refCode = %v, mong IEMOCKD00055", paidPay2s["refCode"])
 	}
 
 	// 2. Test Webhook Tingee
@@ -229,7 +229,7 @@ func TestWebhooksPay2SVaTingee(t *testing.T) {
 		"orderId": "ORD-TINGEE-123",
 		"amount": 30000,
 		"paidAmount": 30000,
-		"description": "Thanh toan GTMOCKD00066",
+		"description": "Thanh toan IEMOCKD00066",
 		"status": "success",
 		"statusCode": "00"
 	}`)
@@ -246,7 +246,7 @@ func TestWebhooksPay2SVaTingee(t *testing.T) {
 	if num(t, paidTingee, "amount") != 30000 {
 		t.Errorf("tingee amount = %v, mong 30000", paidTingee["amount"])
 	}
-	if paidTingee["refCode"] != "GTMOCKD00066" {
-		t.Errorf("tingee refCode = %v, mong GTMOCKD00066", paidTingee["refCode"])
+	if paidTingee["refCode"] != "IEMOCKD00066" {
+		t.Errorf("tingee refCode = %v, mong IEMOCKD00066", paidTingee["refCode"])
 	}
 }

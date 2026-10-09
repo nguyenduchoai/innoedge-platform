@@ -128,7 +128,7 @@ static esp_err_t cmd_ping(cJSON *params, char *result, size_t result_len,
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "0.1.0" };
+    innoedge_config_t cfg = {0};
     ESP_ERROR_CHECK(innoedge_init(&cfg));
 
     gpio_config_t io = {

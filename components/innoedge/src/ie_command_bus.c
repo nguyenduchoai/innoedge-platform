@@ -2,6 +2,7 @@
 // Copyright 2026 InnoEdge
 #include "ie_command_bus.h"
 
+#include "ie_command_journal.h"
 #include "ie_config_store.h"
 #include "ie_fault.h"
 #include "ie_ws_client.h"
@@ -18,9 +19,8 @@ static const char *TAG = "ie.cmdbus";
 
 // ── REGISTRY (runtime) ──────────────────────────────────────────────────────
 // SDK không biết trước nghiệp vụ nào — application đăng ký handler lúc khởi
-// động bằng ie_command_bus_register(). Bảng tĩnh cũ (dispense/start_wash...)
-// đã chuyển sang component ie_app_commands (lớp SẢN PHẨM), giữ command_bus
-// thuần hạ tầng: dispatch + dedupe + ack.
+// động bằng ie_command_bus_register(). command_bus thuần hạ tầng: dispatch +
+// chống trùng + ack.
 #ifndef IE_CMD_REGISTRY_MAX
 #define IE_CMD_REGISTRY_MAX 24
 #endif
@@ -28,57 +28,71 @@ static const char *TAG = "ie.cmdbus";
 static ie_command_entry_t s_registry[IE_CMD_REGISTRY_MAX];
 static size_t s_registry_len;
 
-// ── DEDUPE ──────────────────────────────────────────────────────────────────
-// Vòng tròn trong RAM cho các commandId vừa xử lý + commandId cuối lưu NVS để
-// sống qua reboot. Gặp lại id đã xử lý → KHÔNG gọi handler, chỉ ack lại.
-#define IE_CMD_DEDUPE_RING 16
-
-static int64_t s_seen[IE_CMD_DEDUPE_RING];
-static size_t s_seen_pos;
-static int64_t s_last_persisted;
+// ── NHẬT KÝ LỆNH (chống trùng) ──────────────────────────────────────────────
+// Xem ie_command_journal.h. Giữ khoá suốt handler để hai lệnh không bao giờ đan
+// xen giữa lúc ghi RUNNING và lúc ghi kết quả.
+static ie_command_journal_t s_journal;
+static bool s_journal_ready;
+static int64_t s_legacy_watermark; // last_cmd: id cao nhất từng BẮT ĐẦU chạy
 static SemaphoreHandle_t s_lock;
+#define JOURNAL_KEY "cmd_journal"
 
-static bool dedupe_seen(int64_t command_id)
+// Journal mới: mọi id <= retired_through là "quá cũ, không chắc" — không bao giờ
+// chạy lại lệnh mà bản firmware trước (chỉ có watermark) có thể đã chạy.
+static void journal_fresh(int64_t retired_through)
 {
-    if (command_id <= 0) {
-        return false; // commandId không hợp lệ → không coi là trùng
-    }
-    // High-watermark: commandId là PK auto-increment (tăng đơn điệu) + server
-    // redeliver theo id ASC → mọi id <= watermark = ĐÃ xử lý. Bền qua reboot chỉ
-    // bằng 1 int NVS (s_last_persisted), KHÔNG mất cả cửa sổ như ring RAM trước
-    // đây (nguyên nhân nhả tiền 2 lần sau reboot). Lệnh MỚI luôn id > watermark
-    // nên không bao giờ bị bỏ nhầm.
-    if (command_id <= s_last_persisted) {
-        return true;
-    }
-    for (size_t i = 0; i < IE_CMD_DEDUPE_RING; i++) {
-        if (s_seen[i] == command_id) {
-            return true;
-        }
-    }
-    return false;
+    memset(&s_journal, 0, sizeof(s_journal));
+    s_journal.version = IE_COMMAND_JOURNAL_VERSION;
+    s_journal.retired_through = retired_through > 0 ? retired_through : 0;
 }
 
-static void dedupe_remember(int64_t command_id)
+static void journal_load(void)
 {
-    if (command_id <= 0) {
+    s_legacy_watermark = ie_config_store_last_command_id();
+    esp_err_t err = ie_config_store_load_blob(JOURNAL_KEY, &s_journal, sizeof(s_journal));
+    if (err == ESP_ERR_NOT_FOUND) {
+        journal_fresh(s_legacy_watermark);
         return;
     }
-    s_seen[s_seen_pos] = command_id;
-    s_seen_pos = (s_seen_pos + 1) % IE_CMD_DEDUPE_RING;
-    if (command_id <= s_last_persisted) {
-        return; // CHỈ nâng watermark, không hạ (giữ id cao nhất đã xử lý)
+    if (err != ESP_OK || !ie_command_journal_valid(&s_journal)) {
+        // Chặn luôn command bus thì máy không nhận được cả lệnh vá lỗi. Dựng lại
+        // từ watermark là an toàn: watermark được ghi TRƯỚC mỗi handler.
+        ESP_LOGE(TAG, "journal hỏng (%s) — dựng lại từ last_cmd=%lld",
+                 esp_err_to_name(err), (long long)s_legacy_watermark);
+        ie_fault_set("command_journal_reset", "warning",
+                     "Nhat ky lenh hong, da dung lai - lenh cu can doi soat");
+        journal_fresh(s_legacy_watermark);
+        return;
     }
-    s_last_persisted = command_id;
-    // Lưu NVS để dedupe sống qua reboot (quan trọng với dispense/nhả tiền).
-    esp_err_t err = ie_config_store_save_last_command_id(command_id);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "lưu last_command_id thất bại: %s", esp_err_to_name(err));
-        // Dedupe không bền qua reboot → nguy cơ NHẢ TIỀN 2 LẦN nếu mất điện giữa
-        // chừng rồi server gửi lại lệnh. Báo để kỹ thuật kiểm tra NVS/flash.
-        ie_fault_set("dedupe_persist_fail", "critical",
-                       "Khong luu duoc chong-trung lenh - nguy co nha tien 2 lan");
+    // last_cmd vượt mọi id journal biết = bản firmware cũ (chỉ có watermark) đã
+    // chạy lệnh trong lúc rollback → id tới đó mà journal không biết là "không
+    // chắc". Bình thường last_cmd <= max id của journal (journal ghi trước), và
+    // nâng retired_through lúc đó sẽ bỏ nhầm lệnh tới lệch thứ tự sau reboot.
+    if (s_legacy_watermark > ie_command_journal_max_id(&s_journal)) {
+        s_journal.retired_through = s_legacy_watermark;
     }
+    for (size_t i = 0; i < IE_COMMAND_JOURNAL_SLOTS; i++) {
+        if (s_journal.entries[i].state == IE_COMMAND_RUNNING) {
+            ESP_LOGE(TAG, "commandId=%lld bị ngắt giữa chừng (mất điện?)",
+                     (long long)s_journal.entries[i].id);
+            ie_fault_set("command_interrupted", "critical",
+                         "Lenh bi ngat khi mat dien - can doi soat, khong tu chay lai");
+        }
+    }
+}
+
+// Ghi RUNNING (và watermark cho bản firmware cũ nếu bị rollback) TRƯỚC handler.
+static esp_err_t journal_begin(int64_t command_id, size_t *slot)
+{
+    *slot = ie_command_journal_begin(&s_journal, command_id);
+    esp_err_t err = ie_config_store_save_blob(JOURNAL_KEY, &s_journal, sizeof(s_journal));
+    if (err == ESP_OK && command_id > s_legacy_watermark) {
+        err = ie_config_store_save_last_command_id(command_id);
+        if (err == ESP_OK) {
+            s_legacy_watermark = command_id;
+        }
+    }
+    return err;
 }
 
 esp_err_t ie_command_bus_init(void)
@@ -93,12 +107,25 @@ esp_err_t ie_command_bus_init(void)
     // SAU init (xem ie_command_bus.h).
     memset(s_registry, 0, sizeof(s_registry));
     s_registry_len = 0;
-    s_last_persisted = ie_config_store_last_command_id();
-    s_seen_pos = 0;
-    memset(s_seen, 0, sizeof(s_seen));
-    ESP_LOGI(TAG, "init: last_command_id=%lld (registry %u action)",
-             (long long)s_last_persisted, (unsigned)s_registry_len);
+    journal_load();
+    s_journal_ready = true;
+    ESP_LOGI(TAG, "init: journal sẵn sàng, retired_through=%lld",
+             (long long)s_journal.retired_through);
     return ESP_OK;
+}
+
+void ie_command_bus_hold(void)
+{
+    if (s_lock) {
+        xSemaphoreTake(s_lock, portMAX_DELAY);
+    }
+}
+
+void ie_command_bus_release(void)
+{
+    if (s_lock) {
+        xSemaphoreGive(s_lock);
+    }
 }
 
 // Reboot trễ: handler "reboot" của application yêu cầu, dispatcher vẫn kịp gửi
@@ -149,45 +176,79 @@ static const ie_command_entry_t *lookup(const char *action)
     return NULL;
 }
 
-void ie_command_bus_dispatch(int64_t command_id, const char *action,
-                               const char *params_json)
+// Lệnh đã gặp: chỉ một trường hợp được ack "ok" — đã chạy XONG và thành công.
+// Mọi trường hợp khác là "error" để cloud/đối tác đối soát, KHÔNG gửi lại.
+static void ack_previous(int64_t command_id, ie_command_state_t previous)
 {
+    switch (previous) {
+    case IE_COMMAND_OK:
+        ie_ws_client_send_command_ack(command_id, "ok", "duplicate", NULL);
+        break;
+    case IE_COMMAND_FAILED:
+        ie_ws_client_send_command_ack(command_id, "error",
+                                      "previous execution failed; reconcile manually", NULL);
+        break;
+    default: // RUNNING (bị ngắt) hoặc TOO_OLD (rơi khỏi cửa sổ)
+        ie_ws_client_send_command_ack(command_id, "error",
+                                      "execution uncertain; reconcile manually, do not replay",
+                                      NULL);
+        break;
+    }
+}
+
+void ie_command_bus_dispatch(int64_t command_id, const char *action,
+                             const char *params_json)
+{
+    if (command_id <= 0) {
+        // Không có id thì không chống trùng được → không chạy lệnh có side-effect.
+        ie_ws_client_send_command_ack(command_id, "error", "invalid commandId", NULL);
+        return;
+    }
     if (!action || action[0] == '\0') {
         ESP_LOGW(TAG, "lệnh động thiếu action (commandId=%lld)", (long long)command_id);
         ie_ws_client_send_command_ack(command_id, "error", "missing action", NULL);
         return;
     }
-
-    if (s_lock) {
-        xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (!s_lock || !s_journal_ready) {
+        ie_ws_client_send_command_ack(command_id, "error", "command bus not initialised", NULL);
+        return;
     }
 
-    if (dedupe_seen(command_id)) {
-        if (s_lock) {
-            xSemaphoreGive(s_lock);
-        }
-        ESP_LOGW(TAG, "commandId=%lld action=%s TRÙNG — chỉ ack lại",
-                 (long long)command_id, action);
-        ie_ws_client_send_command_ack(command_id, "ok", "duplicate", NULL);
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+
+    ie_command_state_t previous = ie_command_journal_lookup(&s_journal, command_id);
+    if (previous != IE_COMMAND_UNSEEN) {
+        xSemaphoreGive(s_lock);
+        ESP_LOGW(TAG, "commandId=%lld action=%s đã gặp (state=%d) — không chạy lại",
+                 (long long)command_id, action, (int)previous);
+        ack_previous(command_id, previous);
         return;
     }
 
     const ie_command_entry_t *entry = lookup(action);
     if (!entry) {
-        if (s_lock) {
-            xSemaphoreGive(s_lock);
-        }
+        xSemaphoreGive(s_lock);
         ESP_LOGW(TAG, "commandId=%lld action=%s không có trong registry",
                  (long long)command_id, action);
         ie_ws_client_send_command_ack(command_id, "error", "unknown action", NULL);
         return;
     }
 
-    // Đánh dấu đã xử lý TRƯỚC khi chạy handler: nếu handler có side-effect (nhả
-    // tiền) rồi mất điện, lần gửi lại sau reboot sẽ thấy trùng và không nhả lại.
-    dedupe_remember(command_id);
-    if (s_lock) {
+    size_t slot = 0;
+    esp_err_t persist_err = journal_begin(command_id, &slot);
+    if (persist_err != ESP_OK) {
+        // Không ghi được RUNNING = không chạy. Thà từ chối còn hơn chạy mà không
+        // nhớ là đã chạy (lần gửi lại sẽ nhả tiền lần hai).
+        s_journal.entries[slot] = (ie_command_record_t){0};
+        // Blob có thể đã ghi RUNNING (lỗi ở bước watermark): ghi lại bản đã gỡ để
+        // sau reboot không báo nhầm "bị ngắt" cho lệnh chưa từng chạy.
+        ie_config_store_save_blob(JOURNAL_KEY, &s_journal, sizeof(s_journal));
         xSemaphoreGive(s_lock);
+        ESP_LOGE(TAG, "ghi journal lỗi: %s", esp_err_to_name(persist_err));
+        ie_fault_set("command_journal_write_failed", "critical",
+                     "Khong luu duoc nhat ky lenh - da chan thuc thi");
+        ie_ws_client_send_command_ack(command_id, "error", "journal write failed; not executed", NULL);
+        return;
     }
 
     cJSON *params = NULL;
@@ -201,14 +262,27 @@ void ie_command_bus_dispatch(int64_t command_id, const char *action,
     esp_err_t err = entry->handler(params, result, sizeof(result), msg, sizeof(msg));
     cJSON_Delete(params);
 
+    s_journal.entries[slot].state = (err == ESP_OK) ? IE_COMMAND_OK : IE_COMMAND_FAILED;
+    persist_err = ie_config_store_save_blob(JOURNAL_KEY, &s_journal, sizeof(s_journal));
+    if (persist_err != ESP_OK) {
+        // Đã chạy nhưng không ghi được kết quả: sau reboot nó còn RUNNING = "không
+        // chắc" — đúng sự thật. Báo lỗi thay vì ack ok.
+        s_journal.entries[slot].state = IE_COMMAND_RUNNING;
+        err = persist_err;
+        snprintf(msg, sizeof(msg), "result not durable; reconcile manually");
+        ie_fault_set("command_result_uncertain", "critical",
+                     "Khong luu duoc ket qua lenh - can doi soat");
+    }
+    xSemaphoreGive(s_lock);
+
     if (err == ESP_OK) {
         ie_ws_client_send_command_ack(command_id, "ok", msg[0] ? msg : NULL,
-                                        result[0] ? result : NULL);
+                                      result[0] ? result : NULL);
     } else {
         if (msg[0] == '\0') {
             snprintf(msg, sizeof(msg), "%s", esp_err_to_name(err));
         }
         ie_ws_client_send_command_ack(command_id, "error", msg,
-                                        result[0] ? result : NULL);
+                                      result[0] ? result : NULL);
     }
 }

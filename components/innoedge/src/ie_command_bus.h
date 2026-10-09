@@ -36,8 +36,8 @@ typedef struct {
     ie_command_handler_fn handler;
 } ie_command_entry_t;
 
-// Khởi tạo (nạp commandId cuối từ NVS vào bộ dedupe). Gọi một lần khi khởi động,
-// TRƯỚC khi đăng ký handler.
+// Khởi tạo: nạp nhật ký lệnh từ NVS (ie_command_journal.h). Gọi một lần khi
+// khởi động, TRƯỚC khi đăng ký handler.
 esp_err_t ie_command_bus_init(void);
 
 // Đăng ký một handler cho action. `action` phải là chuỗi sống lâu (string
@@ -49,10 +49,17 @@ esp_err_t ie_command_bus_register(const char *action, ie_command_handler_fn hand
 // khởi động lại. Dùng trong handler "reboot".
 void ie_command_bus_request_reboot(void);
 
-// Xử lý một lệnh động: dedupe theo command_id → lookup action trong registry →
-// gọi handler → GỬI command_ack qua ws_client. Lệnh trùng chỉ ack lại
-// (status "ok", message "duplicate"), KHÔNG gọi handler. action lạ → ack
-// status "error", message "unknown action".
+// Khoá thực thi chung của SDK. Handler lệnh chạy dưới khoá này; on_paid cũng
+// vậy (innoedge.c). OTA giữ nó rồi mới esp_restart() → không bao giờ khởi động
+// lại giữa lúc đang nhả hàng, bất kể application có khai busy_check hay không.
+void ie_command_bus_hold(void);
+void ie_command_bus_release(void);
+
+// Xử lý một lệnh động: tra nhật ký theo command_id → lookup action → ghi RUNNING
+// → gọi handler → ghi kết quả → GỬI command_ack. Lệnh đã gặp KHÔNG bao giờ chạy
+// lại: đã xong và ok → ack "ok"/"duplicate"; từng lỗi, bị ngắt giữa chừng hoặc
+// quá cũ → ack "error" + yêu cầu đối soát. command_id <= 0 hoặc action lạ → ack
+// "error", không chạy.
 // params_json là chuỗi JSON của object params ("{}" nếu rỗng); có thể NULL.
 void ie_command_bus_dispatch(int64_t command_id, const char *action,
                                const char *params_json);

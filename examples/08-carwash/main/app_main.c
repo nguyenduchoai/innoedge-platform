@@ -124,7 +124,7 @@ static void session_monitor_task(void *arg)
 
 void app_main(void)
 {
-    innoedge_config_t cfg = { .fw_version = "0.1.3" };
+    innoedge_config_t cfg = {0};
     ESP_ERROR_CHECK(innoedge_init(&cfg));
 
     ESP_ERROR_CHECK(innoedge_relay_control_init());

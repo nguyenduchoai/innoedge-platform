@@ -4,6 +4,7 @@
 
 #include "esp_err.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -35,14 +36,15 @@ esp_err_t ie_config_store_save_websocket_url(const char *url);
 esp_err_t ie_config_store_save_static_qr(const char *payload, const char *ref_code);
 esp_err_t ie_config_store_save_assigned(bool assigned);
 esp_err_t ie_config_store_next_seq(uint64_t *seq);
-// Intent QR cuối đã xử lý payment_paid — chống nhả relay 2 lần khi server
-// gửi lại lệnh sau reconnect (redelivery).
-esp_err_t ie_config_store_save_last_paid_intent(int64_t intent_id);
-int64_t ie_config_store_last_paid_intent(void);
 // commandId lệnh động (command bus) cuối đã thực thi — sống qua reboot để dedupe
 // lệnh server gửi lại sau reconnect (đặc biệt quan trọng với dispense/nhả tiền).
 esp_err_t ie_config_store_save_last_command_id(int64_t command_id);
 int64_t ie_config_store_last_command_id(void);
+// Blob cố định kích thước (nhật ký lệnh "cmd_journal", nhật ký tiền QR
+// "paid_journal"). key <= 15 ký tự. ESP_ERR_NOT_FOUND = chưa có; sai kích thước
+// = ESP_ERR_INVALID_SIZE. save có commit.
+esp_err_t ie_config_store_load_blob(const char *key, void *data, size_t len);
+esp_err_t ie_config_store_save_blob(const char *key, const void *data, size_t len);
 
 // ── Cấu hình vận hành (operational config) ──────────────────────────────────
 // Chuỗi JSON thô của object `config` từ server (combos/pricing/dynamic...) +

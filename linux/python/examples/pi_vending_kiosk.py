@@ -3,6 +3,7 @@
 # Copyright 2026 InnoEdge
 # Ví dụ Kiosk Bán Nước Tự Động trên Raspberry Pi & Banana Pi
 
+import os
 import time
 import logging
 from innoedge import InnoEdge, PinRelay
@@ -10,7 +11,8 @@ from innoedge import InnoEdge, PinRelay
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # 1. Khởi tạo InnoEdge trên Raspberry Pi / Banana Pi
-app = InnoEdge(cloud_url="ws://127.0.0.1:8080/ws", fw_version="1.0.0")
+app = InnoEdge(cloud_url=os.environ.get("INNOEDGE_WS", "ws://127.0.0.1:8080/ws/"),
+               fw_version="1.0.0")  # chạy kèm: go run ./tools/mock-cloud
 
 # 2. Cấu hình 2 Relay điều khiển vòi rót qua chân GPIO
 # (Trên Raspberry Pi & Banana Pi: GPIO 17 = chân vật lý 11, GPIO 27 = chân vật lý 13)
@@ -65,15 +67,9 @@ if __name__ == "__main__":
     print(f"🚀 Kiosk Khởi động trên Linux SBC ({app.device_id})")
     app.start()
 
-    # Mô phỏng một giao dịch khách bấm chọn món và thanh toán
-    print("\n--- MÔ PHỎNG LUỒNG GIAO DỊCH KIOSK ---")
+    # Khách bấm chọn món trên màn hình → xin QR thật từ cloud. Với mock-cloud,
+    # webhook ngân hàng giả tới sau vài giây và on_paid ở trên sẽ rót đồ uống.
+    while not app.is_online():
+        time.sleep(0.2)
     on_customer_select_item("Cà phê sữa đá", 25000)
-
-    # Giả lập gói tin QR về từ Cloud
-    app.dispatch_message('{"type":"qr","payload":"00020101021238540010A00000072701240006970422...","amount":25000,"refCode":"PI8899","expiresSec":300,"intentId":77}')
-
-    # Giả lập Webhook ngân hàng báo tiền về
-    app.dispatch_message('{"type":"paid","amount":25000,"intentId":77}')
-
-    time.sleep(1)
-    app.stop()
+    app.run()

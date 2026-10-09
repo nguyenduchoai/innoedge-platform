@@ -2,8 +2,12 @@
 // Copyright 2026 InnoEdge
 #include "ie_payment_queue.h"
 
+#include "ie_fault.h"
+
 #include "cJSON.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "nvs.h"
 #include "sdkconfig.h"
 #include <stdio.h>
@@ -15,6 +19,13 @@ static const char *NVS_NS = "gtek_payq";
 
 static uint32_t s_head;
 static uint32_t s_count;
+// append chạy trên task application, ack trên task WS, peek trên cả ba task gửi.
+// Cả ba đọc-sửa-ghi head/count qua NVS: thiếu khoá thì một ack chen giữa append
+// làm head trỏ vào slot đã xoá → peek lỗi mãi → mọi giao dịch sau kẹt lại.
+static SemaphoreHandle_t s_lock;
+
+#define LOCK() xSemaphoreTake(s_lock, portMAX_DELAY)
+#define UNLOCK() xSemaphoreGive(s_lock)
 
 static uint32_t queue_cap(void)
 {
@@ -52,6 +63,24 @@ static esp_err_t save_meta(nvs_handle_t nvs)
     return err;
 }
 
+// Slot head mất/hỏng (flash lỗi) mà cứ giữ nó thì hàng đợi kẹt vĩnh viễn và
+// MỌI giao dịch phía sau không bao giờ lên cloud. Bỏ đúng slot đó + báo động.
+static void drop_unreadable_head(nvs_handle_t nvs, esp_err_t why)
+{
+    char key[8];
+    key_for(s_head, key);
+    ESP_LOGE(TAG, "slot %s không đọc được (%s) — bỏ để không kẹt hàng đợi",
+             key, esp_err_to_name(why));
+    nvs_erase_key(nvs, key);
+    s_head = (s_head + 1) % queue_cap();
+    s_count--;
+    if (save_meta(nvs) == ESP_OK) {
+        nvs_commit(nvs);
+    }
+    ie_fault_set("payment_queue_slot_lost", "critical",
+                 "Mat mot ban ghi giao dich trong flash - can doi soat");
+}
+
 static uint64_t parse_seq(const char *json)
 {
     uint64_t seq = 0;
@@ -68,6 +97,12 @@ static uint64_t parse_seq(const char *json)
 
 esp_err_t ie_payment_queue_init(void)
 {
+    if (!s_lock) {
+        s_lock = xSemaphoreCreateMutex();
+        if (!s_lock) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
@@ -92,9 +127,14 @@ esp_err_t ie_payment_queue_append(uint64_t seq, const char *json, bool *out_drop
     if (!json || json[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
     }
+    if (!s_lock) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    LOCK();
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
+        UNLOCK();
         return err;
     }
     load_meta(nvs);
@@ -111,6 +151,7 @@ esp_err_t ie_payment_queue_append(uint64_t seq, const char *json, bool *out_drop
     err = nvs_set_str(nvs, key, json);
     if (err != ESP_OK) {
         nvs_close(nvs);
+        UNLOCK();
         ESP_LOGE(TAG, "queue: ghi entry thất bại seq=%llu: %s",
                  (unsigned long long)seq, esp_err_to_name(err));
         return err;
@@ -130,7 +171,9 @@ esp_err_t ie_payment_queue_append(uint64_t seq, const char *json, bool *out_drop
         err = nvs_commit(nvs);
     }
     nvs_close(nvs);
-    ESP_LOGI(TAG, "queued seq=%llu count=%u", (unsigned long long)seq, (unsigned)s_count);
+    uint32_t depth = s_count;
+    UNLOCK();
+    ESP_LOGI(TAG, "queued seq=%llu count=%u", (unsigned long long)seq, (unsigned)depth);
     return err;
 }
 
@@ -140,37 +183,54 @@ esp_err_t ie_payment_queue_peek(ie_payment_event_t *event)
         return ESP_ERR_INVALID_ARG;
     }
     memset(event, 0, sizeof(*event));
+    if (!s_lock) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    LOCK();
     nvs_handle_t nvs;
-    esp_err_t err = nvs_open(NVS_NS, NVS_READONLY, &nvs);
+    esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
+        UNLOCK();
         return err;
     }
     load_meta(nvs);
-    if (s_count == 0) {
-        nvs_close(nvs);
-        return ESP_ERR_NOT_FOUND;
+    err = ESP_ERR_NOT_FOUND;
+    while (s_count > 0) {
+        char key[8];
+        key_for(s_head, key);
+        size_t len = sizeof(event->json);
+        err = nvs_get_str(nvs, key, event->json, &len);
+        if (err == ESP_OK) {
+            event->seq = parse_seq(event->json);
+            break;
+        }
+        if (err != ESP_ERR_NVS_NOT_FOUND && err != ESP_ERR_NVS_INVALID_LENGTH) {
+            break; // lỗi đọc tạm thời: giữ nguyên, lần sau thử lại — KHÔNG xoá backlog
+        }
+        drop_unreadable_head(nvs, err);
+        err = ESP_ERR_NOT_FOUND;
     }
-    char key[8];
-    key_for(s_head, key);
-    size_t len = sizeof(event->json);
-    err = nvs_get_str(nvs, key, event->json, &len);
     nvs_close(nvs);
-    if (err == ESP_OK) {
-        event->seq = parse_seq(event->json);
-    }
+    UNLOCK();
     return err;
 }
 
 esp_err_t ie_payment_queue_ack(uint64_t seq)
 {
+    if (!s_lock) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    LOCK();
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
+        UNLOCK();
         return err;
     }
     load_meta(nvs);
     if (s_count == 0) {
         nvs_close(nvs);
+        UNLOCK();
         return ESP_ERR_NOT_FOUND;
     }
     char key[8];
@@ -192,6 +252,7 @@ esp_err_t ie_payment_queue_ack(uint64_t seq)
         err = ESP_ERR_NOT_FOUND;
     }
     nvs_close(nvs);
+    UNLOCK();
     return err;
 }
 

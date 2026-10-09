@@ -11,7 +11,9 @@
 #include "ie_command_bus.h"
 #include "ie_config_client.h"
 #include "ie_config_store.h"
+#include "ie_fault.h"
 #include "ie_ota_client.h"
+#include "ie_paid_guard.h"
 #include "ie_payment_queue.h"
 #include "ie_provisioning.h"
 #include "ie_wifi_manager.h"
@@ -49,11 +51,13 @@ static uint32_t heartbeat_period_ms(void)
     return (s_cfg.heartbeat_sec ? s_cfg.heartbeat_sec : 30) * 1000U;
 }
 
-static const char *fw_version(void)
-{
-    return (s_cfg.fw_version && s_cfg.fw_version[0]) ? s_cfg.fw_version
-                                                     : CONFIG_INNOEDGE_FW_VERSION;
-}
+// OTA chạy nền theo chu kỳ; "kiểm tra ngay" (lệnh cloud ota_check hoặc
+// innoedge_ota_check) chỉ ĐÁNH THỨC task này, không tải ngay trên task gọi —
+// tải 1-2 MB trên task WS là chặn WS cả phút, cloud tưởng máy rớt mạng.
+// ponytail: chu kỳ cố định 6 giờ; thêm Kconfig khi có khách cần khác.
+#define IE_OTA_PERIOD_MS (6U * 60U * 60U * 1000U)
+#define IE_OTA_BUSY_RETRY_MS (10U * 60U * 1000U)
+static TaskHandle_t s_ota_task;
 
 static void try_send_queue_head(void)
 {
@@ -118,19 +122,51 @@ static void on_qr_error(uint64_t seq, const char *message, void *ctx)
     }
 }
 
+static void send_paid_ack(int64_t intent_id)
+{
+    char ack[64];
+    snprintf(ack, sizeof(ack), "{\"type\":\"paid_ack\",\"intentId\":%lld}",
+             (long long)intent_id);
+    ie_ws_client_send_text(ack);
+}
+
+// on_paid là tín hiệu DUY NHẤT được giao hàng → phải tới application đúng MỘT
+// lần mỗi intent, kể cả khi cloud gửi lại frame sau reconnect (xem ie_paid_guard.h).
 static void on_payment_paid(int64_t intent_id, int64_t amount, void *ctx)
 {
     (void)ctx;
-    // Ack để cloud thôi gửi lại frame này.
-    if (intent_id > 0 && ie_ws_client_is_connected()) {
-        char ack[64];
-        snprintf(ack, sizeof(ack), "{\"type\":\"paid_ack\",\"intentId\":%lld}",
+    size_t slot = 0;
+    switch (ie_paid_guard_begin(intent_id, &slot)) {
+    case IE_PAID_DUPLICATE:
+        ESP_LOGW(TAG, "payment_paid intent=%lld gửi lại — chỉ ack, KHÔNG giao lần hai",
                  (long long)intent_id);
-        ie_ws_client_send_text(ack);
+        send_paid_ack(intent_id);
+        return;
+    case IE_PAID_UNCERTAIN: {
+        // Ack để cloud thôi gửi lại, nhưng KHÔNG giao (không chắc đã giao hay chưa)
+        // và báo người vận hành: khách có thể đã trả mà chưa nhận hàng.
+        char msg[96];
+        snprintf(msg, sizeof(msg), "QR intent %lld da tra, khong chac da giao - doi soat",
+                 (long long)intent_id);
+        ESP_LOGE(TAG, "%s", msg);
+        send_paid_ack(intent_id);
+        ie_ws_send_alert("paid_uncertain", "critical", msg, true);
+        return;
     }
+    case IE_PAID_REFUSE:
+        ESP_LOGE(TAG, "payment_paid intent=%lld chưa ghi nhận được — chờ cloud gửi lại",
+                 (long long)intent_id);
+        return;
+    case IE_PAID_DELIVER:
+        break;
+    }
+    send_paid_ack(intent_id);
+    ie_command_bus_hold(); // OTA không được reboot giữa lúc application đang giao hàng
     if (s_ev.on_paid) {
         s_ev.on_paid(intent_id, amount);
     }
+    ie_paid_guard_done(slot);
+    ie_command_bus_release();
 }
 
 static void on_static_qr(const char *payload, const char *ref_code, void *ctx)
@@ -188,7 +224,7 @@ static void on_command(const char *command, const char *auth_token,
         vTaskDelay(pdMS_TO_TICKS(500));
         esp_restart();
     } else if (strcmp(command, "ota_check") == 0) {
-        ie_ota_client_check_once(&s_dev, NULL);
+        innoedge_ota_check();
     } else if (strcmp(command, "ble_provision") == 0) {
         ie_provisioning_start(&s_dev);
     }
@@ -209,7 +245,7 @@ static void heartbeat_task(void *arg)
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(heartbeat_period_ms()));
         if (ie_ws_client_is_connected()) {
-            ie_ws_client_send_heartbeat(fw_version(), ie_wifi_manager_rssi(),
+            ie_ws_client_send_heartbeat(ie_fw_version(), ie_wifi_manager_rssi(),
                                           (unsigned)ie_payment_queue_count(),
                                           (int)esp_reset_reason());
         }
@@ -228,12 +264,19 @@ static void queue_sender_task(void *arg)
 static void ota_task(void *arg)
 {
     (void)arg;
-    ie_ota_result_t res = {0};
-    if (ie_ota_client_check_once(&s_dev, &res) == ESP_OK && res.unassigned &&
-        s_ev.on_unassigned) {
-        s_ev.on_unassigned();
+    bool first = true;
+    while (true) {
+        bool was_assigned = s_dev.assigned;
+        ie_ota_result_t res = {0};
+        esp_err_t err = ie_ota_client_check_once(&s_dev, &res);
+        // Báo "chưa gán" khi mới boot hoặc khi vừa bị gỡ — không lặp mỗi chu kỳ.
+        if (err == ESP_OK && res.unassigned && (first || was_assigned) && s_ev.on_unassigned) {
+            s_ev.on_unassigned();
+        }
+        first = false;
+        uint32_t wait_ms = res.deferred ? IE_OTA_BUSY_RETRY_MS : IE_OTA_PERIOD_MS;
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(wait_ms));
     }
-    vTaskDelete(NULL);
 }
 
 static void config_task(void *arg)
@@ -283,7 +326,7 @@ static void start_online_services(void)
     if (!s_cfg.disable_ota) {
         // OTA chạy NỀN: mạng yếu mà tải đồng bộ = máy như treo lúc boot.
         ie_ota_client_set_busy_check(s_cfg.busy_check);
-        xTaskCreate(ota_task, "ie_ota", 8192, NULL, 4, NULL);
+        xTaskCreate(ota_task, "ie_ota", 8192, NULL, 4, &s_ota_task);
     }
     if (!s_cfg.disable_config_fetch) {
         xTaskCreate(config_task, "ie_cfg", 6144, NULL, 4, NULL);
@@ -322,9 +365,11 @@ esp_err_t innoedge_init(const innoedge_config_t *cfg)
     ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "event loop");
     esp_netif_create_default_wifi_sta();
 
+    ie_fw_version_set(s_cfg.fw_version);
     ESP_RETURN_ON_ERROR(ie_config_store_load(&s_dev), TAG, "nạp cấu hình thiết bị");
     ESP_RETURN_ON_ERROR(ie_payment_queue_init(), TAG, "hàng đợi giao dịch");
     ESP_RETURN_ON_ERROR(ie_command_bus_init(), TAG, "command bus");
+    ie_paid_guard_init();
     if (s_ev.on_provisioning) {
         ie_provisioning_set_ui_notify(s_ev.on_provisioning);
     }
@@ -340,7 +385,7 @@ esp_err_t innoedge_init(const innoedge_config_t *cfg)
 
     s_inited = true;
     ESP_LOGI(TAG, "SDK %s · device=%s · fw=%s · assigned=%d",
-             INNOEDGE_SDK_VERSION, s_dev.device_id, fw_version(), s_dev.assigned);
+             INNOEDGE_SDK_VERSION, s_dev.device_id, ie_fw_version(), s_dev.assigned);
     return ESP_OK;
 }
 
@@ -383,8 +428,8 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
     esp_err_t err = ie_config_store_next_seq(&seq);
     if (err != ESP_OK) {
         // Không cấp được seq = tiền đã thu mà không ghi nhận được → phải báo.
-        innoedge_alert("seq_alloc_failed", "critical",
-                       "Khong cap duoc ma giao dich - co the mat tien", true);
+        ie_fault_set("seq_alloc_failed", "critical",
+                       "Khong cap duoc ma giao dich - co the mat tien");
         return err;
     }
 
@@ -419,14 +464,14 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
     bool dropped = false;
     err = ie_payment_queue_append(seq, json, &dropped);
     if (err != ESP_OK) {
-        innoedge_alert("payment_enqueue_failed", "critical",
-                       "Khong luu duoc giao dich da thu - co the mat tien", true);
+        ie_fault_set("payment_enqueue_failed", "critical",
+                       "Khong luu duoc giao dich da thu - co the mat tien");
         return err;
     }
     if (dropped) {
         // Hàng đợi đầy → đã ghi đè giao dịch cũ nhất = MẤT TIỀN. Không im lặng.
-        innoedge_alert("payment_queue_overflow_drop", "critical",
-                       "Hang doi day - mot giao dich da thu bi mat", true);
+        ie_fault_set("payment_queue_overflow_drop", "critical",
+                       "Hang doi day - mot giao dich da thu bi mat");
     }
     if (ie_payment_queue_count() >= (uint32_t)(CONFIG_INNOEDGE_PAYMENT_QUEUE_CAP * 8 / 10)) {
         innoedge_alert("payment_queue_backlog_high", "warning",
@@ -484,8 +529,8 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
         return err;
     }
     if (dropped) {
-        innoedge_alert("payment_queue_overflow_drop", "critical",
-                       "Hang doi day - mot su kien da bi mat", true);
+        ie_fault_set("payment_queue_overflow_drop", "critical",
+                       "Hang doi day - mot su kien da bi mat");
     }
     try_send_queue_head();
     return ESP_OK;
@@ -539,5 +584,10 @@ esp_err_t innoedge_config_reload(void)
 
 esp_err_t innoedge_ota_check(void)
 {
+    if (s_ota_task) {
+        xTaskNotifyGive(s_ota_task); // task OTA tự kiểm, đúng một chỗ tải
+        return ESP_OK;
+    }
+    // disable_ota: application tự chọn thời điểm → kiểm ngay trên task gọi.
     return ie_ota_client_check_once(&s_dev, NULL);
 }

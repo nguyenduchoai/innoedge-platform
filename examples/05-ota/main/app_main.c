@@ -47,7 +47,6 @@ static void fake_customer_task(void *arg)
 void app_main(void)
 {
     innoedge_config_t cfg = {
-        .fw_version = "0.1.0",  // cloud so version này để quyết định có bản mới không
         .busy_check = is_busy,  // bỏ NULL = cập nhật ngay khi có bản mới
     };
     ESP_ERROR_CHECK(innoedge_init(&cfg));

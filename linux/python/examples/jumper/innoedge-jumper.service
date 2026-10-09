@@ -1,0 +1,23 @@
+# InnoEdge fleet agent cho robot Jumper — xem README.md.
+# Đặt cloud + tên unit controller bằng: sudo systemctl edit innoedge-jumper
+#   [Service]
+#   Environment=INNOEDGE_WS=wss://cloud.example.com/ws/
+#   Environment=CONTROLLER_UNIT=<tên unit controller của Jumper>
+[Unit]
+Description=InnoEdge fleet agent (Jumper)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=INNOEDGE_WS=ws://127.0.0.1:8080/ws/
+Environment=CONTROLLER_UNIT=
+ExecStart=/usr/bin/env python3 /usr/local/bin/innoedge-jumper --bundle-root /opt/mjrl --storage /var/lib/innoedge-jumper --controller-service ${CONTROLLER_UNIT}
+StateDirectory=innoedge-jumper
+Restart=always
+RestartSec=5
+# Không lái khớp, chỉ quản lý bundle + systemd: cần quyền ghi /opt/mjrl và gọi systemctl.
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

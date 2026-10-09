@@ -3,6 +3,7 @@
 #include "ie_ws_client.h"
 
 #include "cJSON.h"
+#include "ie_fault.h"
 #include "ie_ota_client.h"
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
@@ -91,7 +92,7 @@ static void send_hello(void)
              "{\"type\":\"hello\",\"transport\":\"websocket\","
              "\"firmware\":\"%s\",\"local_ip\":\"0.0.0.0\","
              "\"features\":{\"payments\":true,\"qr\":true,\"heartbeat\":true}}",
-             CONFIG_INNOEDGE_FW_VERSION);
+             ie_fw_version());
     (void)send_locked(msg);
 }
 
@@ -246,6 +247,7 @@ static void on_ws_event(void *handler_args, esp_event_base_t base, int32_t id, v
         ie_ota_mark_valid();
         vTaskDelay(pdMS_TO_TICKS(200));
         send_hello();
+        ie_fault_resend_active();
         break;
     case WEBSOCKET_EVENT_DISCONNECTED:
         s_connected = false;
@@ -298,11 +300,11 @@ esp_err_t ie_ws_client_start(const ie_device_config_t *config,
         snprintf(s_headers, sizeof(s_headers),
                  "Authorization: Bearer %s\r\nDevice-Id: %s\r\nClient-Id: %s\r\n"
                  "User-Agent: innoedge-fw/%s\r\n",
-                 config->device_token, config->device_id, config->client_id, CONFIG_INNOEDGE_FW_VERSION);
+                 config->device_token, config->device_id, config->client_id, ie_fw_version());
     } else {
         snprintf(s_headers, sizeof(s_headers),
                  "Device-Id: %s\r\nClient-Id: %s\r\nUser-Agent: innoedge-fw/%s\r\n",
-                 config->device_id, config->client_id, CONFIG_INNOEDGE_FW_VERSION);
+                 config->device_id, config->client_id, ie_fw_version());
     }
 
     esp_websocket_client_config_t ws_cfg = {
@@ -364,7 +366,7 @@ esp_err_t ie_ws_client_send_heartbeat(const char *fw_version, int rssi,
              "{\"type\":\"heartbeat\",\"fw_version\":\"%s\","
              "\"uptime_sec\":%lld,\"rssi\":%d,\"heap_internal_free\":%u,"
              "\"heap_internal_min\":%u,\"queue_depth\":%u,\"reset_reason\":%d}",
-             fw_version ? fw_version : CONFIG_INNOEDGE_FW_VERSION,
+             fw_version ? fw_version : ie_fw_version(),
              (long long)(esp_timer_get_time() / 1000000LL), rssi,
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),

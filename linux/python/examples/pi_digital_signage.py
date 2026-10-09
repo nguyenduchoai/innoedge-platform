@@ -13,7 +13,8 @@ from innoedge import InnoEdge
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-app = InnoEdge(cloud_url="ws://127.0.0.1:8080/ws", fw_version="1.0.0")
+app = InnoEdge(cloud_url=os.environ.get("INNOEDGE_WS", "ws://127.0.0.1:8080/ws/"),
+               fw_version="1.0.0")  # chạy kèm: go run ./tools/mock-cloud
 
 playlist = [
     {"id": 1, "title": "Khuyến Mãi Mùa Hè", "duration": 5},
@@ -67,10 +68,7 @@ if __name__ == "__main__":
             app.publish_event("proof_of_play", {"ad_id": ad["id"], "title": ad["title"], "duration": ad["duration"]})
             current_slot = (current_slot + 1) % len(playlist)
 
-    # Thử nghiệm mua slot quảng cáo
+    # Khách bấm nút mua slot quảng cáo cá nhân → QR thật từ cloud, on_paid xếp lịch.
     print("\n--- Khách bấm nút mua slot quảng cáo cá nhân (50.000 đ) ---")
     app.request_qr(amount_vnd=50000)
-    app.dispatch_message('{"type":"paid","amount":50000,"intentId":999}')
-
-    time.sleep(1)
-    app.stop()
+    app.run()
