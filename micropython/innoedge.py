@@ -22,8 +22,9 @@ class InnoBot:
     Lớp điều khiển Robot STEM kết hợp hạ tầng thanh toán thương mại InnoEdge.
     """
     def __init__(self, version="1.0.0", left_motor_pins=(4, 5), right_motor_pins=(6, 7),
-                 trig_pin=15, echo_pin=16, servo_pin=18):
+                 trig_pin=15, echo_pin=16, servo_pin=18, cloud=None):
         self.version = version
+        self.cloud = cloud  # innoedge_cloud.Cloud — None = chạy giả lập, không nối cloud
         self.paid_callbacks = []
         self.qr_callbacks = []
         self.command_handlers = {}
@@ -122,15 +123,21 @@ class InnoBot:
 
     def on_paid(self, func):
         self.paid_callbacks.append(func)
+        if self.cloud:
+            self.cloud.on_paid(func)
         return func
 
     def on_qr(self, func):
         self.qr_callbacks.append(func)
+        if self.cloud:
+            self.cloud.on_qr(func)
         return func
 
     def command(self, action_name):
         def decorator(func):
             self.command_handlers[action_name] = func
+            if self.cloud:
+                self.cloud.command(action_name)(func)
             return func
         return decorator
 
@@ -143,4 +150,7 @@ class InnoBot:
 
     def run(self):
         print(f"[InnoBot] Khởi chạy InnoEdge Robot STEM (v{self.version}) thành công.")
+        if self.cloud:
+            print("[InnoBot] Nối cloud:", self.cloud.url)
+            self.cloud.run()  # chặn mãi: nhận lệnh + thanh toán thật
         print("[InnoBot] Sẵn sàng nhận lệnh từ xa hoặc sự kiện thanh toán VietQR.")

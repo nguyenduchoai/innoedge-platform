@@ -262,7 +262,7 @@ Các bộ kiểm tra:
 3. **Luật OTA:** digest, semver nghiêm ngặt, chống hạ cấp.
 4. **Giao thức công nghiệp:** MDB Cashless & Modbus RTU CRC16.
 5. **Arduino C++ Wrapper:** cú pháp và tương thích API.
-6. **MicroPython InnoBot:** logic robot STEM.
+6. **MicroPython:** logic InnoBot + client cloud (hàng đợi, nhật ký lệnh, QR; WebSocket thật với mock-cloud nếu có Go).
 7. **Linux SDK:** hàng đợi bền, nhật ký lệnh, chống giao QR hai lần, cài bản phát hành có kiểm + rollback, example Jumper.
 8. **Mock-Cloud & MCP Server:** khung tin giao thức v1.
 9. **Linux SDK ↔ mock-cloud:** một phiên WebSocket thật (cần Go + `websocket-client`).

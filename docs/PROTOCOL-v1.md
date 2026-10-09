@@ -204,12 +204,14 @@ Chủ máy đổi cấu hình → cloud gửi:
 ```
 POST /ota/v1/
      Device-Id: <MAC>
+     {"version":"1.2.17","application":{"version":"1.2.17"},
+      "project":"<project_name trong image>","mac_address":"<MAC>"}
 → {"status":"ok","data":{"firmware":{
      "version":"1.2.18",          // X.Y.Z nghiêm ngặt
-     "url":"https://.../innoedge-fw-1.2.18.bin",
+     "url":"https://.../ie-coin-1.2.18.bin",
      "sha256":"<64 hex>",         // BẮT BUỘC
      "size":1712384,              // BẮT BUỘC, byte
-     "allowDowngrade":false}}}    // tuỳ chọn; mặc định chỉ nâng
+     "allowDowngrade":false}}}    // tuỳ chọn (true hoặc 1); mặc định chỉ nâng
    — không có bản mới thì bỏ "firmware".
 ```
 
@@ -225,8 +227,12 @@ Bản mới treo/crash trước khi vào cloud → bootloader tự quay bản c�
 kế. Đây là lý do **không được** gọi `esp_ota_mark_app_valid_cancel_rollback()`
 sớm.
 
-Binary đặt tên `innoedge-fw-<version>.bin`. Rollout theo % hash MAC; pin per-device
-để rollback từng máy.
+Cloud chỉ chào firmware cùng `project` (project_name ESP-IDF, khai bằng
+`project()` trong CMakeLists) — một cloud phục vụ nhiều sản phẩm, máy không bao
+giờ được chào image của sản phẩm khác. Thiếu `project` (firmware trước 0.2.1) =
+sản phẩm mặc định của cloud. Cloud đọc product + version từ chính image lúc
+upload; tên file do cloud đặt (`<project>-<version>.bin`). Rollout theo % hash MAC;
+pin per-device để rollback từng máy.
 
 ## 9. Audio hai chiều — v1.1
 

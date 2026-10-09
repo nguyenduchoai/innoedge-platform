@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#define INNOEDGE_SDK_VERSION "0.2.0"
+#define INNOEDGE_SDK_VERSION "0.2.1"
 
 // ── Sự kiện thanh toán gửi lên cloud ────────────────────────────────────────
 typedef enum {

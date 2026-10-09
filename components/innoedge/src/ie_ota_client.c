@@ -286,7 +286,9 @@ static void maybe_run_ota(const cJSON *fw, ie_ota_result_t *result)
         .sha256 = json_str(fw, "sha256"),
         .size = json_size(fw, "size"),
     };
-    bool allow_downgrade = cJSON_IsTrue(cJSON_GetObjectItem(fw, "allowDowngrade"));
+    // Cloud gửi true (release) hoặc 1 (bản ghim để rollback từng máy) — nhận cả hai.
+    const cJSON *dg = cJSON_GetObjectItem(fw, "allowDowngrade");
+    bool allow_downgrade = cJSON_IsTrue(dg) || (cJSON_IsNumber(dg) && dg->valuedouble == 1);
     if (!img.version || !ie_ota_version_allowed(img.version, ie_fw_version(), allow_downgrade)) {
         return; // cùng/cũ hơn bản đang chạy, hoặc version không phải X.Y.Z
     }
@@ -341,10 +343,12 @@ esp_err_t ie_ota_client_check_once(ie_device_config_t *config, ie_ota_result_t *
     char url[192];
     build_url(config->server_base_url, url, sizeof(url));
     char body[256];
+    // project: cloud chỉ chào firmware cùng sản phẩm (project_name trong image).
     snprintf(body, sizeof(body),
              "{\"version\":\"%s\",\"application\":{\"version\":\"%s\"},"
-             "\"mac_address\":\"%s\"}",
-             ie_fw_version(), ie_fw_version(), config->device_id);
+             "\"project\":\"%s\",\"mac_address\":\"%s\"}",
+             ie_fw_version(), ie_fw_version(), esp_app_get_description()->project_name,
+             config->device_id);
 
     rx_t rx = {.buf = calloc(1, IE_OTA_MANIFEST_MAX)};
     if (!rx.buf) {

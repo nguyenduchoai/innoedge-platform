@@ -2,10 +2,27 @@
 
 Thư viện MicroPython chính thức dành cho học sinh, sinh viên, giáo viên và Maker phát triển **Robot STEM**, máy bán hàng tự động và thiết bị IoT thương mại bằng ngôn ngữ Python.
 
-> ⚠️ **Hiện trạng:** thư viện này là HAL robot STEM (động cơ, siêu âm, servo) cộng
-> chỗ đăng ký callback. Nó **CHƯA kết nối cloud**: `on_paid` chỉ chạy khi
-> bạn gọi `simulate_payment()`, không có giao dịch thật nào tới. Cần thanh toán / lệnh từ
-> xa thật trên ESP32 thì dùng SDK ESP-IDF (`components/innoedge`) hoặc thư viện Arduino.
+> **Nối cloud:** `innoedge_cloud.py` nói PROTOCOL-v1 qua WebSocket tự viết (chỉ
+> dùng `socket`/`ssl`/`hashlib` có sẵn). Cùng cam kết với SDK ESP-IDF: tiền ghi flash
+> trước khi gửi, lệnh chạy tối đa một lần, `on_paid` không bao giờ hai lần. Đã test
+> trên CPython với mock-cloud; **chưa thử trên board MicroPython thật**.
+
+```python
+from innoedge import InnoBot
+from innoedge_cloud import Cloud
+
+cloud = Cloud("ws://192.168.1.10:8080/ws/", device_id="<MAC>", fw_version="1.0.0")
+bot = InnoBot(cloud=cloud)
+
+@bot.on_paid
+def paid(intent_id, amount_vnd):
+    bot.forward(seconds=2)
+
+bot.run()   # chặn mãi: nhận lệnh + thanh toán thật
+```
+
+Chép cả hai file lên board: `mpremote fs cp innoedge.py innoedge_cloud.py :`.
+Xem `example_robot.py` (đặt `WIFI_SSID`, `CLOUD_URL`).
 
 ---
 
@@ -14,8 +31,8 @@ Thư viện MicroPython chính thức dành cho học sinh, sinh viên, giáo vi
 * **Điều Khiển Động Cơ 2 Bánh:** Hỗ trợ mạch cầu H L298N, TB6612FNG (`forward`, `backward`, `turn_left`, `turn_right`, `stop`).
 * **Đo Khoảng Cách Siêu Âm:** Cảm biến HC-SR04 tự động tính toán thời gian xung và khoảng cách (cm).
 * **Điều Khiển Góc Servo:** Đóng/mở nắp thùng hàng, gắp vật thể (`set_servo(channel, angle)`).
-* **Đăng ký sự kiện thanh toán:** `@bot.on_paid` (chưa nối cloud — xem Hiện trạng).
-* **Đăng ký lệnh:** decorator `@bot.command("bot_move")` (chưa nối cloud — xem Hiện trạng).
+* **Sự kiện thanh toán VietQR:** `@bot.on_paid` — nhận `payment_paid` thật khi gắn `cloud=`.
+* **Lệnh từ xa:** `@bot.command("bot_move")` — chống trùng theo `commandId`.
 
 ---
 

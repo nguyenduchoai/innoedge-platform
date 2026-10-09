@@ -5,7 +5,29 @@
 import time
 from innoedge import InnoBot
 
-bot = InnoBot(version="1.0.0")
+# Nối cloud thật: điền WiFi + URL (vd chạy `go run ./tools/mock-cloud` trên máy tính).
+# Để trống CLOUD_URL = chạy giả lập, không cần mạng.
+WIFI_SSID, WIFI_PASSWORD = "", ""
+CLOUD_URL = ""  # vd "ws://192.168.1.10:8080/ws/"
+
+
+def make_cloud():
+    if not CLOUD_URL:
+        return None
+    import network
+    import ubinascii
+    from innoedge_cloud import Cloud
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+        while not wlan.isconnected():
+            time.sleep(0.5)
+    mac = ubinascii.hexlify(wlan.config("mac")).decode().upper()
+    return Cloud(CLOUD_URL, device_id=mac, fw_version="1.0.0")
+
+
+bot = InnoBot(version="1.0.0", cloud=make_cloud())
 
 # 1. Khi khách hàng quét VietQR trả tiền: Robot bắt đầu nhiệm vụ!
 @bot.on_paid
@@ -50,7 +72,8 @@ def handle_move(params):
     return {"status": "ok", "moved": direction}
 
 if __name__ == "__main__":
-    bot.run()
-    # Thử nghiệm giả lập một giao dịch nạp tiền VietQR
-    print("\n--- Chạy thử nghiệm giả lập thanh toán VietQR ---")
-    bot.simulate_payment(amount_vnd=20000, intent_id=88)
+    if bot.cloud:
+        bot.run()  # chặn mãi, nhận thanh toán/lệnh thật từ cloud
+    else:
+        print("\n--- Chạy giả lập thanh toán VietQR (chưa đặt CLOUD_URL) ---")
+        bot.simulate_payment(amount_vnd=20000, intent_id=88)

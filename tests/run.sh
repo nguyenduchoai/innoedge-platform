@@ -44,6 +44,9 @@ if command -v python3 >/dev/null 2>&1; then
     echo "▸ micropython robot test"
     python3 ../micropython/example_robot.py >/dev/null
     echo "PASS — MicroPython InnoBot"
+    echo "▸ MicroPython cloud (hàng đợi, nhật ký lệnh, QR; + WebSocket thật nếu có Go)"
+    python3 test_micropython_cloud.py 2>/dev/null
+    echo "PASS — MicroPython cloud"
     echo "▸ linux SDK (hàng đợi bền, nhật ký lệnh, tiền QR, cài bản phát hành)"
     python3 ../linux/python/tests/test_linux_sdk.py 2>/dev/null
     echo "PASS — Linux SDK"

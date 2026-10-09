@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1 — 2026-10-09
+
+Khớp với cloud InnoEdge thật (đối chiếu mã server):
+
+- OTA gửi `project` (project_name của image): cloud chỉ chào firmware cùng sản phẩm.
+  Trước đây cloud chỉ nhận firmware `gtek-fw`, nên thiết bị dựng từ SDK không OTA
+  được qua cloud. Cloud đã sửa cùng lúc.
+- Nhận `allowDowngrade` dạng `1`, không chỉ `true`: bản ghim để rollback từng máy
+  của cloud gửi dạng số, nên 0.2.0 bỏ qua lệnh hạ cấp đó.
+- Tài liệu: bỏ quy ước tên file `innoedge-fw-<version>.bin` (cloud tự đặt tên
+  theo project).
+- MicroPython: nối cloud thật (xem `micropython/README.md`).
+
 ## 0.2.0 — 2026-10-09
 
 Bản đầu tiên **biên dịch được**. Các bản 0.1.0–0.1.4 trên ESP Component Registry

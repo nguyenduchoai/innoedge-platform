@@ -257,7 +257,7 @@ Runs these suites:
 3. **OTA policy:** digest parsing, strict semver, anti-downgrade.
 4. **Industrial Protocols:** MDB Cashless peripheral state machine & Modbus RTU CRC16.
 5. **Arduino C++ Wrapper:** syntax and API compatibility.
-6. **MicroPython InnoBot:** STEM robotics logic.
+6. **MicroPython:** InnoBot logic + cloud client (queue, journal, QR guard; real WebSocket vs mock-cloud when Go is present).
 7. **Linux SDK:** durable queue, command journal, QR paid guard, verified release install + rollback, Jumper example.
 8. **Mock-Cloud & MCP Server:** protocol v1 frames.
 9. **Linux SDK ↔ mock-cloud:** a real WebSocket session (needs Go + `websocket-client`).
