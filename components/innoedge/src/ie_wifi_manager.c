@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_wifi_manager.h"
+#include "ie_wifi_manager.h"
 
 #include "cJSON.h"
 #include "esp_event.h"
@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "gtek.wifi";
+static const char *TAG = "ie.wifi";
 static EventGroupHandle_t s_wifi_events;
 static const int WIFI_CONNECTED_BIT = BIT0;
 static bool s_wifi_initialized;
@@ -186,7 +186,7 @@ static esp_err_t prov_save_handler(httpd_req_t *req)
 
     const char *ssid = jssid->valuestring;
     const char *password = cJSON_IsString(jpass) ? jpass->valuestring : "";
-    err = gtek_config_store_save_wifi(ssid, password);
+    err = ie_config_store_save_wifi(ssid, password);
     ESP_LOGI(TAG, "save WiFi SSID=%s -> %s", ssid, esp_err_to_name(err));
     cJSON_Delete(root);
 
@@ -204,7 +204,7 @@ static esp_err_t prov_get_handler(httpd_req_t *req)
     static const char *html =
         "<!doctype html><html><head><meta charset=utf-8>"
         "<meta name=viewport content='width=device-width,initial-scale=1'>"
-        "<title>Gtek WiFi setup</title>"
+        "<title>InnoEdge WiFi setup</title>"
         "<style>"
         "body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;"
         "max-width:480px;margin:0 auto;padding:16px;background:#f6f7fb;color:#0f172a}"
@@ -218,7 +218,7 @@ static esp_err_t prov_get_handler(httpd_req_t *req)
         ".msg{display:none;margin-top:10px;padding:10px;border-radius:6px}.err{display:block;background:#fee2e2;color:#991b1b}"
         ".ok{display:block;background:#dcfce7;color:#166534}.loading{color:#64748b;padding:18px;text-align:center}"
         "</style></head><body>"
-        "<h2>Gtek</h2><p class=sub>Connect this device to store WiFi.</p>"
+        "<h2>InnoEdge</h2><p class=sub>Connect this device to store WiFi.</p>"
         "<div class=card><div style='display:flex;justify-content:space-between;align-items:center'>"
         "<b>Nearby WiFi</b><button class=refresh onclick=loadScan()>Scan</button></div>"
         "<div id=list class=loading>Scanning...</div></div>"
@@ -252,9 +252,9 @@ static void provisioning_ssid(char *out, size_t out_len)
 {
     uint8_t mac[6] = {0};
     if (esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK) {
-        snprintf(out, out_len, "%s-%02X:%02X", CONFIG_GTEK_BLE_SETUP_PREFIX, mac[4], mac[5]);
+        snprintf(out, out_len, "%s-%02X:%02X", CONFIG_INNOEDGE_BLE_SETUP_PREFIX, mac[4], mac[5]);
     } else {
-        snprintf(out, out_len, "%s", CONFIG_GTEK_BLE_SETUP_PREFIX);
+        snprintf(out, out_len, "%s", CONFIG_INNOEDGE_BLE_SETUP_PREFIX);
     }
 }
 
@@ -271,7 +271,7 @@ static void copy_wifi_text(uint8_t *dst, size_t dst_len, const char *src)
     memcpy(dst, src, len);
 }
 
-esp_err_t gtek_wifi_manager_start(const gtek_device_config_t *config)
+esp_err_t ie_wifi_manager_start(const ie_device_config_t *config)
 {
     if (!config) {
         return ESP_ERR_INVALID_ARG;
@@ -314,7 +314,7 @@ esp_err_t gtek_wifi_manager_start(const gtek_device_config_t *config)
     return (bits & WIFI_CONNECTED_BIT) ? ESP_OK : ESP_ERR_TIMEOUT;
 }
 
-esp_err_t gtek_wifi_manager_wait_connected(uint32_t timeout_ms)
+esp_err_t ie_wifi_manager_wait_connected(uint32_t timeout_ms)
 {
     if (!s_wifi_events) {
         return ESP_ERR_INVALID_STATE;
@@ -324,7 +324,7 @@ esp_err_t gtek_wifi_manager_wait_connected(uint32_t timeout_ms)
     return (bits & WIFI_CONNECTED_BIT) ? ESP_OK : ESP_ERR_TIMEOUT;
 }
 
-esp_err_t gtek_wifi_manager_start_provisioning(void)
+esp_err_t ie_wifi_manager_start_provisioning(void)
 {
     if (s_prov_started) {
         return ESP_OK;
@@ -388,7 +388,7 @@ esp_err_t gtek_wifi_manager_start_provisioning(void)
     return ESP_OK;
 }
 
-int gtek_wifi_manager_rssi(void)
+int ie_wifi_manager_rssi(void)
 {
     wifi_ap_record_t ap = {0};
     if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK) {

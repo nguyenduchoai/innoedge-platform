@@ -50,7 +50,7 @@ SDK không tự làm thay bạn những việc này:
 | Việc | Vì sao |
 |---|---|
 | **Bật Secure Boot v2 + Flash Encryption** | Không có thì ai cầm được máy là đọc được token trong flash |
-| **Mỗi máy một token riêng** | `CONFIG_GTEK_FACTORY_TOKEN` chỉ để bootstrap. Dùng chung token cho cả fleet = lộ một máy là lộ tất cả |
+| **Mỗi máy một token riêng** | `CONFIG_INNOEDGE_FACTORY_TOKEN` chỉ để bootstrap. Dùng chung token cho cả fleet = lộ một máy là lộ tất cả |
 | **Nạp token ở khâu factory provisioning, không nhúng source** | Token trong git là token đã lộ |
 | **Bắt buộc TLS** (`CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=n`) | Đã là mặc định — đừng tắt |
 | **Ký firmware OTA** | Không ký thì bất cứ ai chiếm được kênh phân phối đều đẩy được firmware |

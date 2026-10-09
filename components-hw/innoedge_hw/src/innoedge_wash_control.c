@@ -3,7 +3,7 @@
 #include "innoedge_wash_control.h"
 
 #include "innoedge_relay_control.h"
-#include "gtek_ws_client.h"
+#include "ie_ws_client.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -16,24 +16,24 @@
 static const char *TAG = "innoedge.wash";
 
 #ifndef CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO
-#ifdef CONFIG_GTEK_WASH_WATER_SENSOR_GPIO
-#define CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO CONFIG_GTEK_WASH_WATER_SENSOR_GPIO
+#ifdef CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO
+#define CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO
 #else
 #define CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC
-#ifdef CONFIG_GTEK_WASH_MAX_ACTIVATION_SEC
-#define CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC CONFIG_GTEK_WASH_MAX_ACTIVATION_SEC
+#ifdef CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC
+#define CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC
 #else
 #define CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC 600
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC
-#ifdef CONFIG_GTEK_WASH_MASTER_MARGIN_SEC
-#define CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC CONFIG_GTEK_WASH_MASTER_MARGIN_SEC
+#ifdef CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC
+#define CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC
 #else
 #define CONFIG_INNOEDGE_WASH_MASTER_MARGIN_SEC 120
 #endif
@@ -105,7 +105,7 @@ static void end_session_locked(const char *reason)
     s_activation_started_us = 0;
     if (s_no_water_alert) {
         s_no_water_alert = false;
-        gtek_ws_send_alert("no_water", "warning", "het phien rua", false);
+        ie_ws_send_alert("no_water", "warning", "het phien rua", false);
     }
 }
 
@@ -144,7 +144,7 @@ static void wash_tick_task(void *arg)
                          innoedge_relay_channel_name((innoedge_relay_channel_t)d),
                          (long long)elapsed_sec, CONFIG_INNOEDGE_WASH_MAX_ACTIVATION_SEC);
                 stop_active_locked();
-                gtek_ws_send_alert("fault", "error",
+                ie_ws_send_alert("fault", "error",
                                    "watchdog phien: relay chay qua lau lien tuc, tu dong ngat", true);
                 unlock();
                 continue;
@@ -156,12 +156,12 @@ static void wash_tick_task(void *arg)
                     s_no_water_alert = true;
                     ESP_LOGE(TAG, "MẤT NƯỚC! Tắt bơm bảo vệ máy");
                     innoedge_relay_set((innoedge_relay_channel_t)INNOEDGE_WASH_WATER, false);
-                    gtek_ws_send_alert("no_water", "warning",
+                    ie_ws_send_alert("no_water", "warning",
                                        "Cam bien bao het nuoc - tam ngat bom bao ve", true);
                 } else if (water && s_no_water_alert) {
                     s_no_water_alert = false;
                     ESP_LOGI(TAG, "Có nước lại");
-                    gtek_ws_send_alert("no_water", "warning", "da co nuoc lai", false);
+                    ie_ws_send_alert("no_water", "warning", "da co nuoc lai", false);
                     if (s_active_device == INNOEDGE_WASH_WATER && s_remaining[INNOEDGE_WASH_WATER] > 0) {
                         innoedge_relay_set((innoedge_relay_channel_t)INNOEDGE_WASH_WATER, true);
                     }
@@ -224,7 +224,7 @@ esp_err_t innoedge_wash_control_init(void)
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "cấu hình water sensor GPIO%d thất bại: %s",
                      CONFIG_INNOEDGE_WASH_WATER_SENSOR_GPIO, esp_err_to_name(err));
-            gtek_ws_send_alert("fault", "warning",
+            ie_ws_send_alert("fault", "warning",
                                "Khong doc duoc cam bien nuoc", true);
         } else {
             ESP_LOGI(TAG, "water sensor bật trên GPIO%d (active-low)",

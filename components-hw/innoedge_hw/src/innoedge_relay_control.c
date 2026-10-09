@@ -7,55 +7,55 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "gtek_fault.h"
+#include "ie_fault.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "innoedge.relay";
 
 // GPIO mặc định cho các kênh chưa khai báo trong Kconfig (an toàn = -1).
 #ifndef CONFIG_INNOEDGE_WASH_GPIO_WATER
-#ifdef CONFIG_GTEK_WASH_GPIO_WATER
-#define CONFIG_INNOEDGE_WASH_GPIO_WATER CONFIG_GTEK_WASH_GPIO_WATER
+#ifdef CONFIG_INNOEDGE_WASH_GPIO_WATER
+#define CONFIG_INNOEDGE_WASH_GPIO_WATER CONFIG_INNOEDGE_WASH_GPIO_WATER
 #else
 #define CONFIG_INNOEDGE_WASH_GPIO_WATER (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_WASH_GPIO_FOAM
-#ifdef CONFIG_GTEK_WASH_GPIO_FOAM
-#define CONFIG_INNOEDGE_WASH_GPIO_FOAM CONFIG_GTEK_WASH_GPIO_FOAM
+#ifdef CONFIG_INNOEDGE_WASH_GPIO_FOAM
+#define CONFIG_INNOEDGE_WASH_GPIO_FOAM CONFIG_INNOEDGE_WASH_GPIO_FOAM
 #else
 #define CONFIG_INNOEDGE_WASH_GPIO_FOAM (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_WASH_GPIO_AIR
-#ifdef CONFIG_GTEK_WASH_GPIO_AIR
-#define CONFIG_INNOEDGE_WASH_GPIO_AIR CONFIG_GTEK_WASH_GPIO_AIR
+#ifdef CONFIG_INNOEDGE_WASH_GPIO_AIR
+#define CONFIG_INNOEDGE_WASH_GPIO_AIR CONFIG_INNOEDGE_WASH_GPIO_AIR
 #else
 #define CONFIG_INNOEDGE_WASH_GPIO_AIR (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_WASH_GPIO_VACUUM
-#ifdef CONFIG_GTEK_WASH_GPIO_VACUUM
-#define CONFIG_INNOEDGE_WASH_GPIO_VACUUM CONFIG_GTEK_WASH_GPIO_VACUUM
+#ifdef CONFIG_INNOEDGE_WASH_GPIO_VACUUM
+#define CONFIG_INNOEDGE_WASH_GPIO_VACUUM CONFIG_INNOEDGE_WASH_GPIO_VACUUM
 #else
 #define CONFIG_INNOEDGE_WASH_GPIO_VACUUM (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_RELAY_GPIO
-#ifdef CONFIG_GTEK_RELAY_GPIO
-#define CONFIG_INNOEDGE_RELAY_GPIO CONFIG_GTEK_RELAY_GPIO
+#ifdef CONFIG_INNOEDGE_RELAY_GPIO
+#define CONFIG_INNOEDGE_RELAY_GPIO CONFIG_INNOEDGE_RELAY_GPIO
 #else
 #define CONFIG_INNOEDGE_RELAY_GPIO (-1)
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_RELAY_PULSE_MS
-#ifdef CONFIG_GTEK_RELAY_PULSE_MS
-#define CONFIG_INNOEDGE_RELAY_PULSE_MS CONFIG_GTEK_RELAY_PULSE_MS
+#ifdef CONFIG_INNOEDGE_RELAY_PULSE_MS
+#define CONFIG_INNOEDGE_RELAY_PULSE_MS CONFIG_INNOEDGE_RELAY_PULSE_MS
 #else
 #define CONFIG_INNOEDGE_RELAY_PULSE_MS 80
 #endif
@@ -98,7 +98,7 @@ esp_err_t innoedge_relay_control_init(void)
     }
     if (mask == 0) {
         ESP_LOGW(TAG, "không có relay nào được cấu hình");
-        gtek_fault_set("relay_none_configured", "warning",
+        ie_fault_set("relay_none_configured", "warning",
                        "Khong relay nao duoc cau hinh - may khong dieu khien duoc co cau");
         return ESP_OK;
     }
@@ -118,7 +118,7 @@ esp_err_t innoedge_relay_control_init(void)
     esp_err_t cfg_err = gpio_config(&io_conf);
     if (cfg_err != ESP_OK) {
         ESP_LOGE(TAG, "gpio config failed: %s", esp_err_to_name(cfg_err));
-        gtek_fault_set("relay_init_fail", "critical", "Khoi tao relay that bai");
+        ie_fault_set("relay_init_fail", "critical", "Khoi tao relay that bai");
         return cfg_err;
     }
     for (int i = 0; i < INNOEDGE_RELAY_COUNT; i++) {
@@ -143,7 +143,7 @@ esp_err_t innoedge_relay_set(innoedge_relay_channel_t channel, bool on)
     ESP_LOGI(TAG, "%s %s (GPIO%d)", s_channels[channel].name, on ? "ON" : "OFF", gpio);
     esp_err_t err = gpio_set_level(gpio, on ? 1 : 0);
     if (err != ESP_OK) {
-        gtek_fault_set("relay_set_failed", "critical", "Khong dieu khien duoc relay");
+        ie_fault_set("relay_set_failed", "critical", "Khong dieu khien duoc relay");
     }
     return err;
 }
@@ -185,7 +185,7 @@ esp_err_t innoedge_relay_control_pulse(uint32_t pulse_ms)
 {
     int gpio = s_channels[INNOEDGE_RELAY_DISPENSE].gpio;
     if (!gpio_ok(gpio)) {
-        gtek_fault_set("dispense_relay_not_configured", "critical",
+        ie_fault_set("dispense_relay_not_configured", "critical",
                        "Relay nha tien chua duoc cau hinh - khach tra tien khong ra credit");
         return ESP_ERR_INVALID_STATE;
     }
@@ -194,13 +194,13 @@ esp_err_t innoedge_relay_control_pulse(uint32_t pulse_ms)
     }
     esp_err_t on_err = gpio_set_level(gpio, 1);
     if (on_err != ESP_OK) {
-        gtek_fault_set("dispense_relay_error", "critical", "Khong kich duoc relay nha tien");
+        ie_fault_set("dispense_relay_error", "critical", "Khong kich duoc relay nha tien");
         return on_err;
     }
     vTaskDelay(pdMS_TO_TICKS(pulse_ms));
     esp_err_t off_err = gpio_set_level(gpio, 0);
     if (off_err != ESP_OK) {
-        gtek_fault_set("relay_stuck_on", "critical", "Relay nha tien khong tat duoc - nguy co ket bat");
+        ie_fault_set("relay_stuck_on", "critical", "Relay nha tien khong tat duoc - nguy co ket bat");
     }
     return off_err;
 }

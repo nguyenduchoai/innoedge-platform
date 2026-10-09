@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_ota_client.h"
-#include "gtek_fault.h"
-#include "gtek_ws_client.h"
+#include "ie_ota_client.h"
+#include "ie_fault.h"
+#include "ie_ws_client.h"
 
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *TAG = "gtek.ota";
+static const char *TAG = "ie.ota";
 static char s_rx_buf[4096];
 static int s_rx_len;
 
@@ -23,7 +23,7 @@ static int s_rx_len;
 // hành vi cũ (update ngay).
 static bool (*s_busy_check)(void);
 
-void gtek_ota_client_set_busy_check(bool (*fn)(void))
+void ie_ota_client_set_busy_check(bool (*fn)(void))
 {
     s_busy_check = fn;
 }
@@ -50,7 +50,7 @@ static void build_url(const char *base, char *out, size_t out_len)
 {
     size_t n = strlen(base ? base : "");
     const char *slash = (n > 0 && base[n - 1] == '/') ? "" : "/";
-    snprintf(out, out_len, "%s%sota/v1/", base ? base : CONFIG_GTEK_SERVER_BASE_URL, slash);
+    snprintf(out, out_len, "%s%sota/v1/", base ? base : CONFIG_INNOEDGE_SERVER_BASE_URL, slash);
 }
 
 static void parse_semver(const char *s, int *a, int *b, int *c)
@@ -71,7 +71,7 @@ static bool is_newer_version(const char *candidate)
     }
     int ca, cb, cc, ra, rb, rc;
     parse_semver(candidate, &ca, &cb, &cc);
-    parse_semver(CONFIG_GTEK_FW_VERSION, &ra, &rb, &rc);
+    parse_semver(CONFIG_INNOEDGE_FW_VERSION, &ra, &rb, &rc);
     if (ca != ra) {
         return ca > ra;
     }
@@ -81,11 +81,11 @@ static bool is_newer_version(const char *candidate)
     return cc > rc;
 }
 
-// gtek_ota_mark_valid: gọi SAU khi firmware mới chạy khỏe (WS kết nối được lần
+// ie_ota_mark_valid: gọi SAU khi firmware mới chạy khỏe (WS kết nối được lần
 // đầu). Nếu app đang ở trạng thái PENDING_VERIFY (vừa OTA), xác nhận hợp lệ +
 // huỷ rollback. Nếu KHÔNG gọi (firmware mới crash/treo trước khi kết nối),
 // bootloader tự rollback về slot cũ ở lần reboot — chống brick máy ngoài hiện trường.
-void gtek_ota_mark_valid(void)
+void ie_ota_mark_valid(void)
 {
     const esp_partition_t *running = esp_ota_get_running_partition();
     if (!running) {
@@ -98,8 +98,8 @@ void gtek_ota_mark_valid(void)
         } else {
             ESP_LOGW(TAG, "OTA: mark_app_valid failed");
             // Không xác nhận được bản mới → bootloader có thể tự rollback ở lần
-            // reboot tới. Báo để kỹ thuật theo dõi (gtek_fault.h cùng net).
-            gtek_fault_set("ota_mark_valid_failed", "critical",
+            // reboot tới. Báo để kỹ thuật theo dõi (ie_fault.h cùng net).
+            ie_fault_set("ota_mark_valid_failed", "critical",
                            "Khong xac nhan duoc firmware moi - co the bi rollback");
         }
     }
@@ -120,7 +120,7 @@ static esp_err_t maybe_run_ota(const char *version, const char *url)
         ESP_LOGW(TAG, "OTA %s sẵn sàng nhưng máy đang bận — hoãn", version);
         return ESP_OK;
     }
-    ESP_LOGW(TAG, "new firmware %s available, current %s", version, CONFIG_GTEK_FW_VERSION);
+    ESP_LOGW(TAG, "new firmware %s available, current %s", version, CONFIG_INNOEDGE_FW_VERSION);
     esp_http_client_config_t http_cfg = {
         .url = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
@@ -137,12 +137,12 @@ static esp_err_t maybe_run_ota(const char *version, const char *url)
     }
     ESP_LOGE(TAG, "OTA failed: %s", esp_err_to_name(err));
     // OTA hỏng = máy kẹt ở firmware cũ trong im lặng → báo để đội kỹ thuật biết.
-    gtek_ws_send_alert("ota_update_failed", "warning",
+    ie_ws_send_alert("ota_update_failed", "warning",
                        "Cap nhat firmware that bai - may dang chay ban cu", true);
     return err;
 }
 
-esp_err_t gtek_ota_client_check_once(gtek_device_config_t *config, gtek_ota_result_t *result)
+esp_err_t ie_ota_client_check_once(ie_device_config_t *config, ie_ota_result_t *result)
 {
     if (!config) {
         return ESP_ERR_INVALID_ARG;
@@ -157,7 +157,7 @@ esp_err_t gtek_ota_client_check_once(gtek_device_config_t *config, gtek_ota_resu
     snprintf(body, sizeof(body),
              "{\"version\":\"%s\",\"application\":{\"version\":\"%s\"},"
              "\"mac_address\":\"%s\",\"panel_res\":\"480x480\"}",
-             CONFIG_GTEK_FW_VERSION, CONFIG_GTEK_FW_VERSION, config->device_id);
+             CONFIG_INNOEDGE_FW_VERSION, CONFIG_INNOEDGE_FW_VERSION, config->device_id);
 
     esp_http_client_config_t http_cfg = {
         .url = url,
@@ -202,7 +202,7 @@ esp_err_t gtek_ota_client_check_once(gtek_device_config_t *config, gtek_ota_resu
     cJSON *ws_url = ws ? cJSON_GetObjectItem(ws, "url") : NULL;
     if (cJSON_IsString(ws_url) && ws_url->valuestring[0] != '\0') {
         snprintf(config->websocket_url, sizeof(config->websocket_url), "%s", ws_url->valuestring);
-        gtek_config_store_save_websocket_url(config->websocket_url);
+        ie_config_store_save_websocket_url(config->websocket_url);
         if (result) {
             result->websocket_url_updated = true;
         }

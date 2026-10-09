@@ -25,8 +25,8 @@ Không khai `busy_check` → máy có thể reboot giữa lúc khách đang tr�
 ```bash
 idf.py set-target esp32s3 && idf.py flash monitor
 ```
-1. Đổi `CONFIG_GTEK_FW_VERSION` lên `"0.1.1"`, `idf.py build`.
-2. Upload `build/ie-ota.bin` lên cloud dưới tên `gtek-fw-0.1.1.bin`.
+1. Đổi `CONFIG_INNOEDGE_FW_VERSION` lên `"0.1.1"`, `idf.py build`.
+2. Upload `build/ie-ota.bin` lên cloud dưới tên `innoedge-fw-0.1.1.bin`.
 3. Máy sẽ tải trong lần kiểm tra kế (hoặc gửi lệnh `ota_check`).
 
 Đúng lúc `ĐANG PHỤC VỤ KHÁCH`, log sẽ cho thấy OTA **hoãn** thay vì reboot.
@@ -84,8 +84,8 @@ If you omit `busy_check`, a device might reboot while a customer is actively ins
 ```bash
 idf.py set-target esp32s3 && idf.py flash monitor
 ```
-1. Increment `CONFIG_GTEK_FW_VERSION` to `"0.1.1"` in `menuconfig` or `sdkconfig.defaults`, then run `idf.py build`.
-2. Upload `build/ie-ota.bin` to your cloud as `gtek-fw-0.1.1.bin`.
+1. Increment `CONFIG_INNOEDGE_FW_VERSION` to `"0.1.1"` in `menuconfig` or `sdkconfig.defaults`, then run `idf.py build`.
+2. Upload `build/ie-ota.bin` to your cloud as `innoedge-fw-0.1.1.bin`.
 3. The device checks for updates periodically (or triggers immediately upon command `ota_check`).
 
 While `is_busy()` returns true, logs will confirm that the update and reboot are **safely postponed**.

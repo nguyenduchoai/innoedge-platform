@@ -69,7 +69,7 @@ I (55100) carwash: còn: nước=115s bọt=60s khí=60s hút=0s · phiên=225s
 Cả bốn đều nằm trong `wash_control` — chạy độc lập, không cần mạng.
 
 ## Vì sao combo đọc từ cache NVS
-`gtek_config_lookup_combo()` đọc **cache**, không gọi mạng. Mất WiFi giữa ca vẫn
+`ie_config_lookup_combo()` đọc **cache**, không gọi mạng. Mất WiFi giữa ca vẫn
 mở đúng phiên. Đó là lý do example 04 (config) nên chạy trước example này.
 
 ## Chỉnh theo máy thật

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_provisioning.h"
+#include "ie_provisioning.h"
 
 #include "cJSON.h"
 #include "esp_check.h"
@@ -9,7 +9,7 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "gtek_wifi_manager.h"
+#include "ie_wifi_manager.h"
 #include "host/ble_hs.h"
 #include "host/ble_uuid.h"
 #include "host/util/util.h"
@@ -23,11 +23,11 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *TAG = "gtek.prov";
+static const char *TAG = "ie.prov";
 
-static gtek_provisioning_ui_fn s_ui_notify;
+static ie_provisioning_ui_fn s_ui_notify;
 
-void gtek_provisioning_set_ui_notify(gtek_provisioning_ui_fn fn)
+void ie_provisioning_set_ui_notify(ie_provisioning_ui_fn fn)
 {
     s_ui_notify = fn;
 }
@@ -47,11 +47,11 @@ static const ble_uuid128_t s_status_uuid =
 static uint8_t s_own_addr_type;
 static bool s_ble_started;
 static bool s_restarting;
-static char s_device_name[32] = CONFIG_GTEK_BLE_SETUP_PREFIX;
+static char s_device_name[32] = CONFIG_INNOEDGE_BLE_SETUP_PREFIX;
 static char s_status[128] = "{\"state\":\"idle\"}";
 static uint16_t s_status_val_handle;
 static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
-static gtek_device_config_t s_config;
+static ie_device_config_t s_config;
 
 static void advertise(void);
 
@@ -118,22 +118,22 @@ static esp_err_t save_optional_strings(cJSON *root)
         if (strlen(server_url) >= sizeof(s_config.server_base_url)) {
             return ESP_ERR_INVALID_SIZE;
         }
-        ESP_RETURN_ON_ERROR(gtek_config_store_save_server_base_url(server_url),
+        ESP_RETURN_ON_ERROR(ie_config_store_save_server_base_url(server_url),
                             TAG, "save server url failed");
     }
     if (ws_url[0] != '\0') {
         if (strlen(ws_url) >= sizeof(s_config.websocket_url)) {
             return ESP_ERR_INVALID_SIZE;
         }
-        ESP_RETURN_ON_ERROR(gtek_config_store_save_websocket_url(ws_url),
+        ESP_RETURN_ON_ERROR(ie_config_store_save_websocket_url(ws_url),
                             TAG, "save ws url failed");
     }
     if (token[0] != '\0') {
         if (strlen(token) >= sizeof(s_config.device_token)) {
             return ESP_ERR_INVALID_SIZE;
         }
-        ESP_RETURN_ON_ERROR(gtek_config_store_save_token(token), TAG, "save token failed");
-        ESP_RETURN_ON_ERROR(gtek_config_store_save_assigned(true), TAG, "save assigned failed");
+        ESP_RETURN_ON_ERROR(ie_config_store_save_token(token), TAG, "save token failed");
+        ESP_RETURN_ON_ERROR(ie_config_store_save_assigned(true), TAG, "save assigned failed");
     }
     return ESP_OK;
 }
@@ -172,7 +172,7 @@ static int handle_command_write(struct os_mbuf *om)
 
     ESP_LOGI(TAG, "BLE provisioning received SSID=%s", ssid);
     set_status("saving", NULL);
-    esp_err_t err = gtek_config_store_save_wifi(ssid, password);
+    esp_err_t err = ie_config_store_save_wifi(ssid, password);
     if (err == ESP_OK) {
         err = save_optional_strings(root);
     }
@@ -184,7 +184,7 @@ static int handle_command_write(struct os_mbuf *om)
     }
 
     set_status("ok", "restarting");
-    BaseType_t ok = xTaskCreate(restart_task, "gtek_ble_reboot", 3072, NULL, 5, NULL);
+    BaseType_t ok = xTaskCreate(restart_task, "ie_ble_reboot", 3072, NULL, 5, NULL);
     if (ok != pdPASS) {
         vTaskDelay(pdMS_TO_TICKS(100));
         esp_restart();
@@ -341,13 +341,13 @@ static void set_device_name(void)
     uint8_t mac[6] = {0};
     if (esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK) {
         snprintf(s_device_name, sizeof(s_device_name), "%s-%02X:%02X",
-                 CONFIG_GTEK_BLE_SETUP_PREFIX, mac[4], mac[5]);
+                 CONFIG_INNOEDGE_BLE_SETUP_PREFIX, mac[4], mac[5]);
     } else {
-        snprintf(s_device_name, sizeof(s_device_name), "%s", CONFIG_GTEK_BLE_SETUP_PREFIX);
+        snprintf(s_device_name, sizeof(s_device_name), "%s", CONFIG_INNOEDGE_BLE_SETUP_PREFIX);
     }
 }
 
-static esp_err_t start_ble(const gtek_device_config_t *config)
+static esp_err_t start_ble(const ie_device_config_t *config)
 {
     if (s_ble_started) {
         return ESP_OK;
@@ -399,13 +399,13 @@ static esp_err_t start_ble(const gtek_device_config_t *config)
     return ESP_OK;
 }
 
-esp_err_t gtek_provisioning_start(const gtek_device_config_t *config)
+esp_err_t ie_provisioning_start(const ie_device_config_t *config)
 {
     if (s_ui_notify) {
         s_ui_notify();
     }
 
-    esp_err_t ap_err = gtek_wifi_manager_start_provisioning();
+    esp_err_t ap_err = ie_wifi_manager_start_provisioning();
     if (ap_err != ESP_OK) {
         ESP_LOGW(TAG, "SoftAP provisioning failed: %s", esp_err_to_name(ap_err));
     }

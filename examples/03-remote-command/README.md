@@ -58,8 +58,8 @@ Kiểm chứng: gửi cùng `commandId` hai lần → lần hai trả
 |---|---|
 | `unknown action` | Quên `innoedge_register_command`, hoặc gõ sai tên action |
 | Lệnh chạy nhưng cloud báo timeout | Handler block quá lâu → đẩy sang task riêng |
-| Lệnh chạy hai lần | Đang gọi `gtek_command_bus_dispatch` thủ công thay vì để SDK gọi |
-| `registry đầy` | Quá 24 action — sửa `GTEK_CMD_REGISTRY_MAX` |
+| Lệnh chạy hai lần | Đang gọi `ie_command_bus_dispatch` thủ công thay vì để SDK gọi |
+| `registry đầy` | Quá 24 action — sửa `IE_CMD_REGISTRY_MAX` |
 
 ---
 
@@ -114,4 +114,4 @@ The watermark persists across sudden power cuts and reboots. If power is lost mi
 | `unknown action` | Forgot `innoedge_register_command`, or action name mismatch. |
 | Command runs but cloud reports timeout | Handler blocked the WebSocket task too long → offload to a separate FreeRTOS task. |
 | Command executes twice | Manually calling dispatcher instead of letting the SDK handle it. |
-| Registry full | Exceeded maximum number of actions — increase `GTEK_CMD_REGISTRY_MAX`. |
+| Registry full | Exceeded maximum number of actions — increase `IE_CMD_REGISTRY_MAX`. |

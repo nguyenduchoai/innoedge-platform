@@ -3,48 +3,44 @@ menu "InnoEdge SDK"
 # Các tham số HẠ TẦNG do SDK dùng. Tham số phần cứng (GPIO xu/relay/màn hình)
 # KHÔNG nằm ở đây — chúng thuộc lớp board/application, khai trong
 # main/Kconfig.projbuild của từng project.
-#
-# ponytail: tiền tố còn là GTEK_ vì các component hạ tầng đang chia sẻ với
-# firmware-gtek đang chạy trên fleet. Đổi sang INNOEDGE_ là một lần sed thuần,
-# làm khi tách repo — xem README "Việc còn lại".
 
-config GTEK_FW_VERSION
+config INNOEDGE_FW_VERSION
     string "Firmware version"
     default "0.1.0"
     help
       Gửi lên cloud trong heartbeat và dùng để so sánh khi kiểm tra OTA.
 
-config GTEK_SERVER_BASE_URL
+config INNOEDGE_SERVER_BASE_URL
     string "InnoEdge cloud base URL"
     default "https://cloud.example.com"
     help
       ĐỔI GIÁ TRỊ NÀY. Mặc định là placeholder — SDK sẽ báo lỗi rõ ràng lúc
       khởi động nếu bạn quên đổi.
 
-config GTEK_FACTORY_TOKEN
+config INNOEDGE_FACTORY_TOKEN
     string "Factory bootstrap token"
     default ""
     help
       Token tạm dùng khi máy chưa được cấp token riêng. ĐỂ RỖNG trong build
       production — token thật nạp lúc factory provisioning, không nhúng source.
 
-config GTEK_WIFI_SSID
+config INNOEDGE_WIFI_SSID
     string "Factory WiFi SSID fallback"
     default ""
 
-config GTEK_WIFI_PASSWORD
+config INNOEDGE_WIFI_PASSWORD
     string "Factory WiFi password fallback"
     default ""
 
-config GTEK_BLE_SETUP_PREFIX
+config INNOEDGE_BLE_SETUP_PREFIX
     string "BLE/SoftAP provisioning name prefix"
-    default "GTEK-Setup"
+    default "InnoEdge-Setup"
     help
       Tên máy quảng bá khi chờ cài WiFi. PHẢI khớp danh sách prefix mà app
       di động đang dò (AppRuntimeConfig.setupPrefixes) — đổi là phải đổi đồng bộ
       cả app lẫn firmware.
 
-config GTEK_PAYMENT_QUEUE_CAP
+config INNOEDGE_PAYMENT_QUEUE_CAP
     int "Persistent payment queue capacity"
     default 500
     help

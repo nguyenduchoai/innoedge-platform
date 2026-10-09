@@ -6,53 +6,53 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "gtek_fault.h"
-#include "gtek_ws_client.h"
+#include "ie_fault.h"
+#include "ie_ws_client.h"
 #include "sdkconfig.h"
 
 #ifndef CONFIG_INNOEDGE_COIN_PULSE_GPIO
-#ifdef CONFIG_GTEK_COIN_PULSE_GPIO
-#define CONFIG_INNOEDGE_COIN_PULSE_GPIO CONFIG_GTEK_COIN_PULSE_GPIO
+#ifdef CONFIG_INNOEDGE_COIN_PULSE_GPIO
+#define CONFIG_INNOEDGE_COIN_PULSE_GPIO CONFIG_INNOEDGE_COIN_PULSE_GPIO
 #else
 #define CONFIG_INNOEDGE_COIN_PULSE_GPIO -1
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_BILL_PULSE_GPIO
-#ifdef CONFIG_GTEK_BILL_PULSE_GPIO
-#define CONFIG_INNOEDGE_BILL_PULSE_GPIO CONFIG_GTEK_BILL_PULSE_GPIO
+#ifdef CONFIG_INNOEDGE_BILL_PULSE_GPIO
+#define CONFIG_INNOEDGE_BILL_PULSE_GPIO CONFIG_INNOEDGE_BILL_PULSE_GPIO
 #else
 #define CONFIG_INNOEDGE_BILL_PULSE_GPIO -1
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0
-#ifdef CONFIG_GTEK_COIN_PULSE_PCA9554_P0
-#define CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0 CONFIG_GTEK_COIN_PULSE_PCA9554_P0
+#ifdef CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0
+#define CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0 CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0
 #else
 #define CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0 0
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_PULSE_MIN_MS
-#ifdef CONFIG_GTEK_PULSE_MIN_MS
-#define CONFIG_INNOEDGE_PULSE_MIN_MS CONFIG_GTEK_PULSE_MIN_MS
+#ifdef CONFIG_INNOEDGE_PULSE_MIN_MS
+#define CONFIG_INNOEDGE_PULSE_MIN_MS CONFIG_INNOEDGE_PULSE_MIN_MS
 #else
 #define CONFIG_INNOEDGE_PULSE_MIN_MS 35
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_PULSE_GAP_MS
-#ifdef CONFIG_GTEK_PULSE_GAP_MS
-#define CONFIG_INNOEDGE_PULSE_GAP_MS CONFIG_GTEK_PULSE_GAP_MS
+#ifdef CONFIG_INNOEDGE_PULSE_GAP_MS
+#define CONFIG_INNOEDGE_PULSE_GAP_MS CONFIG_INNOEDGE_PULSE_GAP_MS
 #else
 #define CONFIG_INNOEDGE_PULSE_GAP_MS 300
 #endif
 #endif
 
 #ifndef CONFIG_INNOEDGE_BILL_VND_PER_PULSE
-#ifdef CONFIG_GTEK_BILL_VND_PER_PULSE
-#define CONFIG_INNOEDGE_BILL_VND_PER_PULSE CONFIG_GTEK_BILL_VND_PER_PULSE
+#ifdef CONFIG_INNOEDGE_BILL_VND_PER_PULSE
+#define CONFIG_INNOEDGE_BILL_VND_PER_PULSE CONFIG_INNOEDGE_BILL_VND_PER_PULSE
 #else
 #define CONFIG_INNOEDGE_BILL_VND_PER_PULSE 10000
 #endif
@@ -120,22 +120,22 @@ static void pulse_task(void *pv)
             bool active = false;
             esp_err_t err = s_expander_read(&active);
             if (err != ESP_OK) {
-                gtek_fault_set("coin_reader_fault", "critical",
+                ie_fault_set("coin_reader_fault", "critical",
                                "Khong doc duoc trang thai dau doc xu (expander loi)");
             } else {
-                gtek_fault_clear("coin_reader_fault");
+                ie_fault_clear("coin_reader_fault");
                 if (active && !prev_pca) {
                     record_pulse(INNOEDGE_PULSE_COIN, now, false);
                 }
                 if (active) {
                     if (pca_stuck_start == 0) pca_stuck_start = now;
                     else if (now - pca_stuck_start > pdMS_TO_TICKS(2000)) {
-                        gtek_fault_set("coin_acceptor_stuck", "critical",
+                        ie_fault_set("coin_acceptor_stuck", "critical",
                                        "Dau doc xu keo dai bat thuong (co the ket xu)");
                     }
                 } else {
                     pca_stuck_start = 0;
-                    gtek_fault_clear("coin_acceptor_stuck");
+                    ie_fault_clear("coin_acceptor_stuck");
                 }
                 prev_pca = active;
             }
@@ -208,7 +208,7 @@ esp_err_t innoedge_pulse_input_init(innoedge_pulse_input_cb_t cb, void *ctx)
 
 #if CONFIG_INNOEDGE_COIN_PULSE_PCA9554_P0
     if (!s_expander_read) {
-        gtek_fault_set("coin_reader_init_failed", "critical",
+        ie_fault_set("coin_reader_init_failed", "critical",
                        "Chua dang ky nguon doc xu expander - may khong nhan duoc xu");
     }
 #endif
@@ -226,7 +226,7 @@ esp_err_t innoedge_pulse_input_init(innoedge_pulse_input_cb_t cb, void *ctx)
     if (coin_gpio_enabled) {
         err = configure_input((gpio_num_t)CONFIG_INNOEDGE_COIN_PULSE_GPIO, INNOEDGE_PULSE_COIN);
         if (err != ESP_OK) {
-            gtek_fault_set("coin_reader_init_failed", "critical",
+            ie_fault_set("coin_reader_init_failed", "critical",
                            "Khoi tao dau doc xu that bai - may khong nhan duoc xu");
             return err;
         }
@@ -234,14 +234,14 @@ esp_err_t innoedge_pulse_input_init(innoedge_pulse_input_cb_t cb, void *ctx)
     if (bill_enabled) {
         err = configure_input((gpio_num_t)CONFIG_INNOEDGE_BILL_PULSE_GPIO, INNOEDGE_PULSE_BILL);
         if (err != ESP_OK) {
-            gtek_fault_set("bill_reader_init_failed", "critical",
+            ie_fault_set("bill_reader_init_failed", "critical",
                            "Khoi tao dau doc tien that bai");
             return err;
         }
     }
     BaseType_t ok = xTaskCreate(pulse_task, "ie_pulse", 4096, NULL, 6, NULL);
     if (ok != pdPASS) {
-        gtek_fault_set("coin_reader_init_failed", "critical",
+        ie_fault_set("coin_reader_init_failed", "critical",
                        "Khong tao duoc task doc xu");
         return ESP_ERR_NO_MEM;
     }

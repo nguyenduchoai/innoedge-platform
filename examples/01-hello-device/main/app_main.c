@@ -13,11 +13,11 @@
 
 static const char *TAG = "hello";
 
-// Chưa có WiFi → SDK mở BLE/SoftAP tên "GTEK-Setup-XXXX" và dừng ở đây.
+// Chưa có WiFi → SDK mở BLE/SoftAP tên "InnoEdge-Setup-XXXX" và dừng ở đây.
 // Dùng app di động để cài WiFi cho máy.
 static void on_provisioning(void)
 {
-    ESP_LOGW(TAG, "CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng GTEK-Setup");
+    ESP_LOGW(TAG, "CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng InnoEdge-Setup");
 }
 
 static void on_assigned(void)

@@ -8,19 +8,14 @@
 
 #include "innoedge.h"
 
-#include "gtek_command_bus.h"
-#include "gtek_config_client.h"
-#include "gtek_config_store.h"
-#include "gtek_ota_client.h"
-#include "gtek_payment_queue.h"
-#include "gtek_provisioning.h"
-#include "gtek_wifi_manager.h"
-#include "gtek_ws_client.h"
-#include "gtek_blackbox.h"
-#include "gtek_cluster.h"
-#include "gtek_crypto.h"
-#include "gtek_mem_pool.h"
-#include "gtek_net_failover.h"
+#include "ie_command_bus.h"
+#include "ie_config_client.h"
+#include "ie_config_store.h"
+#include "ie_ota_client.h"
+#include "ie_payment_queue.h"
+#include "ie_provisioning.h"
+#include "ie_wifi_manager.h"
+#include "ie_ws_client.h"
 #include "esp_check.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -41,7 +36,7 @@ static const char *TAG = "innoedge";
 
 #define IE_OP_CONFIG_BUF 4352 // = cap op_config (4096) + lề
 
-static gtek_device_config_t s_dev;
+static ie_device_config_t s_dev;
 static innoedge_config_t s_cfg;
 static innoedge_events_t s_ev;
 static bool s_inited;
@@ -57,17 +52,17 @@ static uint32_t heartbeat_period_ms(void)
 static const char *fw_version(void)
 {
     return (s_cfg.fw_version && s_cfg.fw_version[0]) ? s_cfg.fw_version
-                                                     : CONFIG_GTEK_FW_VERSION;
+                                                     : CONFIG_INNOEDGE_FW_VERSION;
 }
 
 static void try_send_queue_head(void)
 {
-    if (!gtek_ws_client_is_connected()) {
+    if (!ie_ws_client_is_connected()) {
         return;
     }
-    gtek_payment_event_t ev = {0};
-    if (gtek_payment_queue_peek(&ev) == ESP_OK && ev.json[0] != '\0') {
-        esp_err_t err = gtek_ws_client_send_text(ev.json);
+    ie_payment_event_t ev = {0};
+    if (ie_payment_queue_peek(&ev) == ESP_OK && ev.json[0] != '\0') {
+        esp_err_t err = ie_ws_client_send_text(ev.json);
         if (err != ESP_OK) {
             ESP_LOGW(TAG, "gửi lại seq=%llu lỗi: %s",
                      (unsigned long long)ev.seq, esp_err_to_name(err));
@@ -80,11 +75,11 @@ static void try_send_queue_head(void)
 static void on_ack(uint64_t seq, void *ctx)
 {
     (void)ctx;
-    gtek_payment_queue_ack(seq);
+    ie_payment_queue_ack(seq);
     try_send_queue_head(); // ack xong là đẩy tiếp phần tử kế → drain nhanh
 }
 
-static void on_payment_ack(const gtek_payment_ack_message_t *ack, void *ctx)
+static void on_payment_ack(const ie_payment_ack_message_t *ack, void *ctx)
 {
     (void)ctx;
     if (ack && s_ev.on_payment_ack) {
@@ -98,14 +93,14 @@ static void on_status(const char *state, void *ctx)
     (void)ctx;
     if (state && strcmp(state, "unassigned") == 0) {
         s_dev.assigned = false;
-        ESP_ERROR_CHECK_WITHOUT_ABORT(gtek_config_store_save_assigned(false));
+        ESP_ERROR_CHECK_WITHOUT_ABORT(ie_config_store_save_assigned(false));
         if (s_ev.on_unassigned) {
             s_ev.on_unassigned();
         }
     }
 }
 
-static void on_qr(const gtek_qr_message_t *qr, void *ctx)
+static void on_qr(const ie_qr_message_t *qr, void *ctx)
 {
     (void)ctx;
     if (qr && s_ev.on_qr) {
@@ -127,11 +122,11 @@ static void on_payment_paid(int64_t intent_id, int64_t amount, void *ctx)
 {
     (void)ctx;
     // Ack để cloud thôi gửi lại frame này.
-    if (intent_id > 0 && gtek_ws_client_is_connected()) {
+    if (intent_id > 0 && ie_ws_client_is_connected()) {
         char ack[64];
         snprintf(ack, sizeof(ack), "{\"type\":\"paid_ack\",\"intentId\":%lld}",
                  (long long)intent_id);
-        gtek_ws_client_send_text(ack);
+        ie_ws_client_send_text(ack);
     }
     if (s_ev.on_paid) {
         s_ev.on_paid(intent_id, amount);
@@ -144,7 +139,7 @@ static void on_static_qr(const char *payload, const char *ref_code, void *ctx)
     if (!payload || payload[0] == '\0') {
         return;
     }
-    gtek_config_store_save_static_qr(payload, ref_code);
+    ie_config_store_save_static_qr(payload, ref_code);
     snprintf(s_dev.static_qr_payload, sizeof(s_dev.static_qr_payload), "%s", payload);
     snprintf(s_dev.static_qr_ref, sizeof(s_dev.static_qr_ref), "%s",
              ref_code ? ref_code : "");
@@ -181,11 +176,11 @@ static void on_command(const char *command, const char *auth_token,
     ESP_LOGI(TAG, "lệnh nền tảng: %s", command);
     if (strcmp(command, "activation_complete") == 0) {
         if (auth_token && auth_token[0] != '\0' &&
-            gtek_config_store_save_token(auth_token) == ESP_OK) {
+            ie_config_store_save_token(auth_token) == ESP_OK) {
             snprintf(s_dev.device_token, sizeof(s_dev.device_token), "%s", auth_token);
         }
         s_dev.assigned = true;
-        ESP_ERROR_CHECK_WITHOUT_ABORT(gtek_config_store_save_assigned(true));
+        ESP_ERROR_CHECK_WITHOUT_ABORT(ie_config_store_save_assigned(true));
         if (s_ev.on_assigned) {
             s_ev.on_assigned();
         }
@@ -193,9 +188,9 @@ static void on_command(const char *command, const char *auth_token,
         vTaskDelay(pdMS_TO_TICKS(500));
         esp_restart();
     } else if (strcmp(command, "ota_check") == 0) {
-        gtek_ota_client_check_once(&s_dev, NULL);
+        ie_ota_client_check_once(&s_dev, NULL);
     } else if (strcmp(command, "ble_provision") == 0) {
-        gtek_provisioning_start(&s_dev);
+        ie_provisioning_start(&s_dev);
     }
 }
 
@@ -203,7 +198,7 @@ static void on_dynamic_command(int64_t command_id, const char *action,
                                const char *params_json, void *ctx)
 {
     (void)ctx;
-    gtek_command_bus_dispatch(command_id, action, params_json);
+    ie_command_bus_dispatch(command_id, action, params_json);
 }
 
 // ── Task nền ────────────────────────────────────────────────────────────────
@@ -213,9 +208,9 @@ static void heartbeat_task(void *arg)
     (void)arg;
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(heartbeat_period_ms()));
-        if (gtek_ws_client_is_connected()) {
-            gtek_ws_client_send_heartbeat(fw_version(), gtek_wifi_manager_rssi(),
-                                          (unsigned)gtek_payment_queue_count(),
+        if (ie_ws_client_is_connected()) {
+            ie_ws_client_send_heartbeat(fw_version(), ie_wifi_manager_rssi(),
+                                          (unsigned)ie_payment_queue_count(),
                                           (int)esp_reset_reason());
         }
     }
@@ -233,8 +228,8 @@ static void queue_sender_task(void *arg)
 static void ota_task(void *arg)
 {
     (void)arg;
-    gtek_ota_result_t res = {0};
-    if (gtek_ota_client_check_once(&s_dev, &res) == ESP_OK && res.unassigned &&
+    ie_ota_result_t res = {0};
+    if (ie_ota_client_check_once(&s_dev, &res) == ESP_OK && res.unassigned &&
         s_ev.on_unassigned) {
         s_ev.on_unassigned();
     }
@@ -245,8 +240,8 @@ static void config_task(void *arg)
 {
     (void)arg;
     int version = 0;
-    if (gtek_config_client_fetch(&s_dev, &version) != ESP_OK) {
-        version = gtek_config_store_op_config_version(); // lỗi mạng → dùng cache
+    if (ie_config_client_fetch(&s_dev, &version) != ESP_OK) {
+        version = ie_config_store_op_config_version(); // lỗi mạng → dùng cache
         ESP_LOGW(TAG, "tải cấu hình lỗi, dùng cache version=%d", version);
     }
     if (s_ev.on_config) {
@@ -268,7 +263,7 @@ static void start_online_services(void)
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_sntp_init(&sntp));
     }
 
-    gtek_ws_handlers_t handlers = {
+    ie_ws_handlers_t handlers = {
         .on_ack = on_ack,
         .on_payment_ack = on_payment_ack,
         .on_command = on_command,
@@ -281,13 +276,13 @@ static void start_online_services(void)
         .on_binary = on_binary,
         .on_frame = on_frame,
     };
-    ESP_ERROR_CHECK_WITHOUT_ABORT(gtek_ws_client_start(&s_dev, &handlers));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(ie_ws_client_start(&s_dev, &handlers));
 
     xTaskCreate(heartbeat_task, "ie_hb", 4096, NULL, 4, NULL);
     xTaskCreate(queue_sender_task, "ie_qsend", 4096, NULL, 4, NULL);
     if (!s_cfg.disable_ota) {
         // OTA chạy NỀN: mạng yếu mà tải đồng bộ = máy như treo lúc boot.
-        gtek_ota_client_set_busy_check(s_cfg.busy_check);
+        ie_ota_client_set_busy_check(s_cfg.busy_check);
         xTaskCreate(ota_task, "ie_ota", 8192, NULL, 4, NULL);
     }
     if (!s_cfg.disable_config_fetch) {
@@ -300,7 +295,7 @@ static void start_online_services(void)
 static void wifi_resume_task(void *arg)
 {
     (void)arg;
-    if (gtek_wifi_manager_wait_connected(0) == ESP_OK) {
+    if (ie_wifi_manager_wait_connected(0) == ESP_OK) {
         ESP_LOGI(TAG, "WiFi lên muộn — khởi động dịch vụ online");
         start_online_services();
     }
@@ -327,21 +322,17 @@ esp_err_t innoedge_init(const innoedge_config_t *cfg)
     ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "event loop");
     esp_netif_create_default_wifi_sta();
 
-    ESP_RETURN_ON_ERROR(gtek_config_store_load(&s_dev), TAG, "nạp cấu hình thiết bị");
-    ESP_RETURN_ON_ERROR(gtek_payment_queue_init(), TAG, "hàng đợi giao dịch");
-    ESP_RETURN_ON_ERROR(gtek_command_bus_init(), TAG, "command bus");
-    gtek_blackbox_init();
-    gtek_mem_pool_init();
-    gtek_net_failover_init();
-    gtek_cluster_init(INNOEDGE_CLUSTER_STANDALONE);
+    ESP_RETURN_ON_ERROR(ie_config_store_load(&s_dev), TAG, "nạp cấu hình thiết bị");
+    ESP_RETURN_ON_ERROR(ie_payment_queue_init(), TAG, "hàng đợi giao dịch");
+    ESP_RETURN_ON_ERROR(ie_command_bus_init(), TAG, "command bus");
     if (s_ev.on_provisioning) {
-        gtek_provisioning_set_ui_notify(s_ev.on_provisioning);
+        ie_provisioning_set_ui_notify(s_ev.on_provisioning);
     }
 
     // Quên đổi cloud URL là lỗi first-run phổ biến nhất. Nói thẳng thay vì để
     // dev ngồi đoán tại sao WebSocket không bao giờ kết nối.
     if (strstr(s_dev.server_base_url, "example.com") != NULL) {
-        ESP_LOGE(TAG, "CONFIG_GTEK_SERVER_BASE_URL vẫn là placeholder (%s).",
+        ESP_LOGE(TAG, "CONFIG_INNOEDGE_SERVER_BASE_URL vẫn là placeholder (%s).",
                  s_dev.server_base_url);
         ESP_LOGE(TAG, "Sửa: idf.py menuconfig → InnoEdge SDK → cloud base URL");
         return ESP_ERR_INVALID_STATE;
@@ -360,15 +351,15 @@ esp_err_t innoedge_start(void)
     }
     if (!s_dev.provisioned) {
         ESP_LOGI(TAG, "chưa có WiFi — mở provisioning");
-        return gtek_provisioning_start(&s_dev);
+        return ie_provisioning_start(&s_dev);
     }
 
-    esp_err_t err = gtek_wifi_manager_start(&s_dev);
+    esp_err_t err = ie_wifi_manager_start(&s_dev);
     if (err != ESP_OK) {
         // WiFi ĐÃ lưu nhưng chưa lên kịp: mở provisioning làm lưới đỡ (đổi WiFi
         // vẫn được) VÀ chờ nền — driver tự retry, có mạng là dịch vụ tự chạy.
         ESP_LOGW(TAG, "WiFi chưa lên (%s) — chờ nền", esp_err_to_name(err));
-        gtek_provisioning_start(&s_dev);
+        ie_provisioning_start(&s_dev);
         xTaskCreate(wifi_resume_task, "ie_wifiwait", 8192, NULL, 4, NULL);
         return ESP_OK;
     }
@@ -377,10 +368,10 @@ esp_err_t innoedge_start(void)
     return ESP_OK;
 }
 
-bool innoedge_is_online(void) { return gtek_ws_client_is_connected(); }
+bool innoedge_is_online(void) { return ie_ws_client_is_connected(); }
 bool innoedge_is_assigned(void) { return s_dev.assigned; }
 const char *innoedge_device_id(void) { return s_dev.device_id; }
-uint32_t innoedge_queue_depth(void) { return gtek_payment_queue_count(); }
+uint32_t innoedge_queue_depth(void) { return ie_payment_queue_count(); }
 
 esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
                                    int64_t amount_vnd)
@@ -389,7 +380,7 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
         return ESP_ERR_INVALID_STATE;
     }
     uint64_t seq = 0;
-    esp_err_t err = gtek_config_store_next_seq(&seq);
+    esp_err_t err = ie_config_store_next_seq(&seq);
     if (err != ESP_OK) {
         // Không cấp được seq = tiền đã thu mà không ghi nhận được → phải báo.
         innoedge_alert("seq_alloc_failed", "critical",
@@ -426,7 +417,7 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
     }
 
     bool dropped = false;
-    err = gtek_payment_queue_append(seq, json, &dropped);
+    err = ie_payment_queue_append(seq, json, &dropped);
     if (err != ESP_OK) {
         innoedge_alert("payment_enqueue_failed", "critical",
                        "Khong luu duoc giao dich da thu - co the mat tien", true);
@@ -437,7 +428,7 @@ esp_err_t innoedge_publish_payment(innoedge_payment_kind_t kind, int count,
         innoedge_alert("payment_queue_overflow_drop", "critical",
                        "Hang doi day - mot giao dich da thu bi mat", true);
     }
-    if (gtek_payment_queue_count() >= (uint32_t)(CONFIG_GTEK_PAYMENT_QUEUE_CAP * 8 / 10)) {
+    if (ie_payment_queue_count() >= (uint32_t)(CONFIG_INNOEDGE_PAYMENT_QUEUE_CAP * 8 / 10)) {
         innoedge_alert("payment_queue_backlog_high", "warning",
                        "Nhieu giao dich chua gui duoc len server", true);
     }
@@ -475,7 +466,7 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
         return ESP_ERR_INVALID_ARG;
     }
     uint64_t seq = 0;
-    esp_err_t err = gtek_config_store_next_seq(&seq);
+    esp_err_t err = ie_config_store_next_seq(&seq);
     if (err != ESP_OK) {
         return err;
     }
@@ -488,7 +479,7 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
         return ESP_ERR_INVALID_SIZE;
     }
     bool dropped = false;
-    err = gtek_payment_queue_append(seq, json, &dropped);
+    err = ie_payment_queue_append(seq, json, &dropped);
     if (err != ESP_OK) {
         return err;
     }
@@ -502,44 +493,44 @@ esp_err_t innoedge_publish_event(const char *name, const char *data_json)
 
 esp_err_t innoedge_send_binary(const uint8_t *data, size_t len)
 {
-    return gtek_ws_client_send_binary(data, len);
+    return ie_ws_client_send_binary(data, len);
 }
 
 esp_err_t innoedge_alert(const char *code, const char *severity,
                          const char *message, bool active)
 {
-    return gtek_ws_send_alert(code, severity, message, active);
+    return ie_ws_send_alert(code, severity, message, active);
 }
 
 esp_err_t innoedge_register_command(const char *action, innoedge_command_fn fn)
 {
-    return gtek_command_bus_register(action, fn);
+    return ie_command_bus_register(action, fn);
 }
 
 void innoedge_reboot_after_ack(void)
 {
-    gtek_command_bus_request_reboot();
+    ie_command_bus_request_reboot();
 }
 
 esp_err_t innoedge_request_qr(int64_t amount_vnd)
 {
-    if (!s_dev.assigned || !gtek_ws_client_is_connected()) {
+    if (!s_dev.assigned || !ie_ws_client_is_connected()) {
         return ESP_ERR_INVALID_STATE;
     }
     uint64_t seq = 0;
-    ESP_RETURN_ON_ERROR(gtek_config_store_next_seq(&seq), TAG, "cấp seq QR");
-    return gtek_ws_client_request_qr(seq, amount_vnd);
+    ESP_RETURN_ON_ERROR(ie_config_store_next_seq(&seq), TAG, "cấp seq QR");
+    return ie_ws_client_request_qr(seq, amount_vnd);
 }
 
 esp_err_t innoedge_config_json(char *out, size_t out_len, int *version)
 {
-    return gtek_config_store_get_op_config(out, out_len, version);
+    return ie_config_store_get_op_config(out, out_len, version);
 }
 
 esp_err_t innoedge_config_reload(void)
 {
     int version = 0;
-    esp_err_t err = gtek_config_client_fetch(&s_dev, &version);
+    esp_err_t err = ie_config_client_fetch(&s_dev, &version);
     if (err == ESP_OK && s_ev.on_config) {
         s_ev.on_config(version);
     }
@@ -548,47 +539,5 @@ esp_err_t innoedge_config_reload(void)
 
 esp_err_t innoedge_ota_check(void)
 {
-    return gtek_ota_client_check_once(&s_dev, NULL);
+    return ie_ota_client_check_once(&s_dev, NULL);
 }
-
-// ── Enterprise Resiliency & Diagnostics ────────────────────────────────────
-
-esp_err_t innoedge_blackbox_record(const char *tag, const char *details)
-{
-    gtek_blackbox_record_breadcrumb(tag, details);
-    return ESP_OK;
-}
-
-esp_err_t innoedge_blackbox_get_report(char *out, size_t out_len)
-{
-    return gtek_blackbox_format_report(out, out_len);
-}
-
-innoedge_net_interface_t innoedge_net_active_interface(void)
-{
-    return gtek_net_failover_get_active();
-}
-
-esp_err_t innoedge_net_report_link(innoedge_net_interface_t iface, bool is_up)
-{
-    gtek_net_failover_report_link(iface, is_up);
-    return ESP_OK;
-}
-
-esp_err_t innoedge_cluster_init(innoedge_cluster_role_t role)
-{
-    return gtek_cluster_init(role);
-}
-
-esp_err_t innoedge_crypto_sign_tx(uint32_t seq, int kind, int count,
-                                  int64_t amount_vnd, char *tac_out, size_t out_len)
-{
-    return gtek_crypto_sign_transaction(s_dev.device_id, seq, kind, count, amount_vnd, tac_out, out_len);
-}
-
-bool innoedge_crypto_verify_tx(uint32_t seq, int kind, int count,
-                               int64_t amount_vnd, const char *expected_tac)
-{
-    return gtek_crypto_verify_transaction(s_dev.device_id, seq, kind, count, amount_vnd, expected_tac);
-}
-

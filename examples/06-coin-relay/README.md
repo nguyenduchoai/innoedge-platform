@@ -45,7 +45,7 @@ I (30400) coinop: da nha 2 xung
 **1. Firmware KHÔNG tự nhân giá.** Gửi **số xu**, để cloud quy đổi. Mỗi đối tác
 một đơn giá, đổi được từ app — nhét giá vào firmware là phải flash lại cả fleet.
 
-**2. Luôn có trần an toàn.** `GTEK_DISPENSE_MAX_PULSES` chặn một `params` sai
+**2. Luôn có trần an toàn.** `IE_DISPENSE_MAX_PULSES` chặn một `params` sai
 biến thành lệnh nhả sạch hopper.
 
 **3. Dựa vào chống-trùng của SDK, đừng tự làm.** Cloud gửi lại `dispense` sau khi
@@ -58,8 +58,8 @@ reboot sẽ bị chặn. Đây là lỗi từng làm máy nhả tiền hai lần
 
 | Tham số | Ý nghĩa | Chỉnh khi |
 |---|---|---|
-| `GTEK_PULSE_MIN_MS` (35) | xung hẹp hơn = nhiễu, bỏ | đếm dư → tăng |
-| `GTEK_PULSE_GAP_MS` (300) | im lặng bấy nhiêu = hết chuỗi | 5 xu thành 2 lần 2+3 → tăng |
+| `IE_PULSE_MIN_MS` (35) | xung hẹp hơn = nhiễu, bỏ | đếm dư → tăng |
+| `IE_PULSE_GAP_MS` (300) | im lặng bấy nhiêu = hết chuỗi | 5 xu thành 2 lần 2+3 → tăng |
 
 Không có con số đúng cho mọi đầu đọc — phải đo trên máy thật.
 
@@ -116,7 +116,7 @@ I (30400) coinop: Dispensed 2 pulses to relay
 ## Three Golden Rules of Monetized Hardware
 
 1. **Firmware NEVER multiplies prices.** Send **raw coin counts** to the cloud; let the cloud compute fiat currency. Different operators set different pricing in their mobile apps — hardcoding prices into firmware requires re-flashing your entire fleet whenever prices change.
-2. **Always enforce hardware safety ceilings.** `GTEK_DISPENSE_MAX_PULSES` prevents a malicious or buggy cloud payload from emptying your entire hopper.
+2. **Always enforce hardware safety ceilings.** `IE_DISPENSE_MAX_PULSES` prevents a malicious or buggy cloud payload from emptying your entire hopper.
 3. **Rely on SDK idempotency.** The SDK saves the high-watermark `commandId` **in NVS before** firing the relay. Sudden power loss during dispensing will safely reject duplicate retries upon reboot.
 
 ## Hardware Pulse Debounce
@@ -124,5 +124,5 @@ Mechanical coin acceptors produce noisy electrical pulses. Adjust these two para
 
 | Parameter | Meaning | Adjustment Rule |
 |---|---|---|
-| `GTEK_PULSE_MIN_MS` (35ms) | Shorter pulses are ignored as noise | If phantom coins are counted → increase |
-| `GTEK_PULSE_GAP_MS` (300ms) | Silence duration marking the end of a coin burst | If 5 coins register as 2 + 3 → increase |
+| `IE_PULSE_MIN_MS` (35ms) | Shorter pulses are ignored as noise | If phantom coins are counted → increase |
+| `IE_PULSE_GAP_MS` (300ms) | Silence duration marking the end of a coin burst | If 5 coins register as 2 + 3 → increase |

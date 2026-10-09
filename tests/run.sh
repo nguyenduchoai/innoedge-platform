@@ -7,7 +7,7 @@ C=../components
 echo "▸ command bus (registry + chống trùng lệnh)"
 cc -std=c11 -Wall -Wextra -Werror -O1 \
    -I stubs -I "$C/innoedge/src" \
-   test_command_bus.c "$C/innoedge/src/gtek_command_bus.c" \
+   test_command_bus.c "$C/innoedge/src/ie_command_bus.c" \
    -o /tmp/ie_test_command_bus
 /tmp/ie_test_command_bus
 
@@ -19,18 +19,6 @@ cc -std=c11 -Wall -Wextra -Werror -O1 \
    ../components-hw/innoedge_hw/src/innoedge_modbus.c \
    -o /tmp/ie_test_industrial
 /tmp/ie_test_industrial
-
-echo "▸ core resilience (blackbox + mem pool + failover + cluster + crypto)"
-cc -std=c11 -Wall -Wextra -Werror -O1 \
-   -I stubs -I "$C/innoedge/include" -I "$C/innoedge/src" \
-   test_core_resilience.c \
-   "$C/innoedge/src/gtek_blackbox.c" \
-   "$C/innoedge/src/gtek_mem_pool.c" \
-   "$C/innoedge/src/gtek_net_failover.c" \
-   "$C/innoedge/src/gtek_cluster.c" \
-   "$C/innoedge/src/gtek_crypto.c" \
-   -o /tmp/ie_test_core_resilience
-/tmp/ie_test_core_resilience
 
 if command -v c++ >/dev/null 2>&1; then
     echo "▸ arduino C++ wrapper"

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_payment_queue.h"
+#include "ie_payment_queue.h"
 
 #include "cJSON.h"
 #include "esp_log.h"
@@ -9,7 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *TAG = "gtek.payq";
+static const char *TAG = "ie.payq";
+// ponytail: giữ tên namespace cũ — đổi là bỏ rơi giao dịch tồn trên bo đã flash.
 static const char *NVS_NS = "gtek_payq";
 
 static uint32_t s_head;
@@ -17,7 +18,7 @@ static uint32_t s_count;
 
 static uint32_t queue_cap(void)
 {
-    uint32_t cap = CONFIG_GTEK_PAYMENT_QUEUE_CAP;
+    uint32_t cap = CONFIG_INNOEDGE_PAYMENT_QUEUE_CAP;
     if (cap == 0 || cap > 999) {
         cap = 500;
     }
@@ -65,7 +66,7 @@ static uint64_t parse_seq(const char *json)
     return seq;
 }
 
-esp_err_t gtek_payment_queue_init(void)
+esp_err_t ie_payment_queue_init(void)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -83,7 +84,7 @@ esp_err_t gtek_payment_queue_init(void)
     return err;
 }
 
-esp_err_t gtek_payment_queue_append(uint64_t seq, const char *json, bool *out_dropped)
+esp_err_t ie_payment_queue_append(uint64_t seq, const char *json, bool *out_dropped)
 {
     if (out_dropped) {
         *out_dropped = false;
@@ -133,7 +134,7 @@ esp_err_t gtek_payment_queue_append(uint64_t seq, const char *json, bool *out_dr
     return err;
 }
 
-esp_err_t gtek_payment_queue_peek(gtek_payment_event_t *event)
+esp_err_t ie_payment_queue_peek(ie_payment_event_t *event)
 {
     if (!event) {
         return ESP_ERR_INVALID_ARG;
@@ -160,7 +161,7 @@ esp_err_t gtek_payment_queue_peek(gtek_payment_event_t *event)
     return err;
 }
 
-esp_err_t gtek_payment_queue_ack(uint64_t seq)
+esp_err_t ie_payment_queue_ack(uint64_t seq)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -194,7 +195,7 @@ esp_err_t gtek_payment_queue_ack(uint64_t seq)
     return err;
 }
 
-uint32_t gtek_payment_queue_count(void)
+uint32_t ie_payment_queue_count(void)
 {
     return s_count;
 }

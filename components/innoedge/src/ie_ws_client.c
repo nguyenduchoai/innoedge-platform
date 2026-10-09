@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_ws_client.h"
+#include "ie_ws_client.h"
 
 #include "cJSON.h"
-#include "gtek_ota_client.h"
+#include "ie_ota_client.h"
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -15,22 +15,22 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *TAG = "gtek.ws";
+static const char *TAG = "ie.ws";
 static esp_websocket_client_handle_t s_client;
 static bool s_connected;
 static SemaphoreHandle_t s_send_lock;
-static gtek_ws_handlers_t s_handlers;
-static gtek_device_config_t s_config;
+static ie_ws_handlers_t s_handlers;
+static ie_device_config_t s_config;
 static char s_headers[512];
 static char s_ws_url[192];
 
-static void build_ws_url(const gtek_device_config_t *config, char *out, size_t out_len)
+static void build_ws_url(const ie_device_config_t *config, char *out, size_t out_len)
 {
     if (config->websocket_url[0] != '\0') {
         snprintf(out, out_len, "%s", config->websocket_url);
         return;
     }
-    const char *base = config->server_base_url[0] ? config->server_base_url : CONFIG_GTEK_SERVER_BASE_URL;
+    const char *base = config->server_base_url[0] ? config->server_base_url : CONFIG_INNOEDGE_SERVER_BASE_URL;
     const char *scheme = "wss://";
     const char *host = base;
     if (strncmp(base, "https://", 8) == 0) {
@@ -61,7 +61,7 @@ static esp_err_t send_binary_locked(const uint8_t *data, size_t len)
     return sent > 0 ? ESP_OK : ESP_FAIL;
 }
 
-esp_err_t gtek_ws_client_send_binary(const uint8_t *data, size_t len)
+esp_err_t ie_ws_client_send_binary(const uint8_t *data, size_t len)
 {
     if (!data || len == 0) {
         return ESP_ERR_INVALID_ARG;
@@ -91,7 +91,7 @@ static void send_hello(void)
              "{\"type\":\"hello\",\"transport\":\"websocket\","
              "\"firmware\":\"%s\",\"local_ip\":\"0.0.0.0\","
              "\"features\":{\"payments\":true,\"qr\":true,\"heartbeat\":true}}",
-             CONFIG_GTEK_FW_VERSION);
+             CONFIG_INNOEDGE_FW_VERSION);
     (void)send_locked(msg);
 }
 
@@ -153,7 +153,7 @@ static void handle_text(const char *data, int len)
             s_handlers.on_ack(seq, s_handlers.ctx);
         }
         if (seq > 0 && s_handlers.on_payment_ack) {
-            gtek_payment_ack_message_t ack = {
+            ie_payment_ack_message_t ack = {
                 .seq = seq,
                 .coins = (int)json_i64(root, "coins"),
                 .amount_vnd = json_i64(root, "amountVND"),
@@ -200,7 +200,7 @@ static void handle_text(const char *data, int len)
             s_handlers.on_status(state, s_handlers.ctx);
         }
     } else if (strcmp(type, "qr") == 0) {
-        gtek_qr_message_t qr = {0};
+        ie_qr_message_t qr = {0};
         qr.seq = json_u64(root, "seq");
         qr.intent_id = json_i64(root, "intentId");
         qr.amount = json_i64(root, "amount");
@@ -243,7 +243,7 @@ static void on_ws_event(void *handler_args, esp_event_base_t base, int32_t id, v
         // Kết nối WS thành công = firmware vừa OTA chạy KHỎE → xác nhận hợp lệ +
         // huỷ rollback. Bản OTA lỗi (không bao giờ tới đây) sẽ bị bootloader tự
         // rollback về slot cũ ở lần reboot — chống brick máy ngoài hiện trường.
-        gtek_ota_mark_valid();
+        ie_ota_mark_valid();
         vTaskDelay(pdMS_TO_TICKS(200));
         send_hello();
         break;
@@ -267,8 +267,8 @@ static void on_ws_event(void *handler_args, esp_event_base_t base, int32_t id, v
     }
 }
 
-esp_err_t gtek_ws_client_start(const gtek_device_config_t *config,
-                               const gtek_ws_handlers_t *handlers)
+esp_err_t ie_ws_client_start(const ie_device_config_t *config,
+                               const ie_ws_handlers_t *handlers)
 {
     if (!config) {
         return ESP_ERR_INVALID_ARG;
@@ -297,12 +297,12 @@ esp_err_t gtek_ws_client_start(const gtek_device_config_t *config,
     if (config->device_token[0] != '\0') {
         snprintf(s_headers, sizeof(s_headers),
                  "Authorization: Bearer %s\r\nDevice-Id: %s\r\nClient-Id: %s\r\n"
-                 "User-Agent: gtek-fw/%s\r\n",
-                 config->device_token, config->device_id, config->client_id, CONFIG_GTEK_FW_VERSION);
+                 "User-Agent: innoedge-fw/%s\r\n",
+                 config->device_token, config->device_id, config->client_id, CONFIG_INNOEDGE_FW_VERSION);
     } else {
         snprintf(s_headers, sizeof(s_headers),
-                 "Device-Id: %s\r\nClient-Id: %s\r\nUser-Agent: gtek-fw/%s\r\n",
-                 config->device_id, config->client_id, CONFIG_GTEK_FW_VERSION);
+                 "Device-Id: %s\r\nClient-Id: %s\r\nUser-Agent: innoedge-fw/%s\r\n",
+                 config->device_id, config->client_id, CONFIG_INNOEDGE_FW_VERSION);
     }
 
     esp_websocket_client_config_t ws_cfg = {
@@ -331,7 +331,7 @@ esp_err_t gtek_ws_client_start(const gtek_device_config_t *config,
     return err;
 }
 
-esp_err_t gtek_ws_client_stop(void)
+esp_err_t ie_ws_client_stop(void)
 {
     if (!s_client) {
         return ESP_OK;
@@ -343,12 +343,12 @@ esp_err_t gtek_ws_client_stop(void)
     return err;
 }
 
-bool gtek_ws_client_is_connected(void)
+bool ie_ws_client_is_connected(void)
 {
     return s_connected && s_client && esp_websocket_client_is_connected(s_client);
 }
 
-esp_err_t gtek_ws_client_send_text(const char *text)
+esp_err_t ie_ws_client_send_text(const char *text)
 {
     if (!text) {
         return ESP_ERR_INVALID_ARG;
@@ -356,7 +356,7 @@ esp_err_t gtek_ws_client_send_text(const char *text)
     return send_locked(text);
 }
 
-esp_err_t gtek_ws_client_send_heartbeat(const char *fw_version, int rssi,
+esp_err_t ie_ws_client_send_heartbeat(const char *fw_version, int rssi,
                                         unsigned queue_depth, int reset_reason)
 {
     char msg[320];
@@ -364,7 +364,7 @@ esp_err_t gtek_ws_client_send_heartbeat(const char *fw_version, int rssi,
              "{\"type\":\"heartbeat\",\"fw_version\":\"%s\","
              "\"uptime_sec\":%lld,\"rssi\":%d,\"heap_internal_free\":%u,"
              "\"heap_internal_min\":%u,\"queue_depth\":%u,\"reset_reason\":%d}",
-             fw_version ? fw_version : CONFIG_GTEK_FW_VERSION,
+             fw_version ? fw_version : CONFIG_INNOEDGE_FW_VERSION,
              (long long)(esp_timer_get_time() / 1000000LL), rssi,
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
@@ -372,7 +372,7 @@ esp_err_t gtek_ws_client_send_heartbeat(const char *fw_version, int rssi,
     return send_locked(msg);
 }
 
-esp_err_t gtek_ws_client_request_qr(uint64_t seq, int64_t amount)
+esp_err_t ie_ws_client_request_qr(uint64_t seq, int64_t amount)
 {
     char msg[128];
     snprintf(msg, sizeof(msg), "{\"type\":\"qr_request\",\"amount\":%lld,\"seq\":%llu}",
@@ -380,7 +380,7 @@ esp_err_t gtek_ws_client_request_qr(uint64_t seq, int64_t amount)
     return send_locked(msg);
 }
 
-esp_err_t gtek_ws_client_send_command_ack(int64_t command_id, const char *status,
+esp_err_t ie_ws_client_send_command_ack(int64_t command_id, const char *status,
                                           const char *message, const char *result_json)
 {
     cJSON *root = cJSON_CreateObject();
@@ -410,7 +410,7 @@ esp_err_t gtek_ws_client_send_command_ack(int64_t command_id, const char *status
     return err;
 }
 
-esp_err_t gtek_ws_send_alert(const char *code, const char *severity,
+esp_err_t ie_ws_send_alert(const char *code, const char *severity,
                              const char *message, bool active)
 {
     if (!code || code[0] == '\0') {

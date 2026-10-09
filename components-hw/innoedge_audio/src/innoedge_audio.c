@@ -4,7 +4,7 @@
 #include "innoedge_audio.h"
 
 #include "innoedge.h"
-#include "gtek_ws_client.h" // API nội bộ SDK — driver mẫu được phép, app thì không
+#include "ie_ws_client.h" // API nội bộ SDK — driver mẫu được phép, app thì không
 #include "cJSON.h"
 #include "driver/i2s_std.h"
 #include "esp_check.h"
@@ -129,7 +129,7 @@ static void capture_task(void *arg)
     // thì cloud nhận start→start→stop và bỏ cả câu nói thứ hai.
     if (s_listen_gen == my_gen) {
         s_listening = false;
-        gtek_ws_client_send_text("{\"type\":\"listen\",\"state\":\"stop\"}");
+        ie_ws_client_send_text("{\"type\":\"listen\",\"state\":\"stop\"}");
         ESP_LOGI(TAG, "listen stop");
         s_capture_task = NULL;
     }
@@ -155,7 +155,7 @@ esp_err_t innoedge_audio_listen_start(void)
     // Phiên thu mới. Task của phiên trước (nếu còn đang thoát) sẽ thấy gen đổi
     // và KHÔNG gửi stop nữa — cloud chỉ thấy đúng một start cho phiên này.
     s_listen_gen++;
-    esp_err_t err = gtek_ws_client_send_text(
+    esp_err_t err = ie_ws_client_send_text(
         "{\"type\":\"listen\",\"state\":\"start\",\"format\":\"pcm16\",\"rate\":16000}");
     if (err != ESP_OK) {
         return err;

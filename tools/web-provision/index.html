@@ -322,7 +322,7 @@
   </div>
 
   <script>
-    // UUIDs từ innoedge-sdk-esp32/components/innoedge/src/gtek_provisioning.c
+    // UUIDs từ innoedge-sdk-esp32/components/innoedge/src/ie_provisioning.c
     const SERVICE_UUID = '2f234454-cf6d-4a0f-adf2-f4911ba9ffa6';
     const COMMAND_UUID = '2f234455-cf6d-4a0f-adf2-f4911ba9ffa6';
     const STATUS_UUID  = '2f234456-cf6d-4a0f-adf2-f4911ba9ffa6';
@@ -366,11 +366,11 @@
       }
       try {
         setStatus('Đang quét tìm thiết bị BLE...', 'connecting');
-        log('Bắt đầu quét BLE: tìm thiết bị có tiền tố GTEK-Setup hoặc InnoEdge...', 'info');
+        log('Bắt đầu quét BLE: tìm thiết bị có tiền tố InnoEdge-Setup hoặc InnoEdge...', 'info');
 
         bluetoothDevice = await navigator.bluetooth.requestDevice({
           filters: [
-            { namePrefix: 'GTEK-Setup' },
+            { namePrefix: 'InnoEdge-Setup' },
             { namePrefix: 'InnoEdge' },
             { services: [SERVICE_UUID] }
           ],

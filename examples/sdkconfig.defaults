@@ -30,10 +30,10 @@ CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=256
 
 # ── ĐỔI DÒNG NÀY CHO HỆ CỦA BẠN ─────────────────────────────────────────────
 # Placeholder — SDK báo lỗi lúc khởi động nếu chưa đổi.
-CONFIG_GTEK_SERVER_BASE_URL="https://cloud.example.com"
-CONFIG_GTEK_FW_VERSION="0.1.0"
+CONFIG_INNOEDGE_SERVER_BASE_URL="https://cloud.example.com"
+CONFIG_INNOEDGE_FW_VERSION="0.1.0"
 
 # Lớp học / bàn thử: điền WiFi ở đây là máy bỏ qua bước provisioning, lên mạng
 # ngay sau khi flash. ĐỂ RỖNG khi build sản phẩm thật.
-# CONFIG_GTEK_WIFI_SSID="TenWiFi"
-# CONFIG_GTEK_WIFI_PASSWORD="matkhau"
+# CONFIG_INNOEDGE_WIFI_SSID="TenWiFi"
+# CONFIG_INNOEDGE_WIFI_PASSWORD="matkhau"

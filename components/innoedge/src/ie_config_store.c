@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_config_store.h"
+#include "ie_config_store.h"
 
 #include "esp_log.h"
 #include "esp_mac.h"
@@ -11,7 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "gtek.config";
+static const char *TAG = "ie.config";
+// ponytail: tên namespace NVS giữ nguyên từ bản đầu — đổi là mồ côi WiFi/token
+// trên mọi bo đã flash. Người dùng không bao giờ thấy chuỗi này.
 static const char *NVS_NS = "gtek_cfg";
 
 static void copy_str(char *dst, size_t dst_len, const char *src)
@@ -67,20 +69,20 @@ static void make_uuid(char out[40])
              b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
 }
 
-static void set_defaults(gtek_device_config_t *config)
+static void set_defaults(ie_device_config_t *config)
 {
     memset(config, 0, sizeof(*config));
     mac_to_device_id(config->device_id);
     make_uuid(config->client_id);
     copy_str(config->device_name, sizeof(config->device_name), "G-TEK Terminal");
-    copy_str(config->server_base_url, sizeof(config->server_base_url), CONFIG_GTEK_SERVER_BASE_URL);
-    copy_str(config->device_token, sizeof(config->device_token), CONFIG_GTEK_FACTORY_TOKEN);
-    copy_str(config->wifi_ssid, sizeof(config->wifi_ssid), CONFIG_GTEK_WIFI_SSID);
-    copy_str(config->wifi_password, sizeof(config->wifi_password), CONFIG_GTEK_WIFI_PASSWORD);
+    copy_str(config->server_base_url, sizeof(config->server_base_url), CONFIG_INNOEDGE_SERVER_BASE_URL);
+    copy_str(config->device_token, sizeof(config->device_token), CONFIG_INNOEDGE_FACTORY_TOKEN);
+    copy_str(config->wifi_ssid, sizeof(config->wifi_ssid), CONFIG_INNOEDGE_WIFI_SSID);
+    copy_str(config->wifi_password, sizeof(config->wifi_password), CONFIG_INNOEDGE_WIFI_PASSWORD);
     config->provisioned = config->wifi_ssid[0] != '\0';
 }
 
-esp_err_t gtek_config_store_load(gtek_device_config_t *config)
+esp_err_t ie_config_store_load(ie_device_config_t *config)
 {
     if (!config) {
         return ESP_ERR_INVALID_ARG;
@@ -137,7 +139,7 @@ esp_err_t gtek_config_store_load(gtek_device_config_t *config)
     return err;
 }
 
-esp_err_t gtek_config_store_save_wifi(const char *ssid, const char *password)
+esp_err_t ie_config_store_save_wifi(const char *ssid, const char *password)
 {
     if (!ssid || ssid[0] == '\0' || strlen(ssid) >= 33) {
         return ESP_ERR_INVALID_ARG;
@@ -162,27 +164,27 @@ esp_err_t gtek_config_store_save_wifi(const char *ssid, const char *password)
     return err;
 }
 
-esp_err_t gtek_config_store_save_device_name(const char *name)
+esp_err_t ie_config_store_save_device_name(const char *name)
 {
     return write_string("name", name);
 }
 
-esp_err_t gtek_config_store_save_server_base_url(const char *url)
+esp_err_t ie_config_store_save_server_base_url(const char *url)
 {
     return write_string("server_url", url);
 }
 
-esp_err_t gtek_config_store_save_token(const char *token)
+esp_err_t ie_config_store_save_token(const char *token)
 {
     return write_string("dev_token", token);
 }
 
-esp_err_t gtek_config_store_save_websocket_url(const char *url)
+esp_err_t ie_config_store_save_websocket_url(const char *url)
 {
     return write_string("ws_url", url);
 }
 
-esp_err_t gtek_config_store_save_static_qr(const char *payload, const char *ref_code)
+esp_err_t ie_config_store_save_static_qr(const char *payload, const char *ref_code)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -200,7 +202,7 @@ esp_err_t gtek_config_store_save_static_qr(const char *payload, const char *ref_
     return err;
 }
 
-esp_err_t gtek_config_store_save_assigned(bool assigned)
+esp_err_t ie_config_store_save_assigned(bool assigned)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -215,7 +217,7 @@ esp_err_t gtek_config_store_save_assigned(bool assigned)
     return err;
 }
 
-esp_err_t gtek_config_store_next_seq(uint64_t *seq)
+esp_err_t ie_config_store_next_seq(uint64_t *seq)
 {
     if (!seq) {
         return ESP_ERR_INVALID_ARG;
@@ -239,7 +241,7 @@ esp_err_t gtek_config_store_next_seq(uint64_t *seq)
     return err;
 }
 
-esp_err_t gtek_config_store_save_last_paid_intent(int64_t intent_id)
+esp_err_t ie_config_store_save_last_paid_intent(int64_t intent_id)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -254,7 +256,7 @@ esp_err_t gtek_config_store_save_last_paid_intent(int64_t intent_id)
     return err;
 }
 
-int64_t gtek_config_store_last_paid_intent(void)
+int64_t ie_config_store_last_paid_intent(void)
 {
     nvs_handle_t nvs;
     if (nvs_open(NVS_NS, NVS_READONLY, &nvs) != ESP_OK) {
@@ -266,7 +268,7 @@ int64_t gtek_config_store_last_paid_intent(void)
     return v;
 }
 
-esp_err_t gtek_config_store_save_last_command_id(int64_t command_id)
+esp_err_t ie_config_store_save_last_command_id(int64_t command_id)
 {
     nvs_handle_t nvs;
     esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &nvs);
@@ -281,7 +283,7 @@ esp_err_t gtek_config_store_save_last_command_id(int64_t command_id)
     return err;
 }
 
-int64_t gtek_config_store_last_command_id(void)
+int64_t ie_config_store_last_command_id(void)
 {
     nvs_handle_t nvs;
     if (nvs_open(NVS_NS, NVS_READONLY, &nvs) != ESP_OK) {
@@ -294,7 +296,7 @@ int64_t gtek_config_store_last_command_id(void)
 }
 
 // Cấu hình vận hành lưu dạng blob (có thể lớn hơn giới hạn chuỗi NVS).
-esp_err_t gtek_config_store_set_op_config(const char *json, int version)
+esp_err_t ie_config_store_set_op_config(const char *json, int version)
 {
     if (!json) {
         json = "";
@@ -319,7 +321,7 @@ esp_err_t gtek_config_store_set_op_config(const char *json, int version)
     return err;
 }
 
-esp_err_t gtek_config_store_get_op_config(char *json, size_t json_len, int *version)
+esp_err_t ie_config_store_get_op_config(char *json, size_t json_len, int *version)
 {
     if (version) {
         *version = 0;
@@ -369,9 +371,9 @@ esp_err_t gtek_config_store_get_op_config(char *json, size_t json_len, int *vers
     return err;
 }
 
-int gtek_config_store_op_config_version(void)
+int ie_config_store_op_config_version(void)
 {
     int v = 0;
-    gtek_config_store_get_op_config(NULL, 0, &v);
+    ie_config_store_get_op_config(NULL, 0, &v);
     return v;
 }

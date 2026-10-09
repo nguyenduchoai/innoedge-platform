@@ -217,7 +217,7 @@ func TestConfigCoComboChoExample04Va08(t *testing.T) {
 	if len(body.Data.Config.Combos) == 0 {
 		t.Fatal("phải có combo, không thì example 08 không mở được phiên rửa")
 	}
-	// gtek_config_lookup_combo() đọc đúng hai trường này.
+	// ie_config_lookup_combo() đọc đúng hai trường này.
 	s := body.Data.Config.Combos[0].Payload.Steps
 	if len(s) == 0 || s[0].Device == "" || s[0].Seconds == 0 {
 		t.Errorf("combo phải có payload.steps[].{device,seconds}, đang là %+v", s)

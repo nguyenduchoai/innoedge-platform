@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_asset_client.h"
+#include "ie_asset_client.h"
 
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
@@ -9,15 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "gtek.assets";
+static const char *TAG = "ie.assets";
 
 #define ASSET_MAX_BLOB (768 * 1024) // banner KM full-middle 460x350 RGB565+alpha ~487KB (PSRAM)
 #define ASSET_SLOTS 3 // 0=logo G-TEK, 1=logo đối tác, 2=banner KM màn chờ
 
-static gtek_logo_asset_t s_logos[ASSET_SLOTS];
+static ie_logo_asset_t s_logos[ASSET_SLOTS];
 static uint8_t *s_blob; // buffer đang giữ pixel data của s_logos
 
-const gtek_logo_asset_t *gtek_asset_logo(int slot)
+const ie_logo_asset_t *ie_asset_logo(int slot)
 {
     if (slot < 0 || slot >= ASSET_SLOTS || s_logos[slot].rgb565 == NULL) {
         return NULL;
@@ -37,7 +37,7 @@ static esp_err_t parse_blob(uint8_t *blob, size_t len)
     if (len < 5 || memcmp(blob, "GLG1", 4) != 0) {
         return ESP_ERR_INVALID_RESPONSE;
     }
-    gtek_logo_asset_t logos[ASSET_SLOTS] = {0};
+    ie_logo_asset_t logos[ASSET_SLOTS] = {0};
     size_t off = 4;
     uint8_t count = blob[off++];
     for (uint8_t i = 0; i < count; i++) {
@@ -69,7 +69,7 @@ static esp_err_t parse_blob(uint8_t *blob, size_t len)
     return ESP_OK;
 }
 
-esp_err_t gtek_asset_client_fetch(const gtek_device_config_t *config)
+esp_err_t ie_asset_client_fetch(const ie_device_config_t *config)
 {
     if (!config || config->server_base_url[0] == '\0') {
         return ESP_ERR_INVALID_ARG;

@@ -193,7 +193,7 @@ Bản mới treo/crash trước khi vào cloud → bootloader tự quay bản c�
 kế. Đây là lý do **không được** gọi `esp_ota_mark_app_valid_cancel_rollback()`
 sớm.
 
-Binary đặt tên `gtek-fw-<version>.bin`. Rollout theo % hash MAC; pin per-device
+Binary đặt tên `innoedge-fw-<version>.bin`. Rollout theo % hash MAC; pin per-device
 để rollback từng máy.
 
 ## 9. Audio hai chiều — v1.1

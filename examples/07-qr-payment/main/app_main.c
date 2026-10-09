@@ -28,7 +28,7 @@ static void on_qr(const char *payload, int64_t amount_vnd, const char *ref_code,
     ESP_LOGI(TAG, "QR %lldđ · mã %s · hết hạn sau %ds · intent=%lld",
              (long long)amount_vnd, ref_code, expires_sec, (long long)intent_id);
     ESP_LOGI(TAG, "payload: %s", payload);
-    // Máy có màn hình: gtek_ui_app_show_qr(payload, ...) hoặc thư viện QR bất kỳ.
+    // Máy có màn hình: ie_ui_app_show_qr(payload, ...) hoặc thư viện QR bất kỳ.
 }
 
 // Cổng thanh toán lỗi và cloud KHÔNG có kênh dự phòng nào. Cloud cố tình không

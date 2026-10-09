@@ -11,7 +11,7 @@
 
 #include "innoedge.h"
 
-#include "gtek_config_client.h"
+#include "ie_config_client.h"
 #include "innoedge_relay_control.h"
 #include "innoedge_wash_control.h"
 #include "esp_log.h"
@@ -41,7 +41,7 @@ static esp_err_t cmd_start_wash(cJSON *params, char *result, size_t result_len,
     if (cJSON_IsString(combo)) {
         combo_id = combo->valuestring;
         // Đọc từ CACHE NVS → mất mạng vẫn mở được phiên đúng combo.
-        if (gtek_config_lookup_combo(combo_id, budgets) != ESP_OK) {
+        if (ie_config_lookup_combo(combo_id, budgets) != ESP_OK) {
             snprintf(msg, msg_len, "khong co combo %s trong cau hinh", combo_id);
             return ESP_ERR_NOT_FOUND;
         }
@@ -50,7 +50,7 @@ static esp_err_t cmd_start_wash(cJSON *params, char *result, size_t result_len,
         cJSON_ArrayForEach(step, steps) {
             cJSON *dev = cJSON_GetObjectItem(step, "device");
             cJSON *sec = cJSON_GetObjectItem(step, "seconds");
-            int idx = cJSON_IsString(dev) ? gtek_config_device_index(dev->valuestring) : -1;
+            int idx = cJSON_IsString(dev) ? ie_config_device_index(dev->valuestring) : -1;
             if (idx >= 0 && cJSON_IsNumber(sec) && sec->valueint > 0) {
                 budgets[idx] += sec->valueint;
             }

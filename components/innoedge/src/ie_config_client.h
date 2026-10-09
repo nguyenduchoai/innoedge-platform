@@ -3,7 +3,7 @@
 #pragma once
 
 #include "esp_err.h"
-#include "gtek_config_store.h"
+#include "ie_config_store.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -22,16 +22,16 @@ extern "C" {
 
 // Tải + lưu cache. Trả ESP_OK nếu lấy & lưu thành công; lỗi mạng/parse → mã lỗi
 // (cache cũ giữ nguyên). out_version (nếu != NULL) nhận version mới khi thành công.
-esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_version);
+esp_err_t ie_config_client_fetch(ie_device_config_t *config, int *out_version);
 
 // Tra combo theo id trong cache → điền budgets_sec[4] (water,foam,air,vacuum, giây).
 // Đọc combos[].id (so khớp dạng số HOẶC chuỗi) và combos[].payload.steps[] =
 // {device:"water|foam|air|vacuum", seconds:int}. Trả ESP_OK nếu tìm thấy combo;
 // ESP_ERR_NOT_FOUND nếu không có combo khớp / chưa có cache. budgets_sec dài 4.
-esp_err_t gtek_config_lookup_combo(const char *combo_id, int budgets_sec[4]);
+esp_err_t ie_config_lookup_combo(const char *combo_id, int budgets_sec[4]);
 
 // Biến tên thiết bị ("water"/"foam"/"air"/"vacuum") → index 0..3; -1 nếu lạ.
-int gtek_config_device_index(const char *name);
+int ie_config_device_index(const char *name);
 
 #ifdef __cplusplus
 }

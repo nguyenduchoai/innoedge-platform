@@ -58,5 +58,5 @@ Kiểm chứng: gửi cùng `commandId` hai lần → lần hai trả
 |---|---|
 | `unknown action` | Quên `innoedge_register_command`, hoặc gõ sai tên action |
 | Lệnh chạy nhưng cloud báo timeout | Handler block quá lâu → đẩy sang task riêng |
-| Lệnh chạy hai lần | Đang gọi `gtek_command_bus_dispatch` thủ công thay vì để SDK gọi |
-| `registry đầy` | Quá 24 action — sửa `GTEK_CMD_REGISTRY_MAX` |
+| Lệnh chạy hai lần | Đang gọi `ie_command_bus_dispatch` thủ công thay vì để SDK gọi |
+| `registry đầy` | Quá 24 action — sửa `IE_CMD_REGISTRY_MAX` |

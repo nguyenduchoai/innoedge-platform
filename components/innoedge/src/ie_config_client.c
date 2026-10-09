@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_config_client.h"
+#include "ie_config_client.h"
 
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
-#include "gtek_fault.h"
+#include "ie_fault.h"
 #include "sdkconfig.h"
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "gtek.cfg";
+static const char *TAG = "ie.cfg";
 
 // Kích thước tối đa cache op_config (combos + pricing + dynamic). Đủ rộng cho
 // vài combo nhiều bước nhưng vẫn khiêm tốn với ESP32.
-#define GTEK_OP_CONFIG_MAX 4096
+#define IE_OP_CONFIG_MAX 4096
 
 // Buffer nhận HTTP cấp động trong event handler (tránh tốn RAM tĩnh khi không dùng).
 typedef struct {
@@ -51,19 +51,19 @@ static esp_err_t on_http_event(esp_http_client_event_t *evt)
 
 static void build_url(const char *base, char *out, size_t out_len)
 {
-    const char *b = (base && base[0]) ? base : CONFIG_GTEK_SERVER_BASE_URL;
+    const char *b = (base && base[0]) ? base : CONFIG_INNOEDGE_SERVER_BASE_URL;
     size_t n = strlen(b);
     const char *slash = (n > 0 && b[n - 1] == '/') ? "" : "/";
     snprintf(out, out_len, "%s%sapi/device/config", b, slash);
 }
 
-esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_version)
+esp_err_t ie_config_client_fetch(ie_device_config_t *config, int *out_version)
 {
     if (!config) {
         return ESP_ERR_INVALID_ARG;
     }
-    rx_ctx_t rx = {.buf = malloc(GTEK_OP_CONFIG_MAX + 512), .len = 0,
-                   .cap = GTEK_OP_CONFIG_MAX + 512};
+    rx_ctx_t rx = {.buf = malloc(IE_OP_CONFIG_MAX + 512), .len = 0,
+                   .cap = IE_OP_CONFIG_MAX + 512};
     if (!rx.buf) {
         return ESP_ERR_NO_MEM;
     }
@@ -100,12 +100,12 @@ esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_versio
                  esp_err_to_name(err), status);
         // Máy đang chạy theo cấu hình CŨ (giá/combo có thể đã đổi). Latch → tự
         // hết khi lấy được config mới; không spam khi server chỉ trục trặc thoáng.
-        gtek_fault_set("config_fetch_failed", "warning",
+        ie_fault_set("config_fetch_failed", "warning",
                        "Khong tai duoc cau hinh moi - dang chay cau hinh cu");
         free(rx.buf);
         return err == ESP_OK ? ESP_FAIL : err;
     }
-    gtek_fault_clear("config_fetch_failed");
+    ie_fault_clear("config_fetch_failed");
 
     cJSON *root = cJSON_Parse(rx.buf);
     free(rx.buf);
@@ -133,7 +133,7 @@ esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_versio
         strcmp(name->valuestring, config->device_name) != 0) {
         snprintf(config->device_name, sizeof(config->device_name), "%s",
                  name->valuestring);
-        gtek_config_store_save_device_name(config->device_name);
+        ie_config_store_save_device_name(config->device_name);
         ESP_LOGI(TAG, "tên thiết bị: %s", config->device_name);
     }
 
@@ -142,14 +142,14 @@ esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_versio
     if (!cfg_str) {
         return ESP_ERR_NO_MEM;
     }
-    if (strlen(cfg_str) > GTEK_OP_CONFIG_MAX) {
+    if (strlen(cfg_str) > IE_OP_CONFIG_MAX) {
         ESP_LOGW(TAG, "config (%u bytes) > %d — không lưu (giữ cache cũ)",
-                 (unsigned)strlen(cfg_str), GTEK_OP_CONFIG_MAX);
+                 (unsigned)strlen(cfg_str), IE_OP_CONFIG_MAX);
         cJSON_free(cfg_str);
         return ESP_ERR_INVALID_SIZE;
     }
 
-    esp_err_t serr = gtek_config_store_set_op_config(cfg_str, version);
+    esp_err_t serr = ie_config_store_set_op_config(cfg_str, version);
     cJSON_free(cfg_str);
     if (serr == ESP_OK) {
         ESP_LOGI(TAG, "cập nhật op_config version=%d", version);
@@ -160,7 +160,7 @@ esp_err_t gtek_config_client_fetch(gtek_device_config_t *config, int *out_versio
     return serr;
 }
 
-int gtek_config_device_index(const char *name)
+int ie_config_device_index(const char *name)
 {
     if (!name) {
         return -1;
@@ -200,7 +200,7 @@ static void fill_from_steps(cJSON *steps, int budgets_sec[4])
         if (!cJSON_IsString(dev) || !cJSON_IsNumber(sec)) {
             continue;
         }
-        int idx = gtek_config_device_index(dev->valuestring);
+        int idx = ie_config_device_index(dev->valuestring);
         if (idx >= 0) {
             int s = (int)sec->valuedouble;
             if (s > 0) {
@@ -210,19 +210,19 @@ static void fill_from_steps(cJSON *steps, int budgets_sec[4])
     }
 }
 
-esp_err_t gtek_config_lookup_combo(const char *combo_id, int budgets_sec[4])
+esp_err_t ie_config_lookup_combo(const char *combo_id, int budgets_sec[4])
 {
     if (!combo_id || !budgets_sec) {
         return ESP_ERR_INVALID_ARG;
     }
     budgets_sec[0] = budgets_sec[1] = budgets_sec[2] = budgets_sec[3] = 0;
 
-    char *json = malloc(GTEK_OP_CONFIG_MAX + 1);
+    char *json = malloc(IE_OP_CONFIG_MAX + 1);
     if (!json) {
         return ESP_ERR_NO_MEM;
     }
     int ver = 0;
-    esp_err_t err = gtek_config_store_get_op_config(json, GTEK_OP_CONFIG_MAX + 1, &ver);
+    esp_err_t err = ie_config_store_get_op_config(json, IE_OP_CONFIG_MAX + 1, &ver);
     if (err != ESP_OK || json[0] == '\0') {
         free(json);
         ESP_LOGW(TAG, "chưa có op_config cache để tra combo");

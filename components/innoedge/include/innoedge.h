@@ -78,7 +78,7 @@ typedef struct {
 // ── Cấu hình khởi tạo ───────────────────────────────────────────────────────
 // Mọi trường đều có mặc định hợp lý; `{0}` là cấu hình chạy được.
 typedef struct {
-    const char *fw_version;         // NULL → CONFIG_GTEK_FW_VERSION
+    const char *fw_version;         // NULL → CONFIG_INNOEDGE_FW_VERSION
     const innoedge_events_t *events;// NULL → không nhận callback nào
     uint32_t heartbeat_sec;         // 0 → 30
     bool disable_ota;               // true → không tự kiểm tra bản mới
@@ -169,45 +169,6 @@ esp_err_t innoedge_config_reload(void);
 // Có bản mới → tải, xác thực SHA-256, ghi partition, reboot. busy_check bận →
 // hoãn tới lần sau. Bản mới lỗi → bootloader tự rollback bản cũ.
 esp_err_t innoedge_ota_check(void);
-
-// ── Enterprise Resiliency & Diagnostics ────────────────────────────────────
-
-// Ghi nhận một vết vận hành hoặc sự cố vào hộp đen chẩn đoán.
-esp_err_t innoedge_blackbox_record(const char *tag, const char *details);
-
-// Xuất báo cáo chẩn đoán sự cố (crash/watchdog/brownout) thành chuỗi JSON.
-esp_err_t innoedge_blackbox_get_report(char *out, size_t out_len);
-
-// ── Multi-WAN Failover (WiFi ↔ 4G LTE) ──────────────────────────────────────
-typedef enum {
-    INNOEDGE_NET_PRIMARY = 0,    // WiFi / Ethernet
-    INNOEDGE_NET_SECONDARY = 1,  // 4G LTE / Cellular
-} innoedge_net_interface_t;
-
-// Lấy giao diện mạng đang hoạt động (PRIMARY hoặc SECONDARY).
-innoedge_net_interface_t innoedge_net_active_interface(void);
-
-// Báo cáo trạng thái kết nối vật lý của từng interface.
-esp_err_t innoedge_net_report_link(innoedge_net_interface_t iface, bool is_up);
-
-// ── Fleet Clustering (Master-Worker Mesh) ───────────────────────────────────
-typedef enum {
-    INNOEDGE_CLUSTER_STANDALONE = 0,
-    INNOEDGE_CLUSTER_MASTER,
-    INNOEDGE_CLUSTER_WORKER,
-} innoedge_cluster_role_t;
-
-// Cấu hình vai trò cụm thiết bị (Master gateway hoặc Worker subnode).
-esp_err_t innoedge_cluster_init(innoedge_cluster_role_t role);
-
-// ── Chữ ký mật mã giao dịch (TAC - Transaction Authentication Code) ────────
-// Sinh mã TAC HMAC-SHA256 xác thực tính toàn vẹn của giao dịch trước khi lưu NVS.
-esp_err_t innoedge_crypto_sign_tx(uint32_t seq, int kind, int count,
-                                  int64_t amount_vnd, char *tac_out, size_t out_len);
-
-// Kiểm tra tính toàn vẹn của mã TAC giao dịch (phát hiện sửa đổi NVS trái phép).
-bool innoedge_crypto_verify_tx(uint32_t seq, int kind, int count,
-                               int64_t amount_vnd, const char *expected_tac);
 
 #ifdef __cplusplus
 }

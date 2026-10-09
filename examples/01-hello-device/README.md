@@ -27,22 +27,22 @@ idf.py flash monitor
 ## Cấu hình
 | Nơi đổi | Tham số |
 |---|---|
-| `../sdkconfig.defaults` | `CONFIG_GTEK_SERVER_BASE_URL` — địa chỉ cloud (mặc định là placeholder, PHẢI đổi) |
+| `../sdkconfig.defaults` | `CONFIG_INNOEDGE_SERVER_BASE_URL` — địa chỉ cloud (mặc định là placeholder, PHẢI đổi) |
 | `menuconfig` | InnoEdge SDK → mọi tham số hạ tầng |
 
 ## Kết quả mong đợi
 
 Lần đầu (máy chưa có WiFi):
 ```
-W (2100) hello: CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng GTEK-Setup
+W (2100) hello: CHỜ CÀI WIFI — mở app, tìm thiết bị tên bắt đầu bằng InnoEdge-Setup
 ```
 Ba cách cài WiFi — **không cách nào bắt buộc phải có app**:
 
 | Cách | Làm thế nào | Dùng khi |
 |---|---|---|
-| **Điện thoại, không app** | Vào WiFi, nối mạng `GTEK-Setup-XX:XX` → mở trình duyệt `http://192.168.4.1` → chọn mạng, nhập mật khẩu | Lớp học, demo, lần đầu thử |
+| **Điện thoại, không app** | Vào WiFi, nối mạng `InnoEdge-Setup-XX:XX` → mở trình duyệt `http://192.168.4.1` → chọn mạng, nhập mật khẩu | Lớp học, demo, lần đầu thử |
 | **Nạp sẵn lúc build** | `menuconfig → InnoEdge SDK → Factory WiFi SSID/password` | Bàn thử nghiệm, CI, nhiều bo cùng một mạng |
-| App di động (BLE) | App tìm `GTEK-Setup-XXXX` qua Bluetooth | Sản phẩm thật, chủ máy tự cài |
+| App di động (BLE) | App tìm `InnoEdge-Setup-XXXX` qua Bluetooth | Sản phẩm thật, chủ máy tự cài |
 
 Máy mở **cả SoftAP lẫn BLE cùng lúc**, chọn đường nào cũng được. Cài xong máy tự reboot.
 
@@ -74,9 +74,9 @@ Máy hiện đã online trên dashboard, gửi heartbeat mỗi 30s, và tự nh�
 ## Troubleshooting
 | Triệu chứng | Nguyên nhân thường gặp |
 |---|---|
-| Không thấy mạng `GTEK-Setup-XX:XX` | Máy ĐÃ có WiFi lưu sẵn nên không mở provisioning (xoá bằng `idf.py erase-flash`), hoặc còn đang boot |
+| Không thấy mạng `InnoEdge-Setup-XX:XX` | Máy ĐÃ có WiFi lưu sẵn nên không mở provisioning (xoá bằng `idf.py erase-flash`), hoặc còn đang boot |
 | Vào `192.168.4.1` không lên | Điện thoại tự nhảy về 4G vì mạng này không có internet — tắt dữ liệu di động tạm thời |
-| SDK dừng ngay, báo "vẫn là placeholder" | Chưa đổi `CONFIG_GTEK_SERVER_BASE_URL` — đúng như thiết kế |
+| SDK dừng ngay, báo "vẫn là placeholder" | Chưa đổi `CONFIG_INNOEDGE_SERVER_BASE_URL` — đúng như thiết kế |
 | `online=không` mãi | Sai địa chỉ cloud; dùng mock thì phải là **IP LAN**, không phải `127.0.0.1`, và máy tính phải cùng WiFi với ESP32 |
 | `assigned=chưa` mãi | Cloud thật: chưa thêm máy trên app / sai `device_id`. Mock: tự gán sau 1s, chưa thấy thì kiểm tra WS đã nối chưa |
 | Boot lặp sau OTA | Bản mới crash trước khi vào cloud → bootloader tự quay bản cũ (đúng như thiết kế) |
@@ -111,7 +111,7 @@ idf.py flash monitor
 ## Configuration
 | Location | Parameter | Description |
 |---|---|---|
-| `../sdkconfig.defaults` | `CONFIG_GTEK_SERVER_BASE_URL` | Cloud server URL (default placeholder MUST be updated) |
+| `../sdkconfig.defaults` | `CONFIG_INNOEDGE_SERVER_BASE_URL` | Cloud server URL (default placeholder MUST be updated) |
 | `menuconfig` | InnoEdge SDK | All infrastructure parameters |
 
 ## Expected Output
@@ -126,7 +126,7 @@ Three ways to configure WiFi — **no mobile app required**:
 | Method | How-To | Best For |
 |---|---|---|
 | **Web Browser (BLE)** | Open Chrome/Edge to `http://localhost:8080/provision/` (or [`tools/web-provision`](../../tools/web-provision)), click "Scan & Connect" via Web Bluetooth | Demos, fast testing, no install |
-| **Captive Portal** | Connect to WiFi network `GTEK-Setup-XX:XX`, browse to `http://192.168.4.1`, submit credentials | Classroom, offline setups |
+| **Captive Portal** | Connect to WiFi network `InnoEdge-Setup-XX:XX`, browse to `http://192.168.4.1`, submit credentials | Classroom, offline setups |
 | **Pre-compiled WiFi** | `menuconfig → InnoEdge SDK → Factory WiFi SSID/password` | Test benches, automated CI |
 
 The device runs **both SoftAP and BLE simultaneously**. Once credentials are received, it automatically reboots and connects.
@@ -149,6 +149,6 @@ The device is now online on the dashboard, sends heartbeats every 30s, and is re
 ## Troubleshooting
 | Symptom | Cause & Solution |
 |---|---|
-| `CONFIG_GTEK_SERVER_BASE_URL is still placeholder` | You forgot to set your mock-cloud LAN IP in `menuconfig`. |
+| `CONFIG_INNOEDGE_SERVER_BASE_URL is still placeholder` | You forgot to set your mock-cloud LAN IP in `menuconfig`. |
 | `WIFI_EVENT_STA_DISCONNECTED` | Wrong WiFi SSID/password, or 5GHz WiFi used (ESP32 only supports 2.4GHz). |
 | BLE provisioning not found | Check if Bluetooth is enabled on your computer or phone. |

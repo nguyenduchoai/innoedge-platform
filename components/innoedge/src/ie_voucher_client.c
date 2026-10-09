@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 InnoEdge
-#include "gtek_voucher_client.h"
+#include "ie_voucher_client.h"
 
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "gtek.voucher";
+static const char *TAG = "ie.voucher";
 
 #define VOUCHER_RX_CAP 2048 // intent response ~1KB (qrPayload 512 + imageUrl/payUrl)
 
@@ -47,12 +47,12 @@ static esp_err_t on_http_event(esp_http_client_event_t *evt)
 
 // POST JSON device-auth. rx nhận body (kể cả body lỗi 4xx để lấy message).
 // Trả ESP_OK chỉ khi transport OK và status 2xx; *out_status luôn được điền.
-static esp_err_t call_json(const gtek_device_config_t *config,
+static esp_err_t call_json(const ie_device_config_t *config,
                            esp_http_client_method_t method, const char *path,
                            const char *body, char *rx_buf, int rx_cap, int *out_status)
 {
     const char *base = (config->server_base_url[0]) ? config->server_base_url
-                                                    : CONFIG_GTEK_SERVER_BASE_URL;
+                                                    : CONFIG_INNOEDGE_SERVER_BASE_URL;
     size_t n = strlen(base);
     char url[288];
     snprintf(url, sizeof(url), "%s%s%s", base, (n > 0 && base[n - 1] == '/') ? "" : "/",
@@ -95,7 +95,7 @@ static esp_err_t call_json(const gtek_device_config_t *config,
     return (status >= 200 && status < 300) ? ESP_OK : ESP_FAIL;
 }
 
-static esp_err_t post_json(const gtek_device_config_t *config, const char *path,
+static esp_err_t post_json(const ie_device_config_t *config, const char *path,
                            const char *body, char *rx_buf, int rx_cap, int *out_status)
 {
     return call_json(config, HTTP_METHOD_POST, path, body, rx_buf, rx_cap, out_status);
@@ -138,8 +138,8 @@ static const char *json_str(cJSON *obj, const char *key)
     return cJSON_IsString(v) ? v->valuestring : "";
 }
 
-esp_err_t gtek_voucher_verify(const gtek_device_config_t *config, const char *code,
-                              int64_t amount_vnd, gtek_voucher_verify_result_t *out)
+esp_err_t ie_voucher_verify(const ie_device_config_t *config, const char *code,
+                              int64_t amount_vnd, ie_voucher_verify_result_t *out)
 {
     if (!config || !code || code[0] == '\0' || amount_vnd <= 0 || !out) {
         return ESP_ERR_INVALID_ARG;
@@ -176,9 +176,9 @@ esp_err_t gtek_voucher_verify(const gtek_device_config_t *config, const char *co
     return ESP_OK;
 }
 
-esp_err_t gtek_voucher_create_intent(const gtek_device_config_t *config,
+esp_err_t ie_voucher_create_intent(const ie_device_config_t *config,
                                      int64_t amount_vnd, const char *code,
-                                     gtek_voucher_intent_result_t *out)
+                                     ie_voucher_intent_result_t *out)
 {
     if (!config || !code || code[0] == '\0' || amount_vnd <= 0 || !out) {
         return ESP_ERR_INVALID_ARG;
@@ -223,7 +223,7 @@ esp_err_t gtek_voucher_create_intent(const gtek_device_config_t *config,
     return ESP_OK;
 }
 
-esp_err_t gtek_voucher_cancel_intent(const gtek_device_config_t *config,
+esp_err_t ie_voucher_cancel_intent(const ie_device_config_t *config,
                                      int64_t intent_id, bool *out_paid)
 {
     if (!config || intent_id <= 0) {
@@ -257,7 +257,7 @@ esp_err_t gtek_voucher_cancel_intent(const gtek_device_config_t *config,
 
 // Poll trạng thái intent — LƯỚI ĐỠ khi WS đứt đúng lúc khách quét trả: server đã
 // mark paid nhưng lệnh payment_paid không tới máy. Màn QR gọi định kỳ (ui_app).
-esp_err_t gtek_voucher_intent_status(const gtek_device_config_t *config,
+esp_err_t ie_voucher_intent_status(const ie_device_config_t *config,
                                      int64_t intent_id, bool *out_paid,
                                      int64_t *out_amount)
 {

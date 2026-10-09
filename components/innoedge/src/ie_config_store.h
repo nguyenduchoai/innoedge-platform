@@ -24,37 +24,37 @@ typedef struct {
     uint64_t seq;
     bool provisioned;
     bool assigned;
-} gtek_device_config_t;
+} ie_device_config_t;
 
-esp_err_t gtek_config_store_load(gtek_device_config_t *config);
-esp_err_t gtek_config_store_save_wifi(const char *ssid, const char *password);
-esp_err_t gtek_config_store_save_device_name(const char *name);
-esp_err_t gtek_config_store_save_server_base_url(const char *url);
-esp_err_t gtek_config_store_save_token(const char *token);
-esp_err_t gtek_config_store_save_websocket_url(const char *url);
-esp_err_t gtek_config_store_save_static_qr(const char *payload, const char *ref_code);
-esp_err_t gtek_config_store_save_assigned(bool assigned);
-esp_err_t gtek_config_store_next_seq(uint64_t *seq);
+esp_err_t ie_config_store_load(ie_device_config_t *config);
+esp_err_t ie_config_store_save_wifi(const char *ssid, const char *password);
+esp_err_t ie_config_store_save_device_name(const char *name);
+esp_err_t ie_config_store_save_server_base_url(const char *url);
+esp_err_t ie_config_store_save_token(const char *token);
+esp_err_t ie_config_store_save_websocket_url(const char *url);
+esp_err_t ie_config_store_save_static_qr(const char *payload, const char *ref_code);
+esp_err_t ie_config_store_save_assigned(bool assigned);
+esp_err_t ie_config_store_next_seq(uint64_t *seq);
 // Intent QR cuối đã xử lý payment_paid — chống nhả relay 2 lần khi server
 // gửi lại lệnh sau reconnect (redelivery).
-esp_err_t gtek_config_store_save_last_paid_intent(int64_t intent_id);
-int64_t gtek_config_store_last_paid_intent(void);
+esp_err_t ie_config_store_save_last_paid_intent(int64_t intent_id);
+int64_t ie_config_store_last_paid_intent(void);
 // commandId lệnh động (command bus) cuối đã thực thi — sống qua reboot để dedupe
 // lệnh server gửi lại sau reconnect (đặc biệt quan trọng với dispense/nhả tiền).
-esp_err_t gtek_config_store_save_last_command_id(int64_t command_id);
-int64_t gtek_config_store_last_command_id(void);
+esp_err_t ie_config_store_save_last_command_id(int64_t command_id);
+int64_t ie_config_store_last_command_id(void);
 
 // ── Cấu hình vận hành (operational config) ──────────────────────────────────
 // Chuỗi JSON thô của object `config` từ server (combos/pricing/dynamic...) +
 // version. Lưu vào NVS để firmware chạy OFFLINE (đọc combo từ cache). json là
 // object JSON hợp lệ; version là số phiên bản tăng dần do server cấp.
-esp_err_t gtek_config_store_set_op_config(const char *json, int version);
+esp_err_t ie_config_store_set_op_config(const char *json, int version);
 // Đọc cache: chép JSON vào buffer json (cắt nếu thiếu chỗ, luôn null-terminated)
 // và trả version qua *version (0 nếu chưa có). Trả ESP_ERR_NOT_FOUND nếu chưa
 // từng lưu. json/version có thể NULL nếu chỉ cần phần còn lại.
-esp_err_t gtek_config_store_get_op_config(char *json, size_t json_len, int *version);
+esp_err_t ie_config_store_get_op_config(char *json, size_t json_len, int *version);
 // Tiện ích: chỉ lấy version cache hiện tại (0 nếu chưa có).
-int gtek_config_store_op_config_version(void);
+int ie_config_store_op_config_version(void);
 
 #ifdef __cplusplus
 }

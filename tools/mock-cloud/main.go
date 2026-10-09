@@ -327,7 +327,7 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 
 // POST /ota/v1/ — kiểm tra bản mới.
 //
-// Lưu ý: thiết bị TỪ CHỐI tải firmware qua http:// (xem gtek_ota_client.c).
+// Lưu ý: thiết bị TỪ CHỐI tải firmware qua http:// (xem ie_ota_client.c).
 // Nên mock chỉ chào được bản mới nếu bạn đưa -fw-url là một URL https thật.
 // Không có cờ đó thì luôn trả "không có bản mới" — vẫn đủ để example 05 chạy.
 func handleOTA(w http.ResponseWriter, r *http.Request) {

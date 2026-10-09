@@ -45,7 +45,7 @@ I (30400) coinop: da nha 2 xung
 **1. Firmware KHÔNG tự nhân giá.** Gửi **số xu**, để cloud quy đổi. Mỗi đối tác
 một đơn giá, đổi được từ app — nhét giá vào firmware là phải flash lại cả fleet.
 
-**2. Luôn có trần an toàn.** `GTEK_DISPENSE_MAX_PULSES` chặn một `params` sai
+**2. Luôn có trần an toàn.** `IE_DISPENSE_MAX_PULSES` chặn một `params` sai
 biến thành lệnh nhả sạch hopper.
 
 **3. Dựa vào chống-trùng của SDK, đừng tự làm.** Cloud gửi lại `dispense` sau khi
@@ -58,8 +58,8 @@ reboot sẽ bị chặn. Đây là lỗi từng làm máy nhả tiền hai lần
 
 | Tham số | Ý nghĩa | Chỉnh khi |
 |---|---|---|
-| `GTEK_PULSE_MIN_MS` (35) | xung hẹp hơn = nhiễu, bỏ | đếm dư → tăng |
-| `GTEK_PULSE_GAP_MS` (300) | im lặng bấy nhiêu = hết chuỗi | 5 xu thành 2 lần 2+3 → tăng |
+| `IE_PULSE_MIN_MS` (35) | xung hẹp hơn = nhiễu, bỏ | đếm dư → tăng |
+| `IE_PULSE_GAP_MS` (300) | im lặng bấy nhiêu = hết chuỗi | 5 xu thành 2 lần 2+3 → tăng |
 
 Không có con số đúng cho mọi đầu đọc — phải đo trên máy thật.
 
