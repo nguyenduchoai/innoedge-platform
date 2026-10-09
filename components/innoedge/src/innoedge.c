@@ -583,12 +583,12 @@ esp_err_t innoedge_cluster_init(innoedge_cluster_role_t role)
 esp_err_t innoedge_crypto_sign_tx(uint32_t seq, int kind, int count,
                                   int64_t amount_vnd, char *tac_out, size_t out_len)
 {
-    return gtek_crypto_sign_transaction(s_dev.mac, seq, kind, count, amount_vnd, tac_out, out_len);
+    return gtek_crypto_sign_transaction(s_dev.device_id, seq, kind, count, amount_vnd, tac_out, out_len);
 }
 
 bool innoedge_crypto_verify_tx(uint32_t seq, int kind, int count,
                                int64_t amount_vnd, const char *expected_tac)
 {
-    return gtek_crypto_verify_transaction(s_dev.mac, seq, kind, count, amount_vnd, expected_tac);
+    return gtek_crypto_verify_transaction(s_dev.device_id, seq, kind, count, amount_vnd, expected_tac);
 }
 

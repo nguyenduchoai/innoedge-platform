@@ -13,12 +13,12 @@
 #include <string.h>
 
 // ── Cấy giả các phụ thuộc ───────────────────────────────────────────────────
-static long long g_nvs_last_command_id;   // giả lập NVS (sống qua "reboot")
+static int64_t g_nvs_last_command_id;   // giả lập NVS (sống qua "reboot")
 static int g_nvs_write_fails;
 
-long long gtek_config_store_last_command_id(void) { return g_nvs_last_command_id; }
+int64_t gtek_config_store_last_command_id(void) { return g_nvs_last_command_id; }
 
-esp_err_t gtek_config_store_save_last_command_id(long long id)
+esp_err_t gtek_config_store_save_last_command_id(int64_t id)
 {
     if (g_nvs_write_fails) return ESP_FAIL;
     g_nvs_last_command_id = id;
@@ -29,9 +29,9 @@ void gtek_fault_set(const char *code, const char *sev, const char *msg)
 { (void)code; (void)sev; (void)msg; }
 
 // Ack cuối cùng bus gửi đi — test kiểm tra nội dung ack.
-static struct { long long id; char status[16]; char message[64]; int count; } g_ack;
+static struct { int64_t id; char status[16]; char message[64]; int count; } g_ack;
 
-esp_err_t gtek_ws_client_send_command_ack(long long id, const char *status,
+esp_err_t gtek_ws_client_send_command_ack(int64_t id, const char *status,
                                           const char *message, const char *result)
 {
     (void)result;
@@ -66,7 +66,7 @@ static esp_err_t h_other(cJSON *p, char *result, size_t rl, char *msg, size_t ml
     return ESP_OK;
 }
 
-static void reset(long long nvs_last)
+static void reset(int64_t nvs_last)
 {
     g_nvs_last_command_id = nvs_last;
     g_nvs_write_fails = 0;

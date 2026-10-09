@@ -2,7 +2,9 @@
 // Copyright 2026 InnoEdge
 #pragma once
 
-#include "esp_err.h"
+// innoedge_cluster_role_t định nghĩa MỘT chỗ ở API công khai — khai lại ở đây
+// là lỗi "redeclaration" khi innoedge.c include cả hai.
+#include "innoedge.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -10,12 +12,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef enum {
-    INNOEDGE_CLUSTER_STANDALONE = 0,
-    INNOEDGE_CLUSTER_MASTER,
-    INNOEDGE_CLUSTER_WORKER,
-} innoedge_cluster_role_t;
 
 // Khởi tạo cụm cluster với vai trò xác định
 esp_err_t gtek_cluster_init(innoedge_cluster_role_t role);

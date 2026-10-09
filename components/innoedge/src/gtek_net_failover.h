@@ -2,7 +2,8 @@
 // Copyright 2026 InnoEdge
 #pragma once
 
-#include "esp_err.h"
+// innoedge_net_interface_t định nghĩa MỘT chỗ ở API công khai.
+#include "innoedge.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -10,11 +11,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef enum {
-    INNOEDGE_NET_PRIMARY = 0,    // WiFi / Ethernet
-    INNOEDGE_NET_SECONDARY = 1,  // 4G LTE / Cellular
-} innoedge_net_interface_t;
 
 typedef enum {
     GTEK_FAILOVER_STATE_PRIMARY_OK = 0,
